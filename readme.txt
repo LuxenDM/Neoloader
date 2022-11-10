@@ -2,7 +2,7 @@ Welcome to the Vendetta Online Neoloader Pre-execution Library Management Engine
 
 The purpose of Neoloader is a modder's utility designed to assist in loading mods in Vendetta Online, using a dependency-ordered system. Besides the obvious benefit of allowing a user to enable or disable mods in-game, this allows common-access libraries to be better utilized, and to improve compatibility between communicative mods, all in what aims to be a dummy-proof system requiring as little user-side configuration as possible. This expansion to the loading system in Vendetta Online is implemented using base-game functionality, and does not require modification of the game's files and doesn't exploit bugs in the sandbox environment.
 
-Documentation for modders can be found in the optional files available alongside this mod. (TODO)
+Documentation for modders can be found at https://github.com/LuxenDM/Neoloader-Documentation
 
 
 
