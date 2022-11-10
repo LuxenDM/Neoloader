@@ -1,0 +1,43 @@
+TO DO LIST:
+	
+	uninstall marks all mods in the registry loadstate as off
+		(implemented, make sure this works)
+	
+	sanitize internal references to this_naming_style and notThisType and notthistype and notTHIStype
+	
+	fix the IF-handler during Init; it checks for "load" state multiple times, and probably just needs to be rewritten for sanity
+		check if this is eating a LOT of time during init; phase 3, which includes this, is the most costly part after new installation
+
+	implement using the config_override properly; right now, it only affects the neo table, but nothing else.
+		gkreadstr/gkreadint
+	
+	fix lib.resolvefile to halt if error during loadfile is not a file not found
+		(implemented, make sure this works)
+
+	make sure the if loader during init does its job
+		we can use draugath's barebones_IF to check this
+			todo: patch his files to work through Neoloader instead of a direct customIF
+
+
+neomgr:
+	
+	make neomgr obey its set options
+	
+	Modlist
+		set max width on public name
+	Logging
+		Make log refresh button and update on export
+	Settings
+		place settings inside scrollbox
+		
+		Neoloader settings
+			Default Load State=<dropdown NO|YES> //user changes if new mods are auto-loaded next game launch
+				users will likely just set this to "YES", but the default state is "NO" to encourage inspecting mods (at minimum on a surface level, of what appears in the neomgr interface) before using them.
+			Echo Neoloader system messages=<checkbox> //true, messages are also printed in addition to logged
+			
+		neomgr settings
+			Open neomgr on game launch=<checkbox>
+			Show Notifications=<checkbox>
+
+MultiUI:
+	
