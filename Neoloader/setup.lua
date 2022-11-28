@@ -16,7 +16,7 @@ if NEO_UNINSTALL == false then
 	setstr("Neoloader", "mgr", "neomgr")
 	setstr("Neoloader", "uninstalled", "NO")
 	
-	--before we add packaged mods, lets remove any possible old mod registrations from older installations that weren't cleanly removed
+	--before we add packaged plugins, lets remove any possible old plugin registrations from older installations that weren't cleanly removed
 	
 	local counter = 1
 	while true do
@@ -31,9 +31,9 @@ if NEO_UNINSTALL == false then
 		gkini.WriteString("Neo-registry", "reg" .. tostring(i), "")
 	end
 	
-	--packaged mod for basic functionality
+	--packaged plugin for basic functionality
 	lib.register("plugins/Neoloader/neomgr.ini")
-	setstr("Neo-modstate", "neomgr.1", "YES")
+	setstr("Neo-pluginstate", "neomgr.1", "YES")
 	
 	--user options
 	setstr("Neoloader", "rAllowDelayedLoad", "NO")
@@ -62,7 +62,7 @@ else
 	setstr("Vendetta", "if", "")
 	setint("Neoloader", "Init", -1)
 	
-	--try to remove all registered mods
+	--try to remove all registered plugins
 	local counter = 1
 	while true do
 		if gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "") ~= "" then
@@ -76,11 +76,11 @@ else
 		gkini.WriteString("Neo-registry", "reg" .. tostring(i), "")
 	end
 	
-	--try to disable loading of all existing mods
-	local modlist = lib.get_gstate().modlist
-	for k, v in ipairs(modlist) do
-		if v.mod_id then
-			setstr("Neo-modstate", k, "NO")
+	--try to disable loading of all existing plugins
+	local pluginlist = lib.get_gstate().pluginlist
+	for k, v in ipairs(pluginlist) do
+		if v.plugin_id then
+			setstr("Neo-pluginstate", k, "NO")
 		end
 	end
 	

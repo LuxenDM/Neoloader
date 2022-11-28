@@ -1,5 +1,5 @@
 --[[
-This is the bundled management UI for the Neoloader engine. It uses Neoloader's API to show the status of Neo-compatible mods, and allows the user to allow/prevent mods from loading.
+This is the bundled management UI for the Neoloader engine. It uses Neoloader's API to show the status of Neo-compatible plugins, and allows the user to allow/prevent plugins from loading.
 
 This is only meant to provide minimal functionality, and should be replaced with a more featured manager by the user, but is not entirely neccesary for the functionality of Neoloader.
 ]]--
@@ -9,23 +9,34 @@ local lastNotif = ""
 local ready = false
 local public = {}
 local diag_timer = Timer()
-local margin_setting = tonumber(lib.mod_read_str("neomgr", "0", "data", "margin"))
+
+local margin_setting = tonumber(lib.plugin_read_str("neomgr", "0", "data", "margin"))
+local auto_open = lib.plugin_read_str("neomgr", "0", "data", "OpenOnGameLaunch")
+local open_on_notif = lib.plugin_read_str("neomgr", "0", "data", "HandleNotifications")
+
+margin_setting = gkini.ReadInt("neomgr", "margin", margin_setting)
+auto_open = gkini.ReadString("neomgr", "OpenOnGameLaunch", auto_open)
+open_on_notif = gkini.ReadString("neomgr", "HandleNotifications", open_on_notif)
+
+
+
+neo_diag = nil
 
 --[[
-As a manager, neomgr needs to have a standardized API in its "class". these functions are stored in public{}, and if neomgr is the active manager, Neoloader will activate these functions. We can also provide other functions for other mods to use here, but since this is a minimally featured management system for Neoloader, we won't do this.
+As a manager, neomgr needs to have a standardized API in its "class". these functions are stored in public{}, and if neomgr is the active manager, Neoloader will activate these functions. We can also provide other functions for other plugins to use here, but since this is a minimally featured management system for Neoloader, we won't do this.
 
 functions needed:
 	open:
 		Opens the neomgr display
 	mgr_key:
-		Neoloader is sending neomgr the "key" used to activate mods or run the uninstaller.
+		Neoloader is sending neomgr the "key" used to activate plugins or run the uninstaller.
 	notif:
 		A notification that requires user attention was triggered
 		
 		Possible notifications:
-			A new mod was registered (lib.register after ADVANCED_PLUGIN_LOADER_COMPLETE)
-			A mod failed to load during init (Activation failure)
-			No root-level mods are available (No mods can be activated)
+			A new plugin was registered (lib.register after ADVANCED_PLUGIN_LOADER_COMPLETE)
+			A plugin failed to load during init (Activation failure)
+			No root-level plugins are available (No plugins can be activated)
 			Startup successful (Everything's A-OK) (self-hides after 5 seconds)
 			<other>
 				other plugins could use the notif but provide a status that neomgr isn't expecting; a generic message will be opened instead.
@@ -51,6 +62,7 @@ end
 
 local function createNotification(status)
 	
+	print("notif created")
 	local valid_status = {
 		--[[
 		EXAMPLE = {
@@ -60,19 +72,19 @@ local function createNotification(status)
 		}
 		]]--
 		NEW_REGISTRY = {
-			[1] = "A new mod has been registered; open the Neoloader manager to configure your mods!",
+			[1] = "A new plugin has been registered; open the Neoloader manager to configure your plugins!",
 			[2] = true,
 		},
-		MOD_FAILURE = {
-			[1] = "Neoloader failed to load a mod! Open the Neoloader manager to configure your mods.",
+		plugin_FAILURE = {
+			[1] = "Neoloader failed to load a plugin! Open the Neoloader manager to configure your plugins.",
 			[2] = false,
 		},
 		ROOT_FAILURE = {
-			[1] = "No dependent-less mods were set to be loaded, so Neoloader had no mods to load. Open the Neoloader manager to configure your mods.",
+			[1] = "No dependent-less plugins were set to be loaded, so Neoloader had no plugins to load. Open the Neoloader manager to configure your plugins.",
 			[2] = true,
 		},
 		SUCCESS = {
-			[1] = "Neoloader finished successfully! To configure your mods, open the Neoloader manager.",
+			[1] = "Neoloader finished successfully! To configure your plugins, open the Neoloader manager.",
 			[2] = true,
 		},
 	}
@@ -99,12 +111,15 @@ local function createNotification(status)
 					size = "1%",
 				},
 				iup.label {
-					title = "To manage your mods, use the button in the options menu or use the /neo command",
+					title = "To manage your plugins, use the button in the options menu or use the /neo command",
 				},
 				iup.button {
 					title = "Hide Notification",
 					action = function(self)
-						iup.Destroy(iup.GetDialog(self))
+						iup.GetDialog(self):hide()
+						if not PlayerInStation() and IsConnected() then
+							ShowDialog(HUD.dlg)
+						end
 					end,
 				},
 			},
@@ -112,21 +127,25 @@ local function createNotification(status)
 	}
 	
 	diag:map()
-	diag:showxy(0, 0)
+	diag:showxy(iup.CENTER, iup.CENTER)
 	
-	do --why did I "do" this?
-		diag_timer:SetTimeout(10000, function() iup.Destroy(diag) end)
-	end
+	diag_timer:SetTimeout(10000, function()
+		diag:hide()
+		if not PlayerInStation() and IsConnected() then
+			ShowDialog(HUD.dlg)
+		end
+	end)
 end
 
 RegisterEvent(function() 
+	print("triggered; last: " .. lastNotif .. "; open_ " .. open_on_notif .. "; auto_ " .. auto_open)
 	ready = true
 	if lastNotif ~= "" then
-		if lib.mod_read_str("neomgr", "1", "data", "HandleNotifications") == "YES" then
+		if open_on_notif == "YES" then
 			createNotification(lastNotif)
 		end
 	end
-	if lib.mod_read_str("neomgr", "1", "data", "OpenOnGameLaunch") == "YES" then
+	if auto_open == "YES" then
 		public.open()
 	end
 end, "PLUGINS_LOADED")
@@ -136,7 +155,7 @@ function public.notif(status)
 		lastNotif = status
 		console_print("Not ready to show notifications")
 	else
-		if lib.mod_read_str("neomgr", "1", "data", "HandleNotifications") == "YES" then
+		if open_on_notif == "YES" then
 			createNotification(status)
 		end
 	end
@@ -168,13 +187,20 @@ end --thank you Draugath for making these
 
 
 function public.open()
-	local gstate = lib.get_gstate()
-	local modlist = {}
-	for k, v in ipairs(gstate.modlist) do
-		table.insert(modlist, lib.get_state(v[1], v[2]))
+	
+	if neo_diag then
+		neo_diag:show()
+		return
 	end
 	
-	local modDisplayContainer = {}
+	
+	local gstate = lib.get_gstate()
+	local pluginlist = {}
+	for k, v in ipairs(gstate.pluginlist) do
+		table.insert(pluginlist, lib.get_state(v[1], v[2]))
+	end
+	
+	local pluginDisplayContainer = {}
 	
 	local elem_width = {
 		[1] = 0,
@@ -184,13 +210,13 @@ function public.open()
 		[5] = 0,
 	}
 	
-	local function newModRowDisp(index)
-		local mod_internal_name = modlist[index].mod_id or "Mod internal ID"
-		local mod_full_name = modlist[index].mod_name or "Mod public name"
-		local mod_version = modlist[index].mod_version or "Mod version"
+	local function newpluginRowDisp(index)
+		local plugin_internal_name = pluginlist[index].plugin_id or "plugin internal ID"
+		local plugin_full_name = pluginlist[index].plugin_name or "plugin public name"
+		local plugin_version = pluginlist[index].plugin_version or "plugin version"
 		
-		local mod_load_status = modlist[index].load
-		local mod_failed = modlist[index].complete
+		local plugin_load_status = pluginlist[index].load
+		local plugin_failed = pluginlist[index].complete
 		
 		local load_states = {
 			[1] = "\12744FF44 Loaded!",
@@ -201,21 +227,21 @@ function public.open()
 		}
 		
 		local row_data = {
-			[1] = mod_full_name,
-			[2] = mod_internal_name,
-			[3] = mod_version,
+			[1] = plugin_full_name,
+			[2] = plugin_internal_name,
+			[3] = plugin_version,
 			[4] = "",
-			[5] = mod_failed,
+			[5] = plugin_failed,
 			currentstate = 1,
 			newstate = 1,
 		}
 		
 		if index > 1 then
-			if mod_load_status == "NO" then
+			if plugin_load_status == "NO" then
 				row_data[4] = load_states[4]
 				row_data.newstate = 4
 				row_data.currentstate = 4
-			elseif mod_failed == false then
+			elseif plugin_failed == false then
 				row_data[4] = load_states[5]
 				row_data.newstate = 5
 				row_data.currentstate = 5
@@ -338,7 +364,7 @@ function public.open()
 			if row_data.newstate < 3 or row_data.newstate == 5 then
 				result = "YES"
 			end
-			gkini.WriteString("Neo-modstate", mod_internal_name .. "." .. tostring(mod_version), result)
+			gkini.WriteString("Neo-pluginstate", plugin_internal_name .. "." .. tostring(plugin_version), result)
 		end
 		
 		function row_display.width_resize()
@@ -367,15 +393,15 @@ function public.open()
 	local display_list_container_objs = {}
 	local display_list_container = iup.vbox {}
 	
-	table.insert(modlist, 1, {})
+	table.insert(pluginlist, 1, {})
 	
-	for i=1, #modlist do
-		display_list_container_objs[i] = newModRowDisp(i)
+	for i=1, #pluginlist do
+		display_list_container_objs[i] = newpluginRowDisp(i)
 		display_list_container_objs[i].width_resize()
 		iup.Append(display_list_container, display_list_container_objs[i])
 	end
 	
-	for i=1, #modlist do
+	for i=1, #pluginlist do
 		--doing it again to fix "ascending" sizes
 		display_list_container_objs[i].width_resize()
 	end
@@ -383,12 +409,6 @@ function public.open()
 	local display_list_root = iup.vbox {
 		create_scrollbox(display_list_container),
 		iup.hbox {
-			iup.button {
-				title = "Reload",
-				action = function()
-					ReloadInterface()
-				end,
-			},
 			iup.fill { },
 			iup.button {
 				title = "Apply Changes",
@@ -490,6 +510,30 @@ function public.open()
 		mgr_list_select.value = lookup_mgr[gstate.manager]
 	end
 	
+	local nmgr_toggle_open_notif = iup.list {
+		value = 2,
+		dropdown = "YES",
+		[1] = "YES",
+		[2] = "NO",
+	}
+	
+	local nmgr_toggle_open_start = iup.list {
+		value = 2,
+		dropdown = "YES",
+		[1] = "YES",
+		[2] = "NO",
+	}
+	
+	if auto_open == "YES" then
+		nmgr_toggle_open_start.value = 1
+	end
+	
+	if open_on_notif == "YES" then
+		nmgr_toggle_open_notif.value = 1
+	end
+	
+	
+	
 	local setting_edit_root = iup.frame {
 		iup.vbox {
 			gap = 6,
@@ -507,6 +551,25 @@ function public.open()
 				iup.fill { },
 				if_list_select,
 			},
+			--Neoloader settings
+			iup.fill {
+				size = "%8",
+			},
+			--neomgr settings
+			iup.hbox {
+				iup.label {
+					title = "Open neomgr when the game starts",
+				},
+				iup.fill { },
+				nmgr_toggle_open_start,
+			},
+			iup.hbox {
+				iup.label {
+					title = "Show notifications",
+				},
+				iup.fill { },
+				nmgr_toggle_open_notif,
+			},
 			iup.fill {
 				size = "%8",
 			},
@@ -517,6 +580,12 @@ function public.open()
 					action = function()
 						gkini.WriteString("Neoloader", "if", next_if)
 						gkini.WriteString("Neoloader", "mgr", next_mgr)
+						
+						local open_val = nmgr_toggle_open_start.value == "1" and "YES" or "NO"
+						local notif_val = nmgr_toggle_open_notif.value == "1" and "YES" or "NO"
+						gkini.WriteString("neomgr", "OpenOnGameLaunch", open_val)
+						gkini.WriteString("neomgr", "HandleNotifications", notif_val)
+						
 						ReloadInterface()
 					end,
 				},
@@ -564,20 +633,23 @@ function public.open()
 			},
 			iup.hbox {
 				iup.label {
-					title = "Neoloader basic mod manager",
+					title = "Neoloader basic plugin manager",
 					font = Font.H3,
 				},
 				iup.fill { },
 				iup.button {
 					title = "Close",
 					action = function(self)
-						iup.Destroy(iup.GetDialog(self))
+						iup.GetDialog(self):hide()
+						if not PlayerInStation() and IsConnected() then
+							ShowDialog(HUD.dlg)
+						end
 					end,
 				},
 			},
 			iup.hbox {
 				iup.button {
-					title = "Modlist",
+					title = "pluginlist",
 					action = function()
 						tabs_container.value = display_list_root
 					end,
@@ -601,7 +673,7 @@ function public.open()
 			iup.hbox {
 				iup.fill { },
 				iup.label {
-					title = "This mod manager is bundled with Neoloader, and only meant to provide minimal functionality.",
+					title = "This plugin manager is bundled with Neoloader, and only meant to provide minimal functionality.",
 				},
 			},
 			iup.fill {
@@ -611,7 +683,10 @@ function public.open()
 	}
 	
 	diag:map()
-	diag:show()
+	
+	neo_diag = diag
+	
+	neo_diag:show()
 end
 
 local option_frame = iup.vbox {

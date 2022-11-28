@@ -1,6 +1,6 @@
 --[[
 This file contains the base "environment" that is normally set up by the default interface.
-These functions and variables are often required for certain functions or mods to run, so we need to create them ourselves in the meantime.
+These functions and variables are often required for certain functions or plugins to run, so we need to create them ourselves in the meantime.
 Most of these were ripped from Draugath's BarebonesIF interface replacer - thanks, Draugath!
 
 If you want to prevent the iup_templates from loading, add "rLoadTemplates=NO" to config.ini or config_overrides.ini under [Neoloader].

@@ -27,13 +27,13 @@ else
 		if lib.is_ready(lib.get_gstate().manager) then
 			--the manager should handle notifications, if neccesary; do not bug the user about Neo being installed <here> at all!
 		else
-			cp("No manager is set up to handle mods with Neoloader!")
+			cp("No manager is set up to handle plugins with Neoloader!")
 			cp("'neomgr' is a barebones manager bundled with Neoloader.")
-			cp("use /neomgr to turn that mod on and enable using it as Neoloader's manager!")
+			cp("use /neomgr to turn that plugin on and enable using it as Neoloader's manager!")
 			
 			RegisterUserCommand("neomgr", function()
 				UnregisterUserCommand("neomgr")
-				gkini.WriteString("Neo-modstate", "neomgr.1", "YES")
+				gkini.WriteString("Neo-pluginstate", "neomgr.1", "YES")
 				ReloadInterface()
 			end)
 		end
