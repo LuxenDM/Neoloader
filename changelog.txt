@@ -28,7 +28,7 @@ Neoloader November Private Beta
 		FIXES	lib.set_class
 		FIXES	lib.lock_class
 		FIXES	lib.unlock_class
-		FIXES	lib.mod_read_str
+		FIXES	lib.plugin_read_str
 	
 	New Error Capture System
 		Previous 'detected errors' (usually from faulty function input) returned false and an error string.
@@ -42,57 +42,57 @@ Neoloader November Private Beta
 		lib.resolve_file now accepts an optional second path argument
 		lib.resolve_file no longer errors if no '/' is provided
 	
-	changed how mods are loaded
-		mods distributed WITH other plugins may have variable folder structure; mods now store their folder path during registry, and when activated, this path is attempted if all others fail (see changes to file resolving)
+	changed how plugins are loaded
+		plugins distributed WITH other plugins may have variable folder structure; plugins now store their folder path during registry, and when activated, this path is attempted if all others fail (see changes to file resolving)
 	
 	changed how INI files are built into table objects
 		fixed how dependencies are collected (used a negative iterator on accident)
 		stores folder path of the INI file pointer provided
 	
-	fixed how mods are registered
-		Registry should be more robust to mods with no provided version
+	fixed how plugins are registered
+		Registry should be more robust to plugins with no provided version
 			This is a bad practice to do, but won't crash Neoloader anymore
 	
-	changes to mod activation
+	changes to plugin activation
 		fixes versionless activation to attempt the latest available like other API functions do
-		activation now provides the mod's INI folder path when resolving the mod's file
+		activation now provides the plugin's INI folder path when resolving the plugin's file
 		now logs where the activation system fails
 	
-	changes to mod state retrieval
+	changes to plugin state retrieval
 		Now includes the folder path
 	
 	changes to Neoloader global state retreival
 		ifmgr now returns "vo-if" only if the current general interface manager doesn't exist; fixes issues where the current IF manager may check for itself being the active manager (as opposed to loaded but not active)
 	
-	fixed how mods set their class
+	fixed how plugins set their class
 		Properly handles "version 0" as an attempt to set the latest version installed
 			This is a bad practice to do, but won't crash Neoloader anymore
 	
-	fixed how mods lock their class
+	fixed how plugins lock their class
 		Properly handles "version 0" as an attempt to set the latest version installed
 			This is a bad practice to do, but won't crash Neoloader anymore
 		if a custom key isnt provided, now calls lib.generate_key (but doesn't store/return it, so consider that lock permanent!)
 	
-	fixed how mods unlock their class
+	fixed how plugins unlock their class
 		Properly handles "version 0" as an attempt to set the latest version installed
 			This is a bad practice to do, but won't crash Neoloader anymore
 	
-	fixed how mods access their INIs
+	fixed how plugins access their INIs
 		converts header or key arguments to string, in case the provided value wasn't.
 	
 	New shortcut functions
 		lib.get_path lets you retrieve a folder path without using lib.get_state and parsing the provided table
-		lib.open_config will launch the currently active mod management engine
+		lib.open_config will launch the currently active plugin management engine
 		lib.open_if_config will launch the currently active interface management engine
 	
 	Overhauled the startup loader process
-		there was no functional difference between a library and a mod, and if a library were erroneously dependent on a mod then it would never get loaded. Everything is (again) sorted into a single table for activation, ignoring classification.
+		there was no functional difference between a library and a plugin, and if a library were erroneously dependent on a plugin then it would never get loaded. Everything is (again) sorted into a single table for activation, ignoring classification.
 		Added more logging
 		now uses lib.resolve_file to launch the current interface management engine, if it exists (previously used a pcall setup)
-		improved handling of mods that don't have versioning information
+		improved handling of plugins that don't have versioning information
 			This is a bad practice, but will less likely cause crashes
 		fixed a LOT of bugs related to forgetting which tables worked what way
 	
 	neomgr changes
-		A Mod's public name now has a maximum visible length (1/5th of a user's screen)
+		A plugin's public name now has a maximum visible length (1/5th of a user's screen)
 		
