@@ -498,20 +498,24 @@ function lib.activate_plugin(id, version, verify_key)
 						end
 					else
 						lib.log_error("Failed to activate " .. plugin_id)
-						lib.notify("plugin_FAILURE", id, version)
-						neo.error_flag = true
+						lib.notify("PLUGIN_FAILURE", id, version)
+						return false, "failed to activate, " .. err or "?"
 					end
 				else
 					lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!")
+					return false, "load state is NO"
 				end
 			else
 				lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!")
+				return false, "unmatched dependencies"
 			end
 		else
 			lib.log_error("Attempted to activate " .. plugin_id .. " but it doesn't exist!")
+			--don't return false, no plugin ID to report to init
 		end
 	else
 		lib.log_error("Attempted to activate a plugin, but key is incorrect!")
+		--don't return false, no plugin ID to report to init
 	end
 end
 
@@ -1088,7 +1092,11 @@ else
 		
 		for k, v in ipairs(plugin_table) do
 			plugin_start = gk_get_microsecond()
-			lib.activate_plugin(v[1], v[2], mgr_key)
+			local err_flag, err_detail = lib.activate_plugin(v[1], v[2], mgr_key)
+			if err_flag == false then
+				neo.error_flag = true
+				table.insert(neo.plugin_registry[v[1] .. "." .. v[2]].errors, err_detail)
+			end
 			lib.log_error("[timestat] plugin activated in: " .. tostring(gk_get_microsecond() - plugin_start))
 		end
 		
