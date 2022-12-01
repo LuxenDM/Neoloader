@@ -75,8 +75,8 @@ local function createNotification(status)
 			[1] = "A new plugin has been registered; open the Neoloader manager to configure your plugins!",
 			[2] = true,
 		},
-		plugin_FAILURE = {
-			[1] = "Neoloader failed to load a plugin! Open the Neoloader manager to configure your plugins.",
+		PLUGIN_FAILURE = {
+			[1] = "Neoloader failed to load a plugin! You can view the Neoloader status log in your manager.",
 			[2] = false,
 		},
 		ROOT_FAILURE = {
