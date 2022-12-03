@@ -1,4 +1,4 @@
-NEO_EXISTS = true --use lib/lib[1] instead if you are testing for a generic library management implementation
+NEO_EXISTS = true --use lib/lib[0] instead if you are testing for a generic library management implementation
 
 if type(print) ~= "function" then
 	print = console_print
@@ -63,7 +63,7 @@ end
 local neo = {
 	version = {
 		[1] = 5,
-		[2] = 0,
+		[2] = 1,
 		[3] = "Private Beta Release",
 	},
 	notifications = {},
@@ -142,7 +142,7 @@ function lib.err_handle(test, log_msg)
 	if log_msg == nil and type(test) == 'string' then
 		console_print("debug: err_handle test is a string and log_msg is nil")
 		log_msg = test
-		test = false
+		test = true
 	end
 	if type(test) == "boolean" then
 		if test == false then
