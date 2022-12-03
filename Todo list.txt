@@ -1,10 +1,14 @@
 TO DO LIST:
+
+Verify working state of everything on PC and mobile
+
+Neoloader:
 	
-	sanitize internal references to this_naming_style and notThisType and notthistype and notTHIStype and definitely not THIS_NAMING_STYLE (although screaming snake case IS an epic name)
+	All clean! (for now)
+
+reskin: 
 	
-	change modreg references to pluginreg in all INIs and neoloader itself
-	
-	reskin: show the currently active skin (path if not registered, name if registered)
+	show the currently active skin (path if not registered, name if registered)
 
 neomgr:
 	
@@ -12,7 +16,5 @@ neomgr:
 	
 	pluginlist
 		on apply, re-open dialog after reload maybe?
-	Logging
-		Make log refresh button and update on export
 	Settings
 		place settings inside scrollbox
