@@ -13,6 +13,7 @@ local diag_timer = Timer()
 local margin_setting = tonumber(lib.plugin_read_str("neomgr", "0", "data", "margin"))
 local auto_open = lib.plugin_read_str("neomgr", "0", "data", "OpenOnGameLaunch")
 local open_on_notif = lib.plugin_read_str("neomgr", "0", "data", "HandleNotifications")
+local default_state = gkini.ReadString("Neoloader", "rDefaultLoadState", "NO")
 
 margin_setting = gkini.ReadInt("neomgr", "margin", margin_setting)
 auto_open = gkini.ReadString("neomgr", "OpenOnGameLaunch", auto_open)
@@ -62,7 +63,6 @@ end
 
 local function createNotification(status)
 	
-	print("notif created")
 	local valid_status = {
 		--[[
 		EXAMPLE = {
@@ -138,7 +138,7 @@ local function createNotification(status)
 end
 
 RegisterEvent(function() 
-	print("triggered; last: " .. lastNotif .. "; open_ " .. open_on_notif .. "; auto_ " .. auto_open)
+	--print("triggered; last: " .. lastNotif .. "; open_ " .. open_on_notif .. "; auto_ " .. auto_open)
 	ready = true
 	if lastNotif ~= "" then
 		if open_on_notif == "YES" then
@@ -368,7 +368,9 @@ function public.open()
 		end
 		
 		function row_display.width_resize()
+			local x_limit = math.floor(gkinterface.GetXResolution()/5)
 			for i=1, 5 do
+				--apply new element width to all entries
 				row_elements[i]:map()
 				if tonumber(row_elements[i].size:match("(%d+)x")) > elem_width[i] then
 					elem_width[i] = tonumber(row_elements[i].size:match("(%d+)x"))
@@ -376,14 +378,16 @@ function public.open()
 					row_elements[i].size = tostring(elem_width[i])
 				end
 				
+				--limit max width to 1/5th screen size
+				if tonumber(row_elements[i].size:match("(%d+)x")) > x_limit then
+					row_elements[i].size = tostring(x_limit)
+					elem_width[i] = x_limit
+				end
+				
+				--update row data
 				if i > 1 and i < 5 then
 					row_elements[i].title = row_data[i]
 				end
-			end
-			local x_limit = math.floor(gkinterface.GetXResolution()/5)
-			if tonumber(row_elements[1].size:match("(%d+)x")) > x_limit then
-				row_elements[1].size = tostring(x_limit)
-				elem_width[1] = x_limit
 			end
 		end
 		
@@ -510,6 +514,17 @@ function public.open()
 		mgr_list_select.value = lookup_mgr[gstate.manager]
 	end
 	
+	local neo_default_state = iup.list {
+		value = 2,
+		dropdown = "YES",
+		[1] = "YES",
+		[2] = "NO",
+	}
+	
+	if default_state == "YES" then
+		neo_default_state.value = 1
+	end
+	
 	local nmgr_toggle_open_notif = iup.list {
 		value = 2,
 		dropdown = "YES",
@@ -537,6 +552,10 @@ function public.open()
 	local setting_edit_root = iup.frame {
 		iup.vbox {
 			gap = 6,
+			iup.label {
+				title = "Neoloader general settings:",
+				font = Font.H3,
+			},
 			iup.hbox {
 				iup.label {
 					title = "Neoloader Management Interface: ",
@@ -551,11 +570,23 @@ function public.open()
 				iup.fill { },
 				if_list_select,
 			},
-			--Neoloader settings
-			iup.fill {
-				size = "%8",
+			iup.hbox {
+				iup.label {
+					title = "Default load state for new plugins",
+				},
+				iup.fill { },
+				neo_default_state,
 			},
 			--neomgr settings
+			iup.stationsubframe {
+				iup.hbox {
+					iup.fill { },
+				},
+			},
+			iup.label {
+				title = "neomgr settings: ",
+				font = Font.H3,
+			},
 			iup.hbox {
 				iup.label {
 					title = "Open neomgr when the game starts",
@@ -570,9 +601,12 @@ function public.open()
 				iup.fill { },
 				nmgr_toggle_open_notif,
 			},
-			iup.fill {
-				size = "%8",
+			iup.stationsubframe {
+				iup.hbox {
+					iup.fill { },
+				},
 			},
+			iup.fill { },
 			iup.hbox {
 				iup.fill { },
 				iup.button {
@@ -581,8 +615,10 @@ function public.open()
 						gkini.WriteString("Neoloader", "if", next_if)
 						gkini.WriteString("Neoloader", "mgr", next_mgr)
 						
+						local def_val = neo_default_state.value == "1" and "YES" or "NO"
 						local open_val = nmgr_toggle_open_start.value == "1" and "YES" or "NO"
 						local notif_val = nmgr_toggle_open_notif.value == "1" and "YES" or "NO"
+						gkini.WriteString("Neoloader", "rDefaultLoadState", def_val)
 						gkini.WriteString("neomgr", "OpenOnGameLaunch", open_val)
 						gkini.WriteString("neomgr", "HandleNotifications", notif_val)
 						
@@ -590,7 +626,11 @@ function public.open()
 					end,
 				},
 			},
-			iup.fill { },
+			iup.stationsubframe {
+				iup.hbox {
+					iup.fill { },
+				},
+			},
 			iup.frame {
 				iup.vbox {
 					iup.multiline {
@@ -649,7 +689,7 @@ function public.open()
 			},
 			iup.hbox {
 				iup.button {
-					title = "pluginlist",
+					title = "Plugin List",
 					action = function()
 						tabs_container.value = display_list_root
 					end,

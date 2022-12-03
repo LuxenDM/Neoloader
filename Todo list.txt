@@ -1,23 +1,18 @@
 TO DO LIST:
 	
-	uninstall marks all plugins in the registry loadstate as off
-		(implemented, make sure this works)
-	
 	sanitize internal references to this_naming_style and notThisType and notthistype and notTHIStype and definitely not THIS_NAMING_STYLE (although screaming snake case IS an epic name)
+	
+	change modreg references to pluginreg in all INIs and neoloader itself
+	
+	reskin: show the currently active skin (path if not registered, name if registered)
 
 neomgr:
-
+	
+	move the neomgr access button in the OptionsDialog when angularUI is not active
+	
 	pluginlist
-		set max width on public name
-		enable/disable all mods
+		on apply, re-open dialog after reload maybe?
 	Logging
 		Make log refresh button and update on export
 	Settings
 		place settings inside scrollbox
-		
-		Neoloader settings
-			Default Load State=<dropdown NO|YES> //user changes if new plugins are auto-loaded next game launch
-				users will likely just set this to "YES", but the default state is "NO" to encourage inspecting plugins (at minimum on a surface level, of what appears in the neomgr interface) before using them.
-			Echo Neoloader system messages=<checkbox> //true, messages are also printed in addition to logged
-
-			switch other options to using the dropdown system instead of a toggle
