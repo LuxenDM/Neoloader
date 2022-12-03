@@ -430,31 +430,48 @@ function public.open()
 	
 	--Do log-viewer panel
 	
-	local string_log = ""
-	
-	for _, v in ipairs(gstate.log) do
-		string_log = string_log .. v .. "\n"
-	end
-	
 	local log_view = iup.multiline {
-		value = string_log,
+		value = "",
 		readonly = "YES",
 		expand = "YES",
 	}
 	
+	local function update_log_view()
+		local new_log = ""
+		for _, v in ipairs(lib.get_gstate().log) do
+			new_log = new_log .. v .. "\n"
+		end
+		log_view.value = new_log
+	end
+	update_log_view()
 	
 	local log_view_root = iup.vbox {
 		log_view,
-		iup.button {
-			title = "Export",
-			action = function()
-				if GetPlayerName() ~= nil then
-					SaveSystemNotes(5000, gstate.log)
-					lib.log_error("The log was saved to <vo>/settings/" .. GetPlayerName() .. "/system5000notes.txt")
-				else
-					lib.log_error("The log cannot be exported to a systemnotes file if you are not logged in!")
-				end
-			end,
+		iup.stationsubframe {
+			iup.hbox {
+				iup.fill { },
+			},
+		},
+		iup.hbox {
+			iup.fill { },
+			iup.button {
+				title = "Refresh Log",
+				action = function()
+					update_log_view()
+				end,
+			},
+			iup.button {
+				title = "Export",
+				action = function()
+					if GetPlayerName() ~= nil then
+						SaveSystemNotes(5000, gstate.log)
+						lib.log_error("The log was saved to <vo>/settings/" .. GetPlayerName() .. "/system5000notes.txt")
+						update_log_view()
+					else
+						lib.log_error("The log cannot be exported to a systemnotes file if you are not logged in!")
+					end
+				end,
+			},
 		},
 	}
 	
