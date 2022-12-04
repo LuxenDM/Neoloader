@@ -464,7 +464,8 @@ function public.open()
 				title = "Export",
 				action = function()
 					if GetPlayerName() ~= nil then
-						SaveSystemNotes(5000, gstate.log)
+						update_log_view()
+						SaveSystemNotes(log_view.value, 5000)
 						lib.log_error("The log was saved to <vo>/settings/" .. GetPlayerName() .. "/system5000notes.txt")
 						update_log_view()
 					else
