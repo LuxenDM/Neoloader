@@ -48,7 +48,31 @@ function public.mgr_key(new_key)
 	key = new_key
 end
 
-
+local valid_status = {
+	--[[
+	EXAMPLE = {
+		[1] = "Message to display",
+		[2] = bool "Is a timeout expected?"
+			true: window self-hides after 5 seconds
+	}
+	]]--
+	NEW_REGISTRY = {
+		[1] = "A new plugin has been registered; open the Neoloader manager to configure your plugins!",
+		[2] = true,
+	},
+	PLUGIN_FAILURE = {
+		[1] = "Neoloader failed to load a plugin! You can view the Neoloader status log in your manager.",
+		[2] = false,
+	},
+	ROOT_FAILURE = {
+		[1] = "No dependent-less plugins were set to be loaded, so Neoloader had no plugins to load. Open the Neoloader manager to configure your plugins.",
+		[2] = true,
+	},
+	SUCCESS = {
+		[1] = "Neoloader finished successfully! To configure your plugins, open the Neoloader manager.",
+		[2] = true,
+	},
+}
 
 
 
@@ -63,31 +87,7 @@ end
 
 local function createNotification(status)
 	
-	local valid_status = {
-		--[[
-		EXAMPLE = {
-			[1] = "Message to display",
-			[2] = bool "Is a timeout expected?"
-				true: window self-hides after 5 seconds
-		}
-		]]--
-		NEW_REGISTRY = {
-			[1] = "A new plugin has been registered; open the Neoloader manager to configure your plugins!",
-			[2] = true,
-		},
-		PLUGIN_FAILURE = {
-			[1] = "Neoloader failed to load a plugin! You can view the Neoloader status log in your manager.",
-			[2] = false,
-		},
-		ROOT_FAILURE = {
-			[1] = "No dependent-less plugins were set to be loaded, so Neoloader had no plugins to load. Open the Neoloader manager to configure your plugins.",
-			[2] = true,
-		},
-		SUCCESS = {
-			[1] = "Neoloader finished successfully! To configure your plugins, open the Neoloader manager.",
-			[2] = true,
-		},
-	}
+	
 	local visibleMsg = "The Neoloader manager has a notification..."
 	local doTimeout = true
 	
@@ -131,9 +131,6 @@ local function createNotification(status)
 	
 	diag_timer:SetTimeout(10000, function()
 		diag:hide()
-		if not PlayerInStation() and IsConnected() then
-			ShowDialog(HUD.dlg)
-		end
 	end)
 end
 
@@ -142,7 +139,15 @@ RegisterEvent(function()
 	ready = true
 	if lastNotif ~= "" then
 		if open_on_notif == "YES" then
-			createNotification(lastNotif)
+			if not PlayerInStation() and IsConnected() then
+				createNotification(lastNotif)
+			else
+				if valid_status[lastNotif] then
+					print(valid_status[lastNotif].1)
+				else
+					print("neomgr caught an unhandled notification...")
+				end
+			end
 		end
 	end
 	if auto_open == "YES" then
@@ -153,10 +158,18 @@ end, "PLUGINS_LOADED")
 function public.notif(status)
 	if ready == false then
 		lastNotif = status
-		console_print("Not ready to show notifications")
+		--console_print("Not ready to show notifications")
 	else
 		if open_on_notif == "YES" then
-			createNotification(status)
+			if not PlayerInStation() and IsConnected() then
+				createNotification(lastNotif)
+			else
+				if valid_status[lastNotif] then
+					print(valid_status[lastNotif].1)
+				else
+					print("neomgr caught an unhandled notification...")
+				end
+			end
 		end
 	end
 end
@@ -716,6 +729,7 @@ function public.open()
 					action = function(self)
 						iup.GetDialog(self):hide()
 						if not PlayerInStation() and IsConnected() then
+							HideAllDialogs()
 							ShowDialog(HUD.dlg)
 						end
 					end,
