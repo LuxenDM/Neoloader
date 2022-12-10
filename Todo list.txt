@@ -12,8 +12,6 @@ reskin:
 
 neomgr:
 	
-	move the neomgr access button in the OptionsDialog when angularUI is not active
-	
 	pluginlist
 		on apply, re-open dialog after reload maybe?
 	Settings

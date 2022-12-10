@@ -765,7 +765,13 @@ if lib.is_ready("MultiUI", 1) then
 else
 	if lib.get_gstate().manager == "neomgr" then
 		if OptionsDialog then
-			iup.Append(OptionsDialog, iup.frame {option_frame} )
+			if gkini.ReadString("Vendetta", "usenewui", "1") == "1" then
+				iup.Append(OptionsDialog, iup.frame {option_frame} )
+			elseif gkini.ReadString("Vendetta", "usenewui", "0") == "0" then
+				if OptionsDialog[1] and OptionsDialog[1][1] and OptionsDialog[1][1][1] then
+					iup.Append(OptionsDialog[1][1][1], iup.frame {option_frame} )
+				end
+			end
 		else
 			console_print("OptionsDialog not ready")
 		end
