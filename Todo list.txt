@@ -14,5 +14,3 @@ neomgr:
 	
 	pluginlist
 		on apply, re-open dialog after reload maybe?
-	Settings
-		place settings inside scrollbox

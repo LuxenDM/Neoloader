@@ -567,110 +567,126 @@ function public.open()
 	
 	
 	
-	local setting_edit_root = iup.frame {
-		iup.vbox {
-			gap = 6,
-			iup.label {
-				title = "Neoloader general settings:",
-				font = Font.H3,
-			},
-			iup.hbox {
-				iup.label {
-					title = "Neoloader Management Interface: ",
+	local setting_edit_root = create_scrollbox(iup.frame {
+		iup.hbox {
+			iup.vbox {
+				iup.fill {
+					--spacer tries to force other fill elements below to work inside scrollbox
+					--we could just get the scrollbox vertical size, but it isn't mapped yet, and that's
+					--too much work for this placeholder managemenr interface anyways
+					size = tostring(gkinterface.GetYResolution()*(8.4/10))
 				},
-				iup.fill { },
-				mgr_list_select,
 			},
-			iup.hbox {
-				iup.label {
-					title = "Custom Interface Manager: ",
-				},
-				iup.fill { },
-				if_list_select,
-			},
-			iup.hbox {
-				iup.label {
-					title = "Default load state for new plugins",
-				},
-				iup.fill { },
-				neo_default_state,
-			},
-			--neomgr settings
-			iup.stationsubframe {
+			iup.vbox {
+				gap = 6,
 				iup.hbox {
-					iup.fill { },
-				},
-			},
-			iup.label {
-				title = "neomgr settings: ",
-				font = Font.H3,
-			},
-			iup.hbox {
-				iup.label {
-					title = "Open neomgr when the game starts",
-				},
-				iup.fill { },
-				nmgr_toggle_open_start,
-			},
-			iup.hbox {
-				iup.label {
-					title = "Show notifications",
-				},
-				iup.fill { },
-				nmgr_toggle_open_notif,
-			},
-			iup.stationsubframe {
-				iup.hbox {
-					iup.fill { },
-				},
-			},
-			iup.fill { },
-			iup.hbox {
-				iup.fill { },
-				iup.button {
-					title = "Apply Changes",
-					action = function()
-						gkini.WriteString("Neoloader", "if", next_if)
-						gkini.WriteString("Neoloader", "mgr", next_mgr)
-						
-						local def_val = neo_default_state.value == "1" and "YES" or "NO"
-						local open_val = nmgr_toggle_open_start.value == "1" and "YES" or "NO"
-						local notif_val = nmgr_toggle_open_notif.value == "1" and "YES" or "NO"
-						gkini.WriteString("Neoloader", "rDefaultLoadState", def_val)
-						gkini.WriteString("neomgr", "OpenOnGameLaunch", open_val)
-						gkini.WriteString("neomgr", "HandleNotifications", notif_val)
-						
-						ReloadInterface()
-					end,
-				},
-			},
-			iup.stationsubframe {
-				iup.hbox {
-					iup.fill { },
-				},
-			},
-			iup.frame {
-				iup.vbox {
-					iup.multiline {
-						readonly = "YES",
-						expand = "HORIZONTAL",
-						size = HUDSize(0.7, 0.1),
-						value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader.",
+					iup.fill {
+						--another forcing spacer
+						size = tostring(gkinterface.GetXResolution()*(9.6/10))
 					},
+				},
+				iup.label {
+					title = "Neoloader general settings:",
+					font = Font.H3,
+				},
+				iup.hbox {
+					iup.label {
+						title = "Neoloader Management Interface: ",
+					},
+					iup.fill { },
+					mgr_list_select,
+				},
+				iup.hbox {
+					iup.label {
+						title = "Custom Interface Manager: ",
+					},
+					iup.fill { },
+					if_list_select,
+				},
+				iup.hbox {
+					iup.label {
+						title = "Default load state for new plugins",
+					},
+					iup.fill { },
+					neo_default_state,
+				},
+				--neomgr settings
+				iup.stationsubframe {
 					iup.hbox {
 						iup.fill { },
-						iup.button {
-							title = "Uninstall",
-							fgcolor = "255 80 80",
-							action = function()
-								lib.uninstall(key)
-							end,
+					},
+				},
+				iup.label {
+					title = "neomgr settings: ",
+					font = Font.H3,
+				},
+				iup.hbox {
+					iup.label {
+						title = "Open neomgr when the game starts",
+					},
+					iup.fill { },
+					nmgr_toggle_open_start,
+				},
+				iup.hbox {
+					iup.label {
+						title = "Show notifications",
+					},
+					iup.fill { },
+					nmgr_toggle_open_notif,
+				},
+				iup.stationsubframe {
+					iup.hbox {
+						iup.fill { },
+					},
+				},
+				iup.fill { },
+				iup.hbox {
+					iup.fill { },
+					iup.button {
+						title = "Apply Changes",
+						action = function()
+							gkini.WriteString("Neoloader", "if", next_if)
+							gkini.WriteString("Neoloader", "mgr", next_mgr)
+							
+							local def_val = neo_default_state.value == "1" and "YES" or "NO"
+							local open_val = nmgr_toggle_open_start.value == "1" and "YES" or "NO"
+							local notif_val = nmgr_toggle_open_notif.value == "1" and "YES" or "NO"
+							gkini.WriteString("Neoloader", "rDefaultLoadState", def_val)
+							gkini.WriteString("neomgr", "OpenOnGameLaunch", open_val)
+							gkini.WriteString("neomgr", "HandleNotifications", notif_val)
+							
+							ReloadInterface()
+						end,
+					},
+				},
+				iup.stationsubframe {
+					iup.hbox {
+						iup.fill { },
+					},
+				},
+				iup.frame {
+					iup.vbox {
+						iup.multiline {
+							readonly = "YES",
+							expand = "HORIZONTAL",
+							size = HUDSize(0.7, 0.1),
+							value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader.",
+						},
+						iup.hbox {
+							iup.fill { },
+							iup.button {
+								title = "Uninstall",
+								fgcolor = "255 80 80",
+								action = function()
+									lib.uninstall(key)
+								end,
+							},
 						},
 					},
 				},
 			},
 		},
-	}
+	})
 	
 	--do window creation panel
 	
