@@ -4,13 +4,44 @@ Verify working state of everything on PC and mobile
 
 Neoloader:
 	
-	All clean! (for now)
-
+	Investigate plugins remaining loaded after Reload()
+		tied to not being garbage collected because they still are referenced in the /command table?
+			potential fix: look for any registered commands that aren't base-game and not in the alias table, and unbind them
+				--requires lib.reload
+			secondary fix: if primary doesn't work, have plugins that can submit a list of commands to be manually unbound
+				--still requires lib.reload
+				--non-conforming plugins can't be guaranteed unloaded
+	
+	Implement new event PRE_RELOAD_INTERFACE and API lib.reload
+		when the user runs /reload, or lib.reload is executed, this event is triggered first.
+		At event end, Neoloader runs its own final cleanup, before triggering the proper ReloadInterface()
+	
+	Request startup settings on new install via blocking dialog
+	
+Neoloader-Documentation/Utilities:
+	
+	create new example of a manageable plugin that only executes at normal load time (instead of activation by Neoloader)
+		useful for multi-file plugins that want to be cross compatible, or for automated converters
+	
+	Create auto-patcher application; make old plugins minimally compatible with the Neoloader system
+		future idea, web platform that can do this via browser?
+	
 reskin: 
 	
 	show the currently active skin (path if not registered, name if registered)
+	
+	fix recovery from menu locking flight input
 
 neomgr:
 	
 	pluginlist
 		on apply, re-open dialog after reload maybe?
+	
+	figure better way to hide all and show HUD
+	
+	don't show notifications when in flight, instead just print()
+		fixes notifications showing under HUD
+	
+	try low resolutions, different scaled interfaces, and more aspect ratios
+		scaling probably affects the most. 
+		at this point, is it better to try and manually set width/height of spacers after map and refresh?
