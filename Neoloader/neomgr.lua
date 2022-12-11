@@ -139,11 +139,11 @@ RegisterEvent(function()
 	ready = true
 	if lastNotif ~= "" then
 		if open_on_notif == "YES" then
-			if not PlayerInStation() and IsConnected() then
+			if PlayerInStation() or not IsConnected() then
 				createNotification(lastNotif)
 			else
 				if valid_status[lastNotif] then
-					print(valid_status[lastNotif].1)
+					print(valid_status[lastNotif][1])
 				else
 					print("neomgr caught an unhandled notification...")
 				end
@@ -161,11 +161,11 @@ function public.notif(status)
 		--console_print("Not ready to show notifications")
 	else
 		if open_on_notif == "YES" then
-			if not PlayerInStation() and IsConnected() then
+			if PlayerInStation() or not IsConnected() then
 				createNotification(lastNotif)
 			else
 				if valid_status[lastNotif] then
-					print(valid_status[lastNotif].1)
+					print(valid_status[lastNotif][1])
 				else
 					print("neomgr caught an unhandled notification...")
 				end
