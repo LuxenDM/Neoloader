@@ -433,7 +433,7 @@ function public.open()
 					for k, v in ipairs(display_list_container_objs) do
 						v.apply()
 					end
-					ReloadInterface()
+					lib.reload()
 				end,
 			},
 		},

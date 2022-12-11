@@ -766,6 +766,19 @@ function lib.open_if_config()
 	lib.execute(neo.current_if, lib.get_latest(neo.current_if), "open")
 end
 
+function lib.reload()
+	if neo.statelock then
+		ProcessEvent("PRE_RELOAD_INTERFACE")
+		local commands = GetRegisteredUserCommands()
+		for i=1, #commands do
+			UnregisterUserCommand(commands[i])
+		end
+		
+		--delay till after START/PLUGINS_LOADED events
+		ReloadInterface()
+	end
+end
+
 lib.log_error("[timestat] library environment setup: " .. tostring(timestat_advance()))
 
 
@@ -1129,7 +1142,7 @@ if lib.is_ready(neo.current_mgr) == true then
 end
 
 RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
-RegisterUserCommand("reload", ReloadInterface) --replace with more wrapping
+RegisterUserCommand("reload", lib.reload)
 
 RegisterEvent(function()
 	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step))
