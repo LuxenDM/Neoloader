@@ -781,7 +781,7 @@ function lib.reload()
 		local commands = GetRegisteredUserCommands()
 		for i=1, #commands do
 			if not expected[commands[i]] then
-				RegisterUserCommand(commands[i], function() end) --cannot unregister, only register empty functions instead
+				RegisterUserCommand(commands[i], function() print("Error") end) --cannot unregister, only register empty functions instead
 				--reminder to self: IsDeclared() is also a valid function
 			end
 		end
@@ -791,18 +791,32 @@ function lib.reload()
 	end
 end
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+do
+	--try to clear bad behavior from fake-registering commands after a reload
+	local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
+	local commands = GetRegisteredUserCommands()
+	for i=1, #commands do
+		if not expected[commands[i]] then
+			RegisterUserCommand(commands[i], function() print("Error: no such command") end)
+		end
+	end
+end
+
 lib.log_error("[timestat] library environment setup: " .. tostring(timestat_advance()))
-
-
-
-
-
-
-
-
-
-
-
 
 --init process
 --you need to recheck your notes for changes both above and below this
@@ -1153,10 +1167,9 @@ if lib.is_ready(neo.current_mgr) == true then
 	lib.execute(neo.current_mgr, cur_version, "mgr_key", mgr_key)
 end
 
-RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
-RegisterUserCommand("reload", lib.reload)
-
 RegisterEvent(function()
+	RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
+	RegisterUserCommand("reload", lib.reload)
 	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step))
 end, "PLUGINS_LOADED")
 
