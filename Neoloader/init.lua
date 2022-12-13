@@ -250,7 +250,7 @@ function lib.build_ini(iniFilePointer)
 		
 		local author = getstr("modreg", "author", "", ifp)
 		local website = getstr("modreg", "website", "", ifp)
-		local pluginpath = getstr("modreg", "path", "plugins/Neoloader/empty_plugin.lua", ifp)
+		local pluginpath = getstr("modreg", "path", "", ifp)
 		local pluginfolderpath = string.sub(iniFilePointer, 1, string.find(iniFilePointer, "/[^/]*$"))
 		
 		local dependents = {}
@@ -489,17 +489,25 @@ function lib.activate_plugin(id, version, verify_key)
 		if lib.is_exist(id, version) then
 			if lib.resolve_dep_table(neo.plugin_registry[plugin_id].plugin_dependencies) then
 				if lib.get_state(id, version).load == "YES" then
-					local status, err = lib.resolve_file(neo.plugin_registry[plugin_id].plugin_path, nil, neo.plugin_registry[plugin_id].plugin_folder)
-					if status then
+					if neo.plugin_registry[plugin_id].plugin_path ~= "" then
+						local status, err = lib.resolve_file(neo.plugin_registry[plugin_id].plugin_path, nil, neo.plugin_registry[plugin_id].plugin_folder)
+						if status then
+							neo.plugin_registry[plugin_id].complete = true
+							lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!")
+							if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
+								lib.check_queue()
+							end
+						else
+							lib.log_error("Failed to activate " .. plugin_id)
+							lib.notify("PLUGIN_FAILURE", id, version)
+							return false, "failed to activate, " .. err or "?"
+						end
+					else
 						neo.plugin_registry[plugin_id].complete = true
-						lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!")
+						lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)")
 						if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
 							lib.check_queue()
 						end
-					else
-						lib.log_error("Failed to activate " .. plugin_id)
-						lib.notify("PLUGIN_FAILURE", id, version)
-						return false, "failed to activate, " .. err or "?"
 					end
 				else
 					lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!")
