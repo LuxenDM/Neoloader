@@ -769,9 +769,13 @@ end
 function lib.reload()
 	if neo.statelock then
 		ProcessEvent("PRE_RELOAD_INTERFACE")
+		local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
 		local commands = GetRegisteredUserCommands()
 		for i=1, #commands do
-			UnregisterUserCommand(commands[i])
+			if not expected[commands[i]] then
+				RegisterUserCommand(commands[i], function() end) --cannot unregister, only register empty functions instead
+				--reminder to self: IsDeclared() is also a valid function
+			end
 		end
 		
 		--delay till after START/PLUGINS_LOADED events
