@@ -580,126 +580,202 @@ function public.open()
 	
 	
 	
-	local setting_edit_root = create_scrollbox(iup.frame {
-		iup.hbox {
-			iup.vbox {
-				iup.fill {
-					--spacer tries to force other fill elements below to work inside scrollbox
-					--we could just get the scrollbox vertical size, but it isn't mapped yet, and that's
-					--too much work for this placeholder managemenr interface anyways
-					size = tostring(gkinterface.GetYResolution()*(8.4/10))
-				},
-			},
-			iup.vbox {
-				gap = 6,
-				iup.hbox {
-					iup.fill {
-						--another forcing spacer
-						size = tostring(gkinterface.GetXResolution()*(9.6/10))
-					},
-				},
-				iup.label {
-					title = "Neoloader general settings:",
-					font = Font.H3,
-				},
-				iup.hbox {
-					iup.label {
-						title = "Neoloader Management Interface: ",
-					},
-					iup.fill { },
-					mgr_list_select,
-				},
-				iup.hbox {
-					iup.label {
-						title = "Custom Interface Manager: ",
-					},
-					iup.fill { },
-					if_list_select,
-				},
-				iup.hbox {
-					iup.label {
-						title = "Default load state for new plugins",
-					},
-					iup.fill { },
-					neo_default_state,
-				},
-				--neomgr settings
-				iup.stationsubframe {
-					iup.hbox {
-						iup.fill { },
-					},
-				},
-				iup.label {
-					title = "neomgr settings: ",
-					font = Font.H3,
-				},
-				iup.hbox {
-					iup.label {
-						title = "Open neomgr when the game starts",
-					},
-					iup.fill { },
-					nmgr_toggle_open_start,
-				},
-				iup.hbox {
-					iup.label {
-						title = "Show notifications",
-					},
-					iup.fill { },
-					nmgr_toggle_open_notif,
-				},
-				iup.stationsubframe {
-					iup.hbox {
-						iup.fill { },
-					},
-				},
+	local setting_edit_main_panel = iup.stationsublist {
+		{},
+		control = "YES", 
+		expand = "YES",
+	}
+	
+	local function new_list_seperator()
+		return iup.stationsubframe {
+			iup.hbox {
 				iup.fill { },
+			},
+		}
+	end
+	
+	local setting_row_title_general = iup.hbox {
+		iup.label {
+			title = "Neoloader general settings:",
+			font = Font.H3,
+		},
+	}
+	
+	local setting_row_controller = iup.hbox {
+		iup.label {
+			title = "Neoloader Management Controller: ",
+		},
+		iup.fill { },
+		mgr_list_select,
+	}
+	
+	local setting_row_ifmgr = iup.hbox {
+		iup.label {
+			title = "Custom Interface Manager: ",
+		},
+		iup.fill { },
+		if_list_select,
+	}
+	
+	local setting_row_newstate = iup.hbox {
+		iup.label {
+			title = "Default load state for new plugins",
+		},
+		iup.fill { },
+		neo_default_state,
+	}
+	
+	local setting_row_title_neomgr = iup.hbox {
+		iup.label {
+			title = "neomgr settings: ",
+			font = Font.H3,
+		},
+	}
+	
+	local setting_row_open_diag = iup.hbox {
+		iup.label {
+			title = "Open neomgr when the game starts",
+		},
+		iup.fill { },
+		nmgr_toggle_open_start,
+	}
+	
+	local setting_row_open_notif = iup.hbox {
+		iup.label {
+			title = "Show notifications",
+		},
+		iup.fill { },
+		nmgr_toggle_open_notif,
+	}
+	
+	local setting_apply = iup.vbox {
+		iup.fill {
+			size = gkinterface.GetYResolution() * (1/4)
+		},
+		iup.hbox {
+			iup.fill { },
+			iup.button {
+				title = "Apply Changes",
+				action = function()
+					gkini.WriteString("Neoloader", "if", next_if)
+					gkini.WriteString("Neoloader", "mgr", next_mgr)
+					
+					local def_val = neo_default_state.value == "1" and "YES" or "NO"
+					local open_val = nmgr_toggle_open_start.value == "1" and "YES" or "NO"
+					local notif_val = nmgr_toggle_open_notif.value == "1" and "YES" or "NO"
+					gkini.WriteString("Neoloader", "rDefaultLoadState", def_val)
+					gkini.WriteString("neomgr", "OpenOnGameLaunch", open_val)
+					gkini.WriteString("neomgr", "HandleNotifications", notif_val)
+					
+					ReloadInterface()
+				end,
+			},
+		},
+	}
+	
+	local setting_uninstaller_msg = iup.multiline {
+		readonly = "YES",
+		expand = "HORIZONTAL",
+		size = HUDSize(0.7, 0.2),
+		value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader.",
+	}
+	
+	local setting_uninstaller = iup.hbox {
+		iup.frame {
+			iup.vbox {
+				setting_uninstaller_msg,
 				iup.hbox {
 					iup.fill { },
 					iup.button {
-						title = "Apply Changes",
+						title = "Uninstall",
+						fgcolor = "255 80 80",
 						action = function()
-							gkini.WriteString("Neoloader", "if", next_if)
-							gkini.WriteString("Neoloader", "mgr", next_mgr)
-							
-							local def_val = neo_default_state.value == "1" and "YES" or "NO"
-							local open_val = nmgr_toggle_open_start.value == "1" and "YES" or "NO"
-							local notif_val = nmgr_toggle_open_notif.value == "1" and "YES" or "NO"
-							gkini.WriteString("Neoloader", "rDefaultLoadState", def_val)
-							gkini.WriteString("neomgr", "OpenOnGameLaunch", open_val)
-							gkini.WriteString("neomgr", "HandleNotifications", notif_val)
-							
-							ReloadInterface()
+							lib.uninstall(key)
 						end,
-					},
-				},
-				iup.stationsubframe {
-					iup.hbox {
-						iup.fill { },
-					},
-				},
-				iup.frame {
-					iup.vbox {
-						iup.multiline {
-							readonly = "YES",
-							expand = "HORIZONTAL",
-							size = HUDSize(0.7, 0.1),
-							value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader.",
-						},
-						iup.hbox {
-							iup.fill { },
-							iup.button {
-								title = "Uninstall",
-								fgcolor = "255 80 80",
-								action = function()
-									lib.uninstall(key)
-								end,
-							},
-						},
 					},
 				},
 			},
 		},
-	})
+	}
+	
+	local setting_element_container = {
+		setting_row_title_general,
+		setting_row_controller,
+		setting_row_ifmgr,
+		setting_row_newstate,
+		new_list_seperator(),
+		
+		setting_row_title_neomgr,
+		setting_row_open_diag,
+		setting_row_open_notif,
+		new_list_seperator(),
+		
+		setting_apply,
+		new_list_seperator(),
+		
+		setting_uninstaller,
+	}
+	
+	local update_setting_width
+	
+	do
+		local setting_element_modified_list = {}
+		local maxsize = gkinterface.GetXResolution() * (1) --adjust?
+		local objmax
+		local colorflag = true
+		for index, element in ipairs(setting_element_container) do
+			local object = create_subdlg(element)
+			if colorflag == true then
+				colorflag = false
+				object.bgcolor = "127 127 127"
+			else
+				colorflag = true
+				object.bgcolor = "135 135 135"
+			end
+			object:map()
+			
+			local size = tonumber(string.match(object.size, "%d+"))
+			if (not objmax) or size > objmax then
+				objmax = size
+			end
+			
+			setting_element_modified_list[index] = object
+		end
+		
+		if objmax > maxsize then
+			objmax = maxsize
+		end
+		
+		for index, object in ipairs(setting_element_modified_list) do
+			local nums = {}
+			for value in string.gmatch(object.size, "%d+") do
+				table.insert(nums, value)
+			end
+			--local xwid = nums[1] discard
+			local yhit = nums[2]
+			object.size = tostring(objmax) .. "x" .. tostring(yhit)
+			iup.Append(setting_edit_main_panel, object)
+		end
+		
+		setting_edit_main_panel[1] = 1
+		
+		function update_setting_width(new_width)
+			for index, diag in ipairs(setting_element_modified_list) do
+				local nums = {}
+				for value in string.gmatch(diag.size, "%d+") do
+					table.insert(nums, value)
+				end
+				--local xwid = nums[1] discard
+				local yhit = nums[2]
+				diag.size = tostring(new_width) .. "x" .. tostring(yhit)
+			end
+			iup.Refresh(setting_edit_main_panel)
+		end
+	end
+	
+	local setting_edit_root = iup.vbox {
+		setting_edit_main_panel,
+	}
 	
 	--do window creation panel
 	
@@ -771,6 +847,9 @@ function public.open()
 	}
 	
 	diag:map()
+	
+	local scrolling_disp_width = tonumber(string.match(setting_edit_main_panel.size, "%d+"))
+	update_setting_width(scrolling_disp_width - Font.H1)
 	
 	neo_diag = diag
 	
