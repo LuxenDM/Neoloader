@@ -4,7 +4,7 @@ Verify working state of everything on PC and mobile
 
 Neoloader:
 	
-	Request startup settings on new install via blocking dialog
+	All done?
 	
 Neoloader-Documentation/Utilities:
 	
@@ -15,19 +15,7 @@ Neoloader-Documentation/Utilities:
 		future idea, web platform that can do this via browser?
 	
 	Add lib.reload to documentation
-	
-reskin: 
-	
-	show the currently active skin (path if not registered, name if registered)
-	
-	fix recovery from menu locking flight input
 
 neomgr:
 	
-	pluginlist
-		on apply, re-open dialog after reload maybe?
-	
-	try low resolutions, different scaled interfaces, and more aspect ratios
-		scaling probably affects the most. 
-		at this point, is it better to try and manually set width/height of spacers after map and refresh?
-			defaultUI style: put all elements in a list, map them, compare each to see max size. then, apply new size, append to iup.list. map list.
+	All done?
