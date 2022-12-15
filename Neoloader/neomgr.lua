@@ -740,24 +740,14 @@ function public.open()
 			end
 			
 			setting_element_modified_list[index] = object
-		end
-		
-		if objmax > maxsize then
-			objmax = maxsize
-		end
-		
-		for index, object in ipairs(setting_element_modified_list) do
-			local nums = {}
-			for value in string.gmatch(object.size, "%d+") do
-				table.insert(nums, value)
-			end
-			--local xwid = nums[1] discard
-			local yhit = nums[2]
-			object.size = tostring(objmax) .. "x" .. tostring(yhit)
 			iup.Append(setting_edit_main_panel, object)
 		end
 		
 		setting_edit_main_panel[1] = 1
+		
+		if objmax > maxsize then
+			objmax = maxsize
+		end
 		
 		function update_setting_width(new_width)
 			for index, diag in ipairs(setting_element_modified_list) do
