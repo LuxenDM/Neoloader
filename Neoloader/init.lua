@@ -81,7 +81,7 @@ local neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	patch = 1,
+	patch = 2, --lib.reload added
 	
 	pathlock = false,
 	statelock = false,
