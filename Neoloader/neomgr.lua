@@ -117,7 +117,8 @@ local function createNotification(status)
 					title = "Hide Notification",
 					action = function(self)
 						iup.GetDialog(self):hide()
-						if not PlayerInStation() and IsConnected() then
+						if not PlayerInStation() and IsConnected()  and HUD and HUD.dlg then
+							HideAllDialogs()
 							ShowDialog(HUD.dlg)
 						end
 					end,
@@ -794,7 +795,7 @@ function public.open()
 					title = "Close",
 					action = function(self)
 						iup.GetDialog(self):hide()
-						if not PlayerInStation() and IsConnected() then
+						if not PlayerInStation() and IsConnected() and HUD and HUD.dlg then
 							HideAllDialogs()
 							ShowDialog(HUD.dlg)
 						end
