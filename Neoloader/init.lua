@@ -610,7 +610,7 @@ function lib.execute(name, version, func, ...)
 	local retval
 	version = tostring(version or 0)
 	if version == "0" then
-		version = lib.get_latest(name)
+		version = lib.get_latest(name) or "0"
 	end
 	if lib.is_exist(name, version) then
 		if lib.get_state(name, version).complete == true then
