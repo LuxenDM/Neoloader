@@ -193,18 +193,21 @@ function lib.resolve_file(file, path, path2)
 		path2 .. file, 				--try the plugin's registration path
 		"../../" .. path2 .. file, 	--try the plugin's registration path with preset backtracking?
 	} do
-		lib.log_error("Attempting to resolve " .. filepath)
-		local status, err = loadfile(filepath)
-		if status then	--success!
-			file_loaded = status
-			path_to_file = filepath
-			break
-		else			--error!
-			if not string.find(err, "No such file or directory") then
-				lib.log_error("unable to resolve file: " .. tostring(err or "error"))
-				return false, err or "error"
+		if gksys.IsExist(filepath) or neo.pathlock == true then --pathlock bypasses invalid detections
+			lib.log_error("Attempting to resolve " .. filepath)
+			local status, err = loadfile(filepath)
+			if status then	--success!
+				file_loaded = status
+				path_to_file = filepath
+				break
+			else			--error! fyi, file has to be retested for "existance"; gksys.IsExist() doesn't count for preset paths, hence the pathlock bypass
+				if not string.find(err, "No such file or directory") then
+					lib.log_error("unable to resolve file: " .. tostring(err or "error"))
+					return false, err or "error"
+				end
 			end
-			lib.log_error("result: " .. err)
+		else
+			--file doesn't exist
 		end
 	end
 	
@@ -225,6 +228,10 @@ function lib.build_ini(iniFilePointer)
 	local ifp = iniFilePointer --less typing
 	local getstr = gkini.ReadString2
 	local getint = gkini.ReadInt2
+	
+	if err_han( gksys.IsExist(ifp) == false, "lib.build_ini failed; file does not exist at " .. ifp ) then
+		return false, "no file"
+	end
 	
 	local id = getstr("modreg", "id", "null", ifp)
 	if err_han( id == "null" , "lib.build_ini couldn't find a valid INI file with the path " .. iniFilePointer ) then
@@ -804,6 +811,34 @@ end
 
 
 
+lib.log_error("[timestat] library environment setup: " .. tostring(timestat_advance()))
+
+do
+	--check that all files exist
+	for i, filepath in ipairs {
+		"config_override.ini",
+		"env.lua",
+		"init.lua",
+		"init.lua.version",
+		"main.lua",
+		"setup.lua",
+		"zcom.lua",
+	} do
+		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
+			lib.log_error("Core file missing from Neoloader: " .. filepath)
+			neo.error_flag = true
+		end
+	end
+	
+	for i, filepath in ipairs {
+		"neomgr.ini",
+		"neomgr.lua",
+	} do
+		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
+			lib.log_error("Optional file missing from Neoloader: " .. filepath)
+		end
+	end
+end
 
 do
 	--try to clear bad behavior from fake-registering commands after a reload
@@ -816,7 +851,15 @@ do
 	end
 end
 
-lib.log_error("[timestat] library environment setup: " .. tostring(timestat_advance()))
+
+
+
+
+
+
+
+
+
 
 --init process
 --you need to recheck your notes for changes both above and below this
