@@ -604,6 +604,8 @@ function lib.get_gstate()
 	data.mgr_list = neo.list_mgr
 	data.if_list = neo.list_if
 	
+	data.newstate = neo.defaultLoadState
+	
 	return data
 end
 
