@@ -81,7 +81,7 @@ local neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	patch = 2, --lib.reload added
+	patch = 3, --lib.reload added
 	
 	pathlock = false,
 	statelock = false,
@@ -494,7 +494,7 @@ function lib.activate_plugin(id, version, verify_key)
 	--libraries should be set as loaded/disabled by the user themselves and resolved ONLY by the user using a plugin manager or during Init
 	if verify_key == mgr_key then
 		if lib.is_exist(id, version) then
-			if lib.resolve_dep_table(neo.plugin_registry[plugin_id].plugin_dependencies) then
+			if lib.resolve_dep_table(neo.plugin_registry[plugin_id].plugin_dependencies) or neo.plugin_registry[plugin_id].flag == "FORCE" then
 				if lib.get_state(id, version).load == "YES" then
 					if neo.plugin_registry[plugin_id].plugin_path ~= "" then
 						local status, err = lib.resolve_file(neo.plugin_registry[plugin_id].plugin_path, nil, neo.plugin_registry[plugin_id].plugin_folder)
@@ -515,6 +515,9 @@ function lib.activate_plugin(id, version, verify_key)
 						if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
 							lib.check_queue()
 						end
+					end
+					if neo.plugin_registry[plugin_id].flag == "AUTH" then
+						lib.execute(id, version, "mgr_key", mgr_key)
 					end
 				else
 					lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!")
@@ -800,6 +803,79 @@ function lib.reload()
 	end
 end
 
+function lib.request_auth(name, callback)
+	if err_han( type(callback) ~= "function", "lib.request_auth requires a callback function to recieve the auth key!") then
+		return false
+	end
+	
+	name = tostring(name or "<untitled>")
+	
+	local grant = iup.button {
+		title = "Give Access",
+		action = function(self)
+			callback(mgr_key)
+			iup.GetDialog(self):destroy()
+			if not PlayerInStation() and IsConnected()  and HUD and HUD.dlg then
+				HideAllDialogs()
+				ShowDialog(HUD.dlg)
+			end
+		end,
+	}
+	
+	local deny = iup.button {
+		title = "Deny Access",
+		action = function(self)
+			iup.GetDialog(self):destroy()
+			if not PlayerInStation() and IsConnected()  and HUD and HUD.dlg then
+				HideAllDialogs()
+				ShowDialog(HUD.dlg)
+			end
+		end,
+	}
+	
+	local auth_diag = iup.dialog {
+		topmost = "YES",
+		fullscreen = "YES",
+		bgcolor = "0 0 0 50 *",
+		default_esc = deny,
+		iup.vbox {
+			iup.fill { },
+			iup.hbox {
+				iup.fill { },
+				iup.frame {
+					iup.vbox {
+						alignment = "ACENTER",
+						iup.fill {
+							size = "%2",
+						},
+						iup.label {
+							title = name .. " is requesting management permission over Neoloader!",
+						},
+						iup.fill {
+							size = "%2",
+						},
+						iup.hbox {
+							grant,
+							iup.fill {
+								size = "%4",
+							},
+							deny,
+						},
+						iup.fill {
+							size = "%2",
+						},
+					},
+				},
+				iup.fill { },
+			},
+			iup.fill { },
+		},
+	}
+	
+	auth_diag:map()
+	auth_diag:show()
+	
+end
 
 
 
@@ -813,7 +889,15 @@ end
 
 
 
-lib.log_error("[timestat] library environment setup: " .. tostring(timestat_advance()))
+
+
+
+
+
+
+
+
+lib.log_error("[timestat] library function setup: " .. tostring(timestat_advance()))
 
 do
 	--check that all files exist
@@ -853,9 +937,9 @@ do
 	end
 end
 
+mgr_key = lib.generate_key()
 
-
-
+lib.log_error("[timestat] library extra environment setup: " .. tostring(timestat_advance()))
 
 
 
@@ -921,6 +1005,7 @@ else
 		["YES"] = true, --allow a plugin to load
 		["NO"] = false, --disallow a plugin to load
 		["FORCE"] = true, --force a plugin to load regardless of its dependencies; this is for development use only, not intended for regular users to use! not yet implemented...
+		["AUTH"] = true, --This plugin should be given the management key when it loads
 	}
 	
 	timestat_step = gk_get_microsecond()
@@ -961,14 +1046,18 @@ else
 	
 	for k, v in ipairs(registered_plugins) do
 		local id, version = silent_register(v)
+		--yarr
 		if id == false then
 			--this plugin failed for some reason
 			lib.log_error("failed to create registry entry for " .. v)
 		else
-			--the plugin built and was added; now we see if it needs to be loaded
+			--the plugin's INI built and was added; now we see if it needs to be loaded
 			local loadstate = gkreadstr("Neo-pluginstate", id .. "." .. version, "NO")
 			if valid_states[loadstate] == true then
 				table.insert(validqueue, {id, version})
+				if loadstate ~= "YES" then
+					neo.plugin_registry[id .. "." .. version].flag = loadstate
+				end
 			end
 		end
 	end
@@ -999,7 +1088,7 @@ else
 		If you use MultiUI with barebones or another lightweight UI, this is *drastically* faster
 	]]--
 	
-	local valid_copy = copy_table(validqueue)
+	local valid_copy = copy_table(validqueue) --i should check if this is neccesary in the future
 	local lib_table = {}
 	local plugin_table = {}
 	local these_are_loaded = {
@@ -1048,6 +1137,11 @@ else
 		local obj = neo.plugin_registry[v[1] .. "." .. v[2]]
 		if (obj.plugin_dependencies == nil) or (#obj.plugin_dependencies == 0) then --no dependencies; this is a root object
 			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to processing queue")
+				table.insert(plugin_table, v)
+				these_are_loaded[v[1] .. "." .. v[2]] = true
+				table.insert(these_are_loaded[1], true)
+		elseif obj.flag == "FORCE" then
+			lib.log_error("Skipping dependencies for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; development FORCE-load encountered")
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
@@ -1208,7 +1302,6 @@ if lib.is_ready(neo.current_mgr) == true then
 	
 	RegisterUserCommand("neo", function() lib.execute(neo.current_mgr, cur_version, "open") end)
 	
-	mgr_key = lib.generate_key()
 	lib.execute(neo.current_mgr, cur_version, "mgr_key", mgr_key)
 end
 
