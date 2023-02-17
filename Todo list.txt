@@ -4,18 +4,20 @@ Verify working state of everything on PC and mobile
 
 Neoloader:
 	
-	All done?
+	clean up init process
+	
+	verify AUTH/FORCE options for init work as intended
 	
 Neoloader-Documentation/Utilities:
-	
-	create new example of a manageable plugin that only executes at normal load time (instead of activation by Neoloader)
-		useful for multi-file plugins that want to be cross compatible, or for automated converters
 	
 	Create auto-patcher application; make old plugins minimally compatible with the Neoloader system
 		future idea, web platform that can do this via browser?
 	
-	Add lib.reload to documentation
+	Add documentation for
+		lib.reload
+		lib.request_auth
+		FORCE and AUTH load options
 
 neomgr:
 	
-	All done?
+	fix plugin management panel to scale correctly
