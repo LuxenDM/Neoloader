@@ -4,7 +4,7 @@ This is the bundled management UI for the Neoloader engine. It uses Neoloader's 
 This is only meant to provide minimal functionality, and should be replaced with a more featured manager by the user, but is not entirely neccesary for the functionality of Neoloader.
 ]]--
 
-local key = 0
+local key
 local lastNotif = ""
 local ready = false
 local public = {}
@@ -45,7 +45,9 @@ functions needed:
 ]]--
 
 function public.mgr_key(new_key)
-	key = new_key
+	if not key then
+		key = new_key
+	end
 end
 
 local valid_status = {
@@ -688,7 +690,7 @@ function public.open()
 				iup.hbox {
 					iup.fill { },
 					iup.button {
-						title = "Uninstall",
+						title = "UNINSTALL",
 						fgcolor = "255 80 80",
 						action = function()
 							lib.uninstall(key)
