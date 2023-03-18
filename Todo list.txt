@@ -8,6 +8,13 @@ Neoloader:
 	
 	verify AUTH/FORCE options for init work as intended
 	
+	figure out a better way to give the manager the auth key
+	
+	verify error logging during init is saved to relevant plugin
+	
+	version handler for semantic and decimal sorting
+		https://semver.org
+	
 Neoloader-Documentation/Utilities:
 	
 	Create auto-patcher application; make old plugins minimally compatible with the Neoloader system
@@ -21,3 +28,5 @@ Neoloader-Documentation/Utilities:
 neomgr:
 	
 	fix plugin management panel to scale correctly
+	
+	show error reason summary
