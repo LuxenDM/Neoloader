@@ -1,5 +1,10 @@
 NEO_EXISTS = true --use lib/lib[0] instead if you are testing for a generic library management implementation
 
+local plog
+if gksys.IsExist("plugins/preload.lua") then
+	plog = dofile("plugins/preload.lua")
+end
+
 if type(print) ~= "function" then
 	print = console_print
 end
@@ -81,7 +86,8 @@ local neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	patch = 3, --lib.reload added
+	minor = 4, --preload and proper Semantic versioning support
+	patch = 0,
 	
 	pathlock = false,
 	statelock = false,
@@ -124,6 +130,9 @@ local converted_dep_tables = {} --storage for build results of compiled ini file
 function lib.log_error(...)
 	if neo.echoLogging == "YES" then
 		console_print(...)
+	end
+	if plog then
+		plog(...)
 	end
 	table.insert(neo.log, ...)
 end
@@ -740,6 +749,8 @@ function lib.uninstall(verify_key)
 		declare("NEO_UNINSTALL", true)
 		declare("NEO_UNINS_KEY", mgr_key)
 		lib.resolve_file("plugins/Neoloader/setup.lua")
+	else
+		lib.log_error("A mod attempted uninstallation of Neoloader, but the verification key did not match!")
 	end
 end
 
@@ -836,7 +847,7 @@ function lib.request_auth(name, callback)
 	local auth_diag = iup.dialog {
 		topmost = "YES",
 		fullscreen = "YES",
-		bgcolor = "0 0 0 50 *",
+		bgcolor = "0 0 0 200 *",
 		default_esc = deny,
 		iup.vbox {
 			iup.fill { },
@@ -938,6 +949,10 @@ do
 end
 
 mgr_key = lib.generate_key()
+
+
+RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
+RegisterUserCommand("reload", lib.reload)
 
 lib.log_error("[timestat] library extra environment setup: " .. tostring(timestat_advance()))
 
@@ -1306,8 +1321,6 @@ if lib.is_ready(neo.current_mgr) == true then
 end
 
 RegisterEvent(function()
-	RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
-	RegisterUserCommand("reload", lib.reload)
 	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step))
 end, "PLUGINS_LOADED")
 
