@@ -87,6 +87,7 @@ return {
 	["unignoretarget"] = true,
 	["updatestation"] = true,
 	["verbose"] = true,
+	["ViewToggle"] = true,
 	["voicechattoggle"] = true,
 	["voicegroup"] = true,
 	["voicemute"] = true,
