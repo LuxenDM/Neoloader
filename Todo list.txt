@@ -6,14 +6,7 @@ Neoloader:
 	
 	clean up init process
 	
-	verify AUTH/FORCE options for init work as intended
-	
-	figure out a better way to give the manager the auth key
-	
 	verify error logging during init is saved to relevant plugin
-	
-	version handler for semantic and decimal sorting
-		https://semver.org
 	
 Neoloader-Documentation/Utilities:
 	
@@ -24,9 +17,12 @@ Neoloader-Documentation/Utilities:
 		lib.reload
 		lib.request_auth
 		FORCE and AUTH load options
+		lib.get_whole_ver
+		lib.compare_sem_ver
 
 neomgr:
 	
 	fix plugin management panel to scale correctly
 	
 	show error reason summary
+		where?

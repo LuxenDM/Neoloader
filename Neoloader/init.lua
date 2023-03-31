@@ -495,13 +495,20 @@ function lib.activate_plugin(id, version, verify_key)
 	if version == "0" then
 		version = lib.get_latest(id)
 	end
+	
+	local valid_load_states = {
+		["YES"]		= true,
+		["FORCE"]	= true,
+		["AUTH"]	= true,
+	}
+	
 	local plugin_id = id .. "." .. version
 	--this is called to start a plugin that is already registered. it SHOULD NOT be used without the user's knowledge.
 	--libraries should be set as loaded/disabled by the user themselves and resolved ONLY by the user using a plugin manager or during Init
 	if verify_key == mgr_key then
 		if lib.is_exist(id, version) then
 			if lib.resolve_dep_table(neo.plugin_registry[plugin_id].plugin_dependencies) or neo.plugin_registry[plugin_id].flag == "FORCE" then
-				if lib.get_state(id, version).load == "YES" then
+				if valid_load_states[lib.get_state(id, version).load] then
 					if neo.plugin_registry[plugin_id].plugin_path ~= "" then
 						local status, err = lib.resolve_file(neo.plugin_registry[plugin_id].plugin_path, nil, neo.plugin_registry[plugin_id].plugin_folder)
 						if status then
