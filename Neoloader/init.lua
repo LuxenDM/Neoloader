@@ -888,8 +888,54 @@ function lib.request_auth(name, callback)
 	
 end
 
+function lib.get_whole_ver(semverstr)
+    if err_han(type(semverstr) ~= "string", "lib.get_whole_ver() expects a string input!") then
+		return false
+	end
 
+    local ver_str, meta_str = semverstr:match("^([^%+%-]+)(.*)$")
+    local ver_table = {}
+    for num in ver_str:gmatch("%d+") do
+        table.insert(ver_table, tonumber(num))
+    end
 
+    if #ver_table < 1 then
+        ver_table = {0}
+    end
+
+    local ret_table = {ver_table, meta_str}
+    return ret_table
+end
+
+function lib.compare_sem_ver(obj1, obj2)
+    local ot1 = lib.get_whole_ver(obj1)
+    local ot2 = lib.get_whole_ver(obj2)
+
+    if not ot1 or not ot2 then
+        return false
+    end
+
+    local ver1, meta1 = ot1[1], ot1[2]
+    local ver2, meta2 = ot2[1], ot2[2]
+
+    for i = 1, math.max(#ver1, #ver2) do
+        local n1 = ver1[i] or 0
+		local n2 = ver2[i] or 0
+		if n1 ~= n2 then
+            return n1 < n2 and -1 or 1
+        end
+    end
+
+    if meta1 == "" and meta2 == "" then
+        return 0
+    elseif meta1 == "" then
+        return -1
+    elseif meta2 == "" then
+        return 1
+    else
+        return meta1 < meta2 and -1 or 1
+    end
+end
 
 
 
