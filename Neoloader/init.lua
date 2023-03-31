@@ -261,7 +261,7 @@ function lib.build_ini(iniFilePointer)
 		if converted_dep_tables[id .. pluginversion] then
 			--this plugin has already been registered
 			--pass along existing table and exit
-			return converted_dep_tables
+			return converted_dep_tables[id .. pluginversion]
 		end
 		
 		local author = getstr("modreg", "author", "", ifp)
@@ -352,9 +352,11 @@ local function silent_register(iniFilePointer)
 		if not neo.plugin_registry[id] then
 			--this is the first version of an already-registered plugin
 			neo.plugin_registry[id] = {
-				latest = data.plugin_version,
+				latest = "0",
 			}
-		else
+		end
+		
+		if data.load == "YES" then
 			--version is already in system; check versions and mark the newer one.
 			local balance = lib.compare_sem_ver(neo.plugin_registry[id].latest, data.plugin_version)
 			if balance < 0 then
@@ -384,6 +386,7 @@ function lib.register(iniFilePointer)
 	if err_han( iniTable == false, "lib.register could not build the INI file at " .. iniFilePointer .. "; error recieved was " .. tostring(errid) ) then
 		return false, errid
 	end
+	lib.log_error("Attempting to register data for " .. id .. " v" .. iniTable.plugin_version)
 	if lib.is_exist(id, iniTable.plugin_version) then
 		--don't use the error handler here; duplicate registration can be attempted and shouldn't trigger errors for the user
 		--	multiple plugins may use the same sharable library
@@ -407,21 +410,7 @@ function lib.register(iniFilePointer)
 			--reminder: we do not run plugins on registry; they must be user-activated or during the loading process only.
 		end
 		
-		if not neo.plugin_registry[id] then
-			--this is the first version of an already-registered plugin
-			neo.plugin_registry[id] = {
-				latest = data.plugin_version,
-			}
-		else
-			--version is already in system; check versions and mark the newer one.
-			local balance = lib.compare_sem_ver(neo.plugin_registry[id].latest, data.plugin_version)
-			if balance < 0 then
-				--this is a new version of an already-registered plugin
-				neo.plugin_registry[id].latest = data.plugin_version
-			else
-				--this is either the same version (which shouldn't be possible) or is older than the already registered one
-			end
-		end
+		--don't mark plugin version as latest, it won't be "activated"
 		
 		lib.log_error("Added NEW " .. id .. " v" .. (data.plugin_version or "0") .. " to Neoloader's plugin registry and to config.ini at position " .. tostring(neo.number_plugins_registered))
 		lib.notify("NEW_REGISTRY", id, data.plugin_version or "0")
@@ -522,7 +511,7 @@ function lib.activate_plugin(id, version, verify_key)
 								lib.check_queue()
 							end
 						else
-							lib.log_error("Failed to activate " .. plugin_id)
+							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF")
 							lib.notify("PLUGIN_FAILURE", id, version)
 							return false, "failed to activate, " .. err or "?"
 						end
