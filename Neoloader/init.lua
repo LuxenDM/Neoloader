@@ -65,7 +65,7 @@ end
 
 
 --This will be local when released
-local neo = {
+neo = {
 	version = {
 		[1] = 5,
 		[2] = 1,
@@ -354,11 +354,15 @@ local function silent_register(iniFilePointer)
 			neo.plugin_registry[id] = {
 				latest = data.plugin_version,
 			}
-		elseif neo.plugin_registry[id].latest < data.plugin_version then
-			--this is a new version of an already-registered plugin
-			neo.plugin_registry[id].latest = data.plugin_version
 		else
-			--this is an older version of an already-registered plugin
+			--version is already in system; check versions and mark the newer one.
+			local balance = lib.compare_sem_ver(neo.plugin_registry[id].latest, data.plugin_version)
+			if balance < 0 then
+				--this is a new version of an already-registered plugin
+				neo.plugin_registry[id].latest = data.plugin_version
+			else
+				--this is either the same version (which shouldn't be possible) or is older than the already registered one
+			end
 		end
 		
 		lib.log_error("Added " .. id .. " v" .. data.plugin_version .. " to Neoloader's plugin registry!")
@@ -408,11 +412,15 @@ function lib.register(iniFilePointer)
 			neo.plugin_registry[id] = {
 				latest = data.plugin_version,
 			}
-		elseif neo.plugin_registry[id].latest or "0" < data.plugin_version or "0" then
-			--this is a new version of an already-registered plugin
-			neo.plugin_registry[id].latest = data.plugin_version
 		else
-			--this is an older version of an already-registered plugin
+			--version is already in system; check versions and mark the newer one.
+			local balance = lib.compare_sem_ver(neo.plugin_registry[id].latest, data.plugin_version)
+			if balance < 0 then
+				--this is a new version of an already-registered plugin
+				neo.plugin_registry[id].latest = data.plugin_version
+			else
+				--this is either the same version (which shouldn't be possible) or is older than the already registered one
+			end
 		end
 		
 		lib.log_error("Added NEW " .. id .. " v" .. (data.plugin_version or "0") .. " to Neoloader's plugin registry and to config.ini at position " .. tostring(neo.number_plugins_registered))
@@ -1210,7 +1218,7 @@ else
 			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; breaking into dependency tree...")
 			for k2, v2 in ipairs(obj.plugin_dependencies) do
 				
-				if v2.version == "" then --handle soft dependencies (not-version-specific); discouraged but doable
+				if v2.version == "" or v2.version == "0" then --handle soft dependencies (not-version-specific); discouraged but doable
 				--future idea: allow version ranges?
 					v2.version = lib.get_latest(v2.name)
 				end
@@ -1273,6 +1281,8 @@ else
 			end
 			return status
 		end
+		
+		lib.log_error("Dependency tree is: " .. spickle(dependency_tree or {0}))
 		
 		local function loadpass()
 			local new_change = false
