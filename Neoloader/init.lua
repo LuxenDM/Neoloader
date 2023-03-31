@@ -392,7 +392,7 @@ function lib.register(iniFilePointer)
 		--	multiple plugins may use the same sharable library
 		--duplicate plugin entry in config.ini; we need to remove this plugin
 		--and mark the original with a triggered error
-		lib.log_error("(INIT) plugin registration failed: duplicate plugin!")
+		lib.log_error("	plugin registration failed: duplicate plugin!")
 		return false, "Duplicate of plugin exists"
 	else
 		table.insert(neo.plugin_container, {})
@@ -891,6 +891,9 @@ function lib.get_whole_ver(semverstr)
 	end
 
     local ver_str, meta_str = semverstr:match("^([^%+%-]+)(.*)$")
+	if not ver_str then
+		ver_str = ""
+	end
     local ver_table = {}
     for num in ver_str:gmatch("%d+") do
         table.insert(ver_table, tonumber(num))
@@ -1207,9 +1210,10 @@ else
 			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; breaking into dependency tree...")
 			for k2, v2 in ipairs(obj.plugin_dependencies) do
 				
+				lib.log_error("	requires " .. v2.name .. " v" .. v2.version)
 				if v2.version == "" or v2.version == "0" then --handle soft dependencies (not-version-specific); discouraged but doable
 				--future idea: allow version ranges?
-					v2.version = lib.get_latest(v2.name)
+					v2.version = lib.get_latest(v2.name) or "0"
 				end
 				
 				--split apart v2[name.version] dependencies and link (=this plugin's name.version) in dependency_tree
