@@ -10,9 +10,6 @@ Neoloader:
 	
 Neoloader-Documentation/Utilities:
 	
-	Create auto-patcher application; make old plugins minimally compatible with the Neoloader system
-		future idea, web platform that can do this via browser?
-	
 	Add documentation for
 		lib.reload
 		lib.request_auth

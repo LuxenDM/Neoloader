@@ -1,4 +1,4 @@
-Neoloader September Private Beta
+Neoloader September 2022 Private Beta
 	Initial private beta
 	
 	API version 3
@@ -11,13 +11,13 @@ Neoloader September Private Beta
 
 
 
-Neoloader November Private Beta
+Neoloader November 2022 Private Beta
 	
 	API changes:
 		API version 3
 		patch level 1
 		
-		NEW	lib.err_handle
+		NEW		lib.err_handle
 		NEW 	lib.get_path
 		NEW 	lib.open_config
 		NEW 	lib.open_if_config
@@ -96,3 +96,70 @@ Neoloader November Private Beta
 	neomgr changes
 		A plugin's public name now has a maximum visible length (1/5th of a user's screen)
 		
+
+
+
+
+
+
+
+
+Neoloader April 2023 Private Beta
+	
+	API Changes:
+		API Version 3
+		minor level 4
+		patch level 0
+		
+		NEW		lib.reload
+		NEW		lib.request_auth
+		NEW		lib.get_whole_ver
+		NEW		lib.compare_sem_ver
+		FIXES	lib.activate_plugin
+		FIXES	lib.err_handle
+		CHANGED	lib.get_gstate
+		CHANGED	lib.log_error
+		
+	41 total commits
+	
+	More error reporting
+		lib.activate_plugin returns proper messaging, for instance, as well as making logs.
+		
+	Adjusted setup process
+		Pilots can now choose to make new plugins loaded by default
+		Option available in neoloader's setup phase, and in neomgr
+		
+	Fixed several minor issues with neomgr and reworked options
+		update button for the log now works; log can be exported to syslog5000
+		Neoloader access button in options dialog now moves appropriately for pilots not using AngularUI
+		neomgr Options panel can scroll and fits screen better
+		Fixed loss of flight control if neomgr was accessed in-flight
+			could still be improved (check for Show/Hide/HideAllDialog valid)
+		
+	New reload function
+		Due to certain "ghost" command issues, Neoloader was triggering errors when ReloadInterface() was triggered. While the issue may have been fixed on the game's end, this reload function was intended to safely catch these errors. It will remain implemented, and the /reload command will point to this function. It will also prevent reloads from being 'triggered' before the "START" event, where they would erroneously be ignored.
+		
+	Some functionality for managing plugins that don't expect Neoloader's presence
+		Neoloader now has a brother utility, NeoPatcher, which can make (hopefully) ANY plugin manageable with the in-game interface! Changes were made to allow this through minimal patching; the actual code of a plugin won't have to change, just get rerouted through a check. See more in the documentation.
+		
+	Further improvements to Init
+		calling plugins with version 0 should reroute to the latest installed version. In some places this wasn't handled appropriately, and should be fixed
+		Any time a file is going to be accessed or expected, we now use gksys.IsExist to verify its... actually there. Who'da thunk?
+			Neoloader can now complain if its missing files.
+		
+	plugins can now see the default load state in lib.get_gstate
+	
+	Implemented FORCE and added the AUTH load state
+		FORCE load state will make a plugin in Neoloader launch even if dependencies aren't met. This should be used by plugin developers, not by end users.
+		AUTH, on the other hand, is used for plugins that may want to use 'restricted' functions in Neoloader. Instead of using lib.request_auth every time the client launches, using this load state will give the auth key when the plugin is loaded.
+		
+	Implemented new auth request method
+		before, only the management engine for Neoloader could use lib.activate_plugin and lib.uninstall. Now, any plugin can *request* the auth token through this function.
+		
+	A 'preload' file can now be used before Neoloader starts
+		This is intended to be used for plugin developers who may need to trigger custom code for whatever project they're working on.
+		lib.log_error will now send its output to the function this code returns, in case you're using some kind of custom logging system
+		
+	Neoloader now handles advanced version data
+		Instead of directly comparing version numbers, we can use lib.get_whole_ver to break a version string into a table of version and metadata, and then use lib.compare_sem_ver to decide which between two are likely the greater version.
+		While intended for Semantic Versioning, lib.compare_sem_ver can theoretically take a large number of version types. The only character that is restricted is the hyphen, which denotes the start of "metadata"
