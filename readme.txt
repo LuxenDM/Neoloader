@@ -39,7 +39,7 @@ Uninstallation due to bugs:
 ======================================================================================
 If you cannot launch the game due to bugs, delete the Neoloader folder from your plugin directory or use your preferred plugin manager. Next, open config.ini, and find the entry "if=plugins/Neoloader/init.lua". Delete this line, and save the file. If you want to clean all Neoloader data for a clean reinstallation, you should also delete the entire sections labeled [Neoloader], [Neo-registry], and [Neo-pluginstate].
 
-If the game STILL refuses to launch, another plugin may be the culprit, or config.ini may have corrupted data. Make a copy of config.ini before deleting it, and remove ALL of your plugins. If the game STILL cannot launch even like this, more in-depth investigation is warranted.
+If the game STILL refuses to launch, another plugin may be the culprit, or config.ini may have corrupted data. Make a copy of config.ini before deleting it, and remove ALL of your plugins. If the game STILL cannot launch even like this, more in-depth investigation is warranted, and reinstalling the game may be neccesary.
 
 
 
