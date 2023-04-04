@@ -11,11 +11,10 @@ Neoloader:
 Neoloader-Documentation/Utilities:
 	
 	Add documentation for
-		lib.reload
-		lib.request_auth
+		lib.get_minor
 		FORCE and AUTH load options
-		lib.get_whole_ver
-		lib.compare_sem_ver
+	
+	Add clarification on lib.get_gstate's version table
 
 neomgr:
 	

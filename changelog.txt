@@ -163,3 +163,33 @@ Neoloader April 2023 Private Beta
 	Neoloader now handles advanced version data
 		Instead of directly comparing version numbers, we can use lib.get_whole_ver to break a version string into a table of version and metadata, and then use lib.compare_sem_ver to decide which between two are likely the greater version.
 		While intended for Semantic Versioning, lib.compare_sem_ver can theoretically take a large number of version types. The only character that is restricted is the hyphen, which denotes the start of "metadata"
+	
+Neoloader April 2023 Public Beta
+	
+	Neoloader Changes:
+		major: 5
+		minor: 1
+		patch: 2
+		
+		CHANGED	Init
+		New config.ini [Neoloader] rPresortedList = "NO"
+	
+	API Changes:
+		API Version 3
+		minor level 5
+		patch level 0
+		
+		NEW		lib.get_minor
+		CHANGED	lib.get_gstate
+		CHANGED lib.register
+	
+	fixed LME versioning to use Semantic
+		Neoloader itself uses semantic versioning now; lib.get_minor replaces the old lib.get_patch, while lib.get_patch returns actual 'patch' value. lib.get_gstate will now return API/minor/patch levels
+	
+	Allow skipping of dependency sorting system
+		This is disabled by default and will be disabled when a new plugin is registered, but if the user has externally sorted their config.ini's registration order, they can disabled the sorting process to speed up launch times. This will only provide benefit to users with heavy plugin dependency trees.
+		
+		This CANNOT be turned on through the config override file
+	
+	Clarification on lib.get_gstate's "version" table:
+		This is not representative of the API for "Library Management Engines", but rather is a version specific to Neoloader, which implements the LME api. In effect, this value should be seen as inconsequential to any plugins designed for use of the LME structure. Hence why it is not synced with lib.get_API/minor/patch functions, and is a seperate value in lib.get_gstate.
