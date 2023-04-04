@@ -69,7 +69,8 @@ neo = {
 	version = {
 		[1] = 5,
 		[2] = 1,
-		[3] = "Private Beta Release",
+		[3] = 2,
+		[4] = "Beta",
 	},
 	notifications = {},
 	log = {},
@@ -86,7 +87,7 @@ neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	minor = 4, --preload and proper Semantic versioning support
+	minor = 5, --lib.get_minor
 	patch = 0,
 	
 	pathlock = false,
@@ -98,6 +99,7 @@ neo = {
 	echoLogging = gkreadstr("Neoloader", "rEchoLogging", "YES"),
 	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "NO"),
 	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "YES"),
+	listPresorted = gkini.ReadString("Neoloader", "rPresortedList", "NO"),
 	
 	number_plugins_registered = 0,
 	
@@ -386,6 +388,8 @@ function lib.register(iniFilePointer)
 	if err_han( iniTable == false, "lib.register could not build the INI file at " .. iniFilePointer .. "; error recieved was " .. tostring(errid) ) then
 		return false, errid
 	end
+	neo.listPresorted = "NO"
+	gkini.WriteString("Neoloader", "rPresortedList", "NO")
 	lib.log_error("Attempting to register data for " .. id .. " v" .. iniTable.plugin_version)
 	if lib.is_exist(id, iniTable.plugin_version) then
 		--don't use the error handler here; duplicate registration can be attempted and shouldn't trigger errors for the user
@@ -601,6 +605,9 @@ function lib.get_gstate()
 	data.statelock = neo.statelock
 	data.manager = neo.current_mgr
 	data.ifmgr = neo.current_if
+	data.major = neo.API
+	data.minor = neo.minor
+	data.patch = neo.patch
 	if not lib.is_exist(neo.current_if) then
 		data.ifmgr = "vo-if"
 	end
@@ -741,6 +748,10 @@ end
 
 function lib.get_API()
 	return neo.API
+end
+
+function lib.get_minor()
+	return neo.minor
 end
 
 function lib.get_patch()
@@ -1072,7 +1083,7 @@ else
 	local valid_states = {
 		["YES"] = true, --allow a plugin to load
 		["NO"] = false, --disallow a plugin to load
-		["FORCE"] = true, --force a plugin to load regardless of its dependencies; this is for development use only, not intended for regular users to use! not yet implemented...
+		["FORCE"] = true, --force a plugin to load regardless of its dependencies; this is for development use only, not intended for regular users to use!
 		["AUTH"] = true, --This plugin should be given the management key when it loads
 	}
 	
@@ -1201,6 +1212,10 @@ else
 		dofile("vo/if.lua")
 	end
 	
+	if neo.listPresorted == "YES" then
+		lib.log_error("WARNING! Config.ini claims to be presorted by an external application; dependency load ordering has been skipped!")
+	end
+	
 	for k, v in ipairs(valid_copy) do
 		local obj = neo.plugin_registry[v[1] .. "." .. v[2]]
 		if (obj.plugin_dependencies == nil) or (#obj.plugin_dependencies == 0) then --no dependencies; this is a root object
@@ -1210,6 +1225,11 @@ else
 				table.insert(these_are_loaded[1], true)
 		elseif obj.flag == "FORCE" then
 			lib.log_error("Skipping dependencies for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; development FORCE-load encountered")
+				table.insert(plugin_table, v)
+				these_are_loaded[v[1] .. "." .. v[2]] = true
+				table.insert(these_are_loaded[1], true)
+		elseif neo.listPresorted == "YES" then
+			lib.log_error("Skipped dependency check for " .. obj.plugin_id .. " v" .. obj.plugin_version)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
