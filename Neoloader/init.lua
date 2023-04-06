@@ -151,7 +151,7 @@ RegisterEvent(function() neo.pathlock = false neo.statelock = true end, "PLUGINS
 
 function lib.err_handle(test, log_msg)
 	if log_msg == nil and type(test) == 'string' then
-		console_print("debug: err_handle test is a string and log_msg is nil")
+		--debug: err_handle test is a string and log_msg is nil
 		log_msg = test
 		test = true
 	end
@@ -358,6 +358,9 @@ local function silent_register(iniFilePointer)
 			}
 		end
 		
+		table.insert(neo.plugin_registry[id], data.plugin_version)
+		table.sort(neo.plugin_registry[id])
+		
 		if data.load == "YES" then
 			--version is already in system; check versions and mark the newer one.
 			local balance = lib.compare_sem_ver(neo.plugin_registry[id].latest, data.plugin_version)
@@ -461,6 +464,10 @@ function lib.is_exist(name, version)
 	else
 		if version == "0" then
 			version = neo.plugin_registry[name].latest --can't use lib.get_latest: lib.get_latest uses this function, causes an infinite loop
+			if version == "0" then
+				--no active versions, get latest inactive version registered
+				version = neo.plugin_registry[name][#neo.plugin_registry[name]]
+			end
 		end
 		if type(neo.plugin_registry[name .. "." .. version]) ~= "table" then
 			return false, "specific version doesn't exist"
@@ -557,7 +564,11 @@ end
 function lib.get_latest(id)
 	id = tostring(id or "null")
 	if lib.is_exist(id) then
-		return neo.plugin_registry[id].latest
+		local version = tostring(neo.plugin_registry[id].latest)
+		if version == "0" then
+			version = neo.plugin_registry[id][#neo.plugin_registry[id]]
+		end
+		return version
 	end
 end
 
@@ -583,6 +594,7 @@ function lib.get_state(name, version)
 			load_position = ref.load_position or 0,
 			errors = ref.errors or {},
 			latest = lib.get_latest(name) or "-1",
+			versions = neo.plugin_registry[name] or {"???"},
 			
 			plugin_id = name,
 			plugin_version = version,
@@ -691,7 +703,6 @@ function lib.set_class(name, version, ftable)
 	end
 	
 	if type(ftable) ~= "table" then
-		console_print("We were given an ftable of type " .. type(ftable) .. " :" .. tostring(ftable))
 		ftable = {ftable or 0} --is the or_0 neccesary here?
 	end
 	if lib.is_exist(name, version) then

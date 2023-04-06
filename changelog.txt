@@ -172,7 +172,8 @@ Neoloader April 2023 Public Beta
 		patch: 2
 		
 		CHANGED	Init
-		New config.ini [Neoloader] rPresortedList = "NO"
+		CHANGED	internal plugin registry
+		NEW		config.ini [Neoloader] rPresortedList = "NO"
 	
 	API Changes:
 		API Version 3
@@ -181,7 +182,10 @@ Neoloader April 2023 Public Beta
 		
 		NEW		lib.get_minor
 		CHANGED	lib.get_gstate
+		CHANGED	lib.get_state
+		CHANGED	lib.get_latest
 		CHANGED lib.register
+		FIXED	lib.is_exist
 	
 	fixed LME versioning to use Semantic
 		Neoloader itself uses semantic versioning now; lib.get_minor replaces the old lib.get_patch, while lib.get_patch returns actual 'patch' value. lib.get_gstate will now return API/minor/patch levels
@@ -190,6 +194,14 @@ Neoloader April 2023 Public Beta
 		This is disabled by default and will be disabled when a new plugin is registered, but if the user has externally sorted their config.ini's registration order, they can disabled the sorting process to speed up launch times. This will only provide benefit to users with heavy plugin dependency trees.
 		
 		This CANNOT be turned on through the config override file
+		
+	lib.get_state now returns table of all versions
+		some of the fixes to lib.is_exist neccesitated storage of all registered versions in an easy to access location; this is now available in get_state as well.
+		
+	fix of lib.is_exist
+		last update introduced an error with lib.is_exist if no version was *loaded*; this has been fixed and is_exist will now return true instead of false in this instance again. lib.get_latest will also return the last registered version if no version has ever been loaded.
+		
+	Removed several debugging console_print functions that were no longer needed
 	
-	Clarification on lib.get_gstate's "version" table:
+	+++Clarification on lib.get_gstate's "version" table:
 		This is not representative of the API for "Library Management Engines", but rather is a version specific to Neoloader, which implements the LME api. In effect, this value should be seen as inconsequential to any plugins designed for use of the LME structure. Hence why it is not synced with lib.get_API/minor/patch functions, and is a seperate value in lib.get_gstate.
