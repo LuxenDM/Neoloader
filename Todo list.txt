@@ -10,11 +10,14 @@ Neoloader:
 	
 Neoloader-Documentation/Utilities:
 	
-	Add documentation for
-		lib.get_minor
-		FORCE and AUTH load options
+	update examples folder
 	
-	Add clarification on lib.get_gstate's version table
+	Make a narrower Neoloader banner
+	
+	update "design" page and INI design page
+		Now supports "compatibility" registrations with no third file
+	
+	Convert all images to save potential bandwidth
 
 neomgr:
 	
