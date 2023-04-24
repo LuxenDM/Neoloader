@@ -130,13 +130,14 @@ local waiting_for_dependencies = {} --storage for functions with unfulfilled dep
 local converted_dep_tables = {} --storage for build results of compiled ini files
 
 function lib.log_error(...)
+	val = tostring(...)
 	if neo.echoLogging == "YES" then
-		console_print(...)
+		console_print(val)
 	end
 	if plog then
-		plog(...)
+		plog(val)
 	end
-	table.insert(neo.log, ...)
+	table.insert(neo.log, val)
 end
 
 RegisterEvent(function() neo.pathlock = true end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
