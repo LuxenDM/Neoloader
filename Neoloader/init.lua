@@ -68,8 +68,8 @@ end
 neo = {
 	version = {
 		[1] = 5,
-		[2] = 1,
-		[3] = 2,
+		[2] = 2,
+		[3] = 0,
 		[4] = "Beta",
 	},
 	notifications = {},
