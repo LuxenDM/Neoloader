@@ -1,32 +1,27 @@
 --[[
-This file contains the base "environment" that is normally set up by the default interface.
+This file contains the base "environment" of functions and variables that is normally set up by the default interface.
 These functions and variables are often required for certain functions or plugins to run, so we need to create them ourselves in the meantime.
 Most of these were ripped from Draugath's BarebonesIF interface replacer - thanks, Draugath!
-
-If you want to prevent the iup_templates from loading, add "rLoadTemplates=NO" to config.ini or config_overrides.ini under [Neoloader].
-DO NOT do this unless you are using a custom interface that provides its own templates.
-
->>>>Not yet implemented, probably wont because it might be problematic to support.
 ]]--
 
 
 
 
-function HUDSize(x, y)
+HUDSize = HUDSize or function(x, y)
 	local xres = gkinterface.GetXResolution()
 	local yres = gkinterface.GetYResolution()
 	return string.format("%sx%s", x and math.floor(x * xres) or "", y and "%"..math.floor(y * 100) or "")
 end
 
-function GetFriendlyStatus()
+GetFriendlyStatus = GetFriendlyStatus or function()
 	return 1
 end
 
-function HideDialog(dlg) 
+HideDialog = HideDialog or function(dlg) 
 	dlg:hide() 
 end
 
-function ShowDialog(dlg, x, y)
+ShowDialog = ShowDialog or function(dlg, x, y)
 	if x then
 		dlg:showxy(x, y) 
 	else 
@@ -34,11 +29,11 @@ function ShowDialog(dlg, x, y)
 	end 
 end
 
-function PopupDialog(dlg, x, y) --depreciated!
+PopupDialog = PopupDialog or function(dlg, x, y) --depreciated!
 	ShowDialog(dlg, x, y)
 end
 
-function CreditAndCrystal(in1, in2, in3, in4, in5)
+CreditAndCrystal = CreditAndCrystal or function(in1, in2, in3, in4, in5)
 	print(type(in1) .. ">" .. tostring(in1))
 	print(type(in2) .. ">" .. tostring(in2))
 	print(type(in3) .. ">" .. tostring(in3))
@@ -47,7 +42,7 @@ function CreditAndCrystal(in1, in2, in3, in4, in5)
 	return 1
 end
 
-function OpenAlarm(title, text, buttontext)
+OpenAlarm = OpenAlarm or function(title, text, buttontext)
 	PopupDialog(iup.dialog{
 		iup.vbox{
 			iup.label{title = title.."\n"..text},
@@ -67,24 +62,24 @@ function OpenAlarm(title, text, buttontext)
 	}, iup.CENTER, iup.CENTER)
 end
 
-IF_DIR = 'vo/'
-IMAGE_DIR = gkini.ReadString("Vendetta", "skin", "images/station/")
-tabseltextcolor = "1 241 255"
-tabunseltextcolor = "0 185 199"
+IF_DIR = IF_DIR or 'vo/'
+IMAGE_DIR = IMAGE_DIR or gkini.ReadString("Vendetta", "skin", "images/station/")
+tabseltextcolor = tabseltextcolor or "1 241 255"
+tabunseltextcolor = tabunseltextcolor or "0 185 199"
 
-defaultedittextcolor = "255 255 255"
-listboxbordercolor = "0 0 0"
-listboxfocusedbordercolor = "0 0 0"
-buttondisabledcolor = "127 127 127"
-textlistboxselcolor = "127 127 127"
-textlistboxunfocusedselcolor = "0 0 0"
-UseCondensedUI = "false"
-defaulttextcolor = "255 255 255"
+defaultedittextcolor = defaultedittextcolor or "255 255 255"
+listboxbordercolor = listboxbordercolor or "0 0 0"
+listboxfocusedbordercolor = listboxfocusedbordercolor or "0 0 0"
+buttondisabledcolor = buttondisabledcolor or "127 127 127"
+textlistboxselcolor = textlistboxselcolor or "127 127 127"
+textlistboxunfocusedselcolor = textlistboxunfocusedselcolor or "0 0 0"
+UseCondensedUI = UseCondensedUI or "false"
+defaulttextcolor = defaulttextcolor or "255 255 255"
 
 dofile('vo/if_fontsize.lua')
 dofile('vo/if_templates.lua')
 
-FactionColor_RGB = { --these should be changed so every faction is properly represented by their color
+FactionColor_RGB = FactionColor_RGB or { --these should be changed so every faction is properly represented by their color
 	[0] = "212 212 212",--unaligned
 	[1] = "96 128 255", --itani
 	[2] = "255 32 32", --serco
