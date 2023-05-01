@@ -758,9 +758,14 @@ function lib.unlock_class(name, version, key)
 	end
 end
 
-function lib.notify(status)
+function lib.notify(status, ...)
+	args = ...
+	if type(args) ~= "table" then
+		args = {args}
+	end
+	
 	if lib.is_ready(neo.current_mgr) then
-		lib.execute(neo.current_mgr, lib.get_latest(neo.current_mgr), "notif", status)
+		lib.execute(neo.current_mgr, lib.get_latest(neo.current_mgr), "notif", status, ...)
 	end
 end
 
