@@ -68,8 +68,8 @@ end
 neo = {
 	version = {
 		[1] = 5,
-		[2] = 1,
-		[3] = 2,
+		[2] = 2,
+		[3] = 0,
 		[4] = "Beta",
 	},
 	notifications = {},
@@ -130,13 +130,14 @@ local waiting_for_dependencies = {} --storage for functions with unfulfilled dep
 local converted_dep_tables = {} --storage for build results of compiled ini files
 
 function lib.log_error(...)
+	val = tostring(...)
 	if neo.echoLogging == "YES" then
-		console_print(...)
+		console_print(val)
 	end
 	if plog then
-		plog(...)
+		plog(val)
 	end
-	table.insert(neo.log, ...)
+	table.insert(neo.log, val)
 end
 
 RegisterEvent(function() neo.pathlock = true end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
@@ -418,6 +419,12 @@ function lib.register(iniFilePointer)
 		end
 		
 		--don't mark plugin version as latest, it won't be "activated"
+		if not neo.plugin_registry[id] then
+			neo.plugin_registry[id] = {
+				latest = "0",
+			}
+		end
+		table.insert(neo.plugin_registry[id], data.plugin_version)
 		
 		lib.log_error("Added NEW " .. id .. " v" .. (data.plugin_version or "0") .. " to Neoloader's plugin registry and to config.ini at position " .. tostring(neo.number_plugins_registered))
 		lib.notify("NEW_REGISTRY", id, data.plugin_version or "0")

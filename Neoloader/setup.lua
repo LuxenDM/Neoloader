@@ -56,6 +56,44 @@ if NEO_UNINSTALL == false then
 			dropdown = "YES",
 		}
 		
+		local obj2flag = false
+		local obj2 = iup.hbox { }
+		local obj3flag = false
+		local obj3 = iup.hbox { }
+		
+		
+		
+		local prev_if = gkini.ReadString("Vendetta", "if2", "")
+		if prev_if ~= "" and gksys.IsExist(prev_if) then
+			obj3flag = true
+			
+			local setting_loader = iup.list {
+				[1] = "plugins/Neoloader/init.lua",
+				[2] = prev_if,
+				value = 1,
+				dropdown = "YES",
+			}
+			
+			obj3 = iup.vbox {
+				iup.fill {
+					size = "%2",
+				},
+				iup.label {
+					title = "You already have a custom interface.",
+				},
+				iup.hbox {
+					iup.label {
+						title = "Please select the one to load:",
+					},
+					setting_loader,
+				},
+			}
+			
+			function obj3.get_val()
+				return setting_loader.value
+			end
+		end
+		
 		local diag = iup.dialog {
 			topmost = "YES",
 			fullscreen = "YES",
@@ -81,31 +119,31 @@ if NEO_UNINSTALL == false then
 								},
 								setting_new_loadstate,
 							},
-							iup.hbox {
-								iup.label {
-									title = "",
-								},
-								--obj
-							},
-							iup.hbox {
-								iup.label {
-									title = "",
-								},
-								--obj
-							},
+							obj2,
+							obj3,
 							iup.button {
 								title = "OK",
 								action = function()
 									if setting_new_loadstate.value == "1" then
 										gkini.WriteString("Neoloader", "rDefaultLoadState", "YES")
 										local pluginlist = lib.get_gstate().pluginlist
+										console_print("[SETUP] Setting default states for")
 										for k, v in ipairs(pluginlist) do
-											console_print("v1 " .. v[1] .. "   v2 " .. v[2])
+											console_print("	" .. v[1] .. "	v" .. v[2])
 											gkini.WriteString("Neo-pluginstate", v[1] .. "." .. v[2], "YES")
 										end
 									end
 									--obj
-									--obj
+									if obj3flag == true then
+										local if_val = obj3.get_val()
+										if if_val == '2' then
+											if_val = prev_if 
+										else
+											if_val = "plugins/Neoloader/init.lua"
+										end
+										console_print("[SETUP] IF selected: " .. if_val)
+										gkini.WriteString("Vendetta", "if", if_val)
+									end
 									gkinterface.GKSaveCfg()
 									ReloadInterface()
 								end,
