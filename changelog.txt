@@ -6,11 +6,6 @@ Neoloader September 2022 Private Beta
 
 
 
-
-
-
-
-
 Neoloader November 2022 Private Beta
 	
 	API changes:
@@ -98,12 +93,6 @@ Neoloader November 2022 Private Beta
 		
 
 
-
-
-
-
-
-
 Neoloader April 2023 Private Beta
 	
 	API Changes:
@@ -164,6 +153,8 @@ Neoloader April 2023 Private Beta
 		Instead of directly comparing version numbers, we can use lib.get_whole_ver to break a version string into a table of version and metadata, and then use lib.compare_sem_ver to decide which between two are likely the greater version.
 		While intended for Semantic Versioning, lib.compare_sem_ver can theoretically take a large number of version types. The only character that is restricted is the hyphen, which denotes the start of "metadata"
 	
+
+
 Neoloader April 2023 Public Beta
 	
 	Neoloader Changes:
@@ -205,3 +196,34 @@ Neoloader April 2023 Public Beta
 	
 	+++Clarification on lib.get_gstate's "version" table:
 		This is not representative of the API for "Library Management Engines", but rather is a version specific to Neoloader, which implements the LME api. In effect, this value should be seen as inconsequential to any plugins designed for use of the LME structure. Hence why it is not synced with lib.get_API/minor/patch functions, and is a seperate value in lib.get_gstate.
+
+
+
+Neoloader May 2023 Public Beta
+	
+	Neoloader Changes:
+		major: 5
+		minor: 2
+		patch: 0
+		
+		CHANGED	pre-interface ENVironment variables (env.lua)
+		CHANGED	modloader (main.lua)
+		CHANGED	setup
+		
+	API Changes:
+		API Version 3
+		minor level 6
+		patch level 1
+		
+		CHANGED	lib.notify***
+		FIXED	lib.register
+		FIXED	lib.log_error
+		
+	Changes to Neoloader's environment to allow for more advanced preloading
+		loading advanced tools for debugging required changes to how Neoloader launched and identified a few failure points. These have all been fixed; ENV variables are now only created if they do not already exist, the modloader will save the pre-existing if= option, and Neoloader setup can restore this value. If this is done, the utility being loaded MUST call on neoloader directly to load it, or main.lua will get confused and get stuck load-cycling.
+		
+	lib.register wasn't creating a certain data point that resulted in cascading failures in other API functions, resulting in the tame bug where first-time registered plugins would not appear in neomgr correctly (github issue #1). This has been fixed.
+	
+	lib.log_error would trigger a severe error when passed nil due to how table.insert() works (github issue #2). This has been fixed.
+	
+	lib.notify() now accepts >1 argument, to be passed to whatever management interface is registered to handle them. The data that gets passed will be forced into a table format if it isnt already. This is in preparation of alternate interfaces that can provide much better notification handling, which was introduced in only a minor capacity early in Neoloader's development. ***Further changes to this system may occur that break compatibility with this version's changes. This only applies to the changes made in this update; the prior implementation of lib.notify are still official and supported.
