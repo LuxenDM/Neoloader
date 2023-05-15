@@ -41,7 +41,7 @@ if NEO_UNINSTALL == false then
 	setstr("Neoloader", "rEchoLogging", "YES")
 	setint("Neoloader", "rInitLoopTimeout", 0)
 	setstr("Neoloader", "rDefaultLoadState", "NO")
-	setstr("Neoloader", "rDoErrPopup", "YES")
+	setstr("Neoloader", "rDoErrPopup", "NO")
 	
 	gkini.WriteString("Neoloader", "installing", "finishing")
 	
