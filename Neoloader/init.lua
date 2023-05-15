@@ -98,7 +98,7 @@ neo = {
 	initLoopTimeout = gkreadint("Neoloader", "rInitLoopTimeout", 0),
 	echoLogging = gkreadstr("Neoloader", "rEchoLogging", "YES"),
 	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "NO"),
-	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "YES"),
+	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "NO"),
 	listPresorted = gkini.ReadString("Neoloader", "rPresortedList", "NO"),
 	
 	number_plugins_registered = 0,
@@ -601,7 +601,7 @@ function lib.get_state(name, version)
 			load_position = ref.load_position or 0,
 			errors = ref.errors or {},
 			latest = lib.get_latest(name) or "-1",
-			versions = neo.plugin_registry[name] or {"???"},
+			versions = copy_table(neo.plugin_registry[name] or {"???"}),
 			
 			plugin_id = name,
 			plugin_version = version,
@@ -611,6 +611,8 @@ function lib.get_state(name, version)
 			plugin_link = ref.plugin_link,
 			plugin_folder = ref.plugin_folder,
 			plugin_ini_file = ref.plugin_regpath,
+			
+			plugin_dependencies = ref.plugin_dependencies
 		}
 	end
 	
@@ -978,7 +980,31 @@ function lib.compare_sem_ver(obj1, obj2)
     end
 end
 
-
+function lib.set_load(auth, id, version, state)
+	auth = tostring(auth)
+	id = tostring(id)
+	version = tostring(version)
+	
+	if auth == mgr_key then
+		version = tostring(version or 0)
+		if version == "0" then
+			version = lib.get_latest(plugin_id)
+		end
+		
+		local valid_states = {
+			YES = true,
+			NO = true,
+			FORCE = true,
+			AUTH = true,
+		}
+		if not valid_states[state] then
+			state = "NO"
+		end
+		if lib.is_exist(id, version) then
+			gkini.WriteString("Neo-pluginstate", id .. "." .. version, state)
+		end
+	end
+end
 
 
 
