@@ -988,7 +988,7 @@ function lib.set_load(auth, id, version, state)
 	if auth == mgr_key then
 		version = tostring(version or 0)
 		if version == "0" then
-			version = lib.get_latest(plugin_id)
+			version = lib.get_latest(id)
 		end
 		
 		local valid_states = {
