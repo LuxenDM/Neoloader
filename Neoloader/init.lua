@@ -100,6 +100,7 @@ neo = {
 	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "NO"),
 	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "NO"),
 	listPresorted = gkini.ReadString("Neoloader", "rPresortedList", "NO"),
+	clearCommands = gkini.ReadString("Neoloader", "rClearCommands", "NO"),
 	
 	number_plugins_registered = 0,
 	
@@ -840,12 +841,15 @@ end
 function lib.reload()
 	if neo.statelock then
 		ProcessEvent("PRE_RELOAD_INTERFACE")
-		local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
-		local commands = GetRegisteredUserCommands()
-		for i=1, #commands do
-			if not expected[commands[i]] then
-				RegisterUserCommand(commands[i], function() print("Error") end) --cannot unregister, only register empty functions instead
-				--reminder to self: IsDeclared() is also a valid function
+		
+		--unregister commands
+		if neo.clearCommands == "true" then
+			local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
+			local commands = GetRegisteredUserCommands()
+			for i=1, #commands do
+				if not expected[commands[i]] then
+					RegisterUserCommand(commands[i], function() print("Error") end)
+				end
 			end
 		end
 		
@@ -1002,6 +1006,7 @@ function lib.set_load(auth, id, version, state)
 		end
 		if lib.is_exist(id, version) then
 			gkini.WriteString("Neo-pluginstate", id .. "." .. version, state)
+			neo.plugin_registry[id .. "." .. version].nextload = state
 		end
 	end
 end
@@ -1050,7 +1055,7 @@ do
 	end
 end
 
-do
+if neo.clearCommands == "YES" then
 	--try to clear bad behavior from fake-registering commands after a reload
 	local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
 	local commands = GetRegisteredUserCommands()
@@ -1448,6 +1453,24 @@ end
 RegisterEvent(function()
 	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step))
 end, "PLUGINS_LOADED")
+
+RegisterEvent(function()
+	--enforce known load states for plugins
+	
+	lib.log_error("dbg: Enforcing load state")
+	local plist = lib.get_gstate().pluginlist
+	for k, v in ipairs(plist) do
+		local new_state = neo.plugin_registry[v[1] .. "." .. v[2]].nextload
+		if new_state then
+			gkini.WriteString("Neo-loadstate-attempt", v[1] .. "." .. v[2], new_state)
+		else
+			gkini.WriteString("Neo-loadstate-attempt", v[1] .. "." .. v[2], lib.get_state(v[1], v[2]).load)
+		end
+	end
+	
+	gkinterface.GKSafeCfg()
+	
+end, "UNLOAD_INTERFACE")
 
 lib.log_error("[timestat] Neoloader completed in " .. tostring(gk_get_microsecond() - timestat_neo_start))
 timestat_step = gk_get_microsecond()
