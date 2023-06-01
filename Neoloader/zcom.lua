@@ -58,6 +58,7 @@ return {
 	["query"] = true,
 	["radiks"] = true,
 	["reload"] = true,
+	["remove_mines"] = true,
 	["renameship"] = true,
 	["report"] = true,
 	["reportfps"] = true,
