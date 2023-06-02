@@ -7,7 +7,36 @@ This is only meant to provide minimal functionality, and should be replaced with
 local key
 local lastNotif = ""
 local ready = false
-local public = {}
+local public = {
+	CCD1 = true,
+	open = nil,
+	config = nil,
+	smart_config = {
+		title = "neomgr bundled utility",
+		cb = function() end,
+		[1] = "nocfg",
+		nocfg = {
+			type = "text",
+			align = "right",
+			display = "neomgr does not support live configuration",
+		},
+	},
+	description = "neomgr is the bundled management interface for Neoloader. It provides minimal support for managing your plugins.",
+	commands = {
+		"/neo: open neoloader's manager",
+		"/neosetup: setup neoloader if uninstalled",
+		"/neomgr: enable neomgr if all managers are disabled",
+	},
+	manifest = {
+		"plugins/Neoloader/neomgr.lua",
+		"plugins/Neoloader/neomgr.ini",
+	},
+	
+	--public
+	notif = nil,
+	mgr = true,
+	mgr_key = nil
+}
 local diag_timer = Timer()
 
 local margin_setting = tonumber(lib.plugin_read_str("neomgr", "0", "data", "margin"))
@@ -895,6 +924,8 @@ function public.add_option(iup_reference)
 end
 
 public.mgr = true
+
+public.config = public.open
 
 lib.set_class("neomgr", "1", public)
 lib.lock_class("neomgr", "1", lib.generate_key())
