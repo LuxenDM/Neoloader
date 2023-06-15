@@ -1150,6 +1150,7 @@ if neo.init ~= neo.API then
 	lib.log_error("Installing Neoloader for the first time!")
 	gkini.WriteString("Neoloader", "installing", "now")
 	NEO_UNINSTALL = false
+	NEO_FIRST_INSTALL = mgr_key
 	lib.resolve_file("plugins/Neoloader/setup.lua")
 	dofile("vo/if.lua")
 	
@@ -1484,6 +1485,12 @@ if lib.is_ready(neo.current_mgr) == false then
 		neo.current_mgr = "neomgr"
 	else
 		lib.log_error("The last management interface for Neoloader was not found, and bundled manager is not available for use.")
+		print("Neoloader failed to find an installed and enabled management interface; use /neomgr to force the bundled interface tool to load")
+		RegisterUserCommand("neomgr", function()
+			UnregisterUserCommand("neomgr")
+			lib.set_load(mgr_key, "neomgr", "1", "YES")
+			lib.reload()
+		end)
 	end
 end
 if lib.is_ready(neo.current_mgr) == true then
@@ -1504,9 +1511,9 @@ RegisterEvent(function()
 	for k, v in ipairs(plist) do
 		local new_state = neo.plugin_registry[v[1] .. "." .. v[2]].nextload
 		if new_state then
-			gkini.WriteString("Neo-loadstate-attempt", v[1] .. "." .. v[2], new_state)
+			gkini.WriteString("Neo-pluginstate", v[1] .. "." .. v[2], new_state)
 		else
-			gkini.WriteString("Neo-loadstate-attempt", v[1] .. "." .. v[2], lib.get_state(v[1], v[2]).load)
+			gkini.WriteString("Neo-pluginstate", v[1] .. "." .. v[2], lib.get_state(v[1], v[2]).load)
 		end
 	end
 	

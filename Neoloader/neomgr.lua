@@ -409,7 +409,7 @@ function public.open()
 			if row_data.newstate < 3 or row_data.newstate == 5 then
 				result = "YES"
 			end
-			gkini.WriteString("Neo-pluginstate", plugin_internal_name .. "." .. tostring(plugin_version), result)
+			lib.set_load(key, plugin_internal_name, plugin_version, result)
 		end
 		
 		function row_display.width_resize()
@@ -515,6 +515,7 @@ function public.open()
 						update_log_view()
 					else
 						lib.log_error("The log cannot be exported to a systemnotes file if you are not logged in!")
+						update_log_view()
 					end
 				end,
 			},

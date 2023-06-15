@@ -8,6 +8,10 @@ local setstr = gkini.WriteString
 local setint = gkini.WriteInt
 
 if NEO_UNINSTALL == false then
+	
+	local auth = NEO_FIRST_INSTALL
+	NEO_FIRST_INSTALL = 1
+	
 	print("Neoloader is performing first-time setup; the game will reset momentarily...")
 	
 	--Base config data
@@ -34,6 +38,7 @@ if NEO_UNINSTALL == false then
 	--packaged plugin for basic functionality
 	lib.register("plugins/Neoloader/neomgr.ini")
 	setstr("Neo-pluginstate", "neomgr.1", "YES")
+	lib.set_load(auth, "neomgr", "1", "YES")
 	
 	--user options
 	setstr("Neoloader", "rAllowDelayedLoad", "NO")
@@ -130,7 +135,7 @@ if NEO_UNINSTALL == false then
 										console_print("[SETUP] Setting default states for")
 										for k, v in ipairs(pluginlist) do
 											console_print("	" .. v[1] .. "	v" .. v[2])
-											gkini.WriteString("Neo-pluginstate", v[1] .. "." .. v[2], "YES")
+											lib.set_load(auth, v[1], v[2], "YES")
 										end
 									end
 									--obj
@@ -165,6 +170,7 @@ if NEO_UNINSTALL == false then
 else
 	print("Neoloader is performing an uninstallation.")
 	--base settings to mark Neoloader as uninstalled, preventing main.lua from automating installation
+	local auth = NEO_UNINS_KEY
 	setstr("Neoloader", "uninstalled", "YES")
 	setstr("Vendetta", "if", "")
 	setint("Neoloader", "Init", -1)
@@ -187,6 +193,7 @@ else
 	local pluginlist = lib.get_gstate().pluginlist
 	for k, v in ipairs(pluginlist) do
 		if v.plugin_id then
+			lib.set_load(auth, v.plugin_id, v.plugin_version, "NO")
 			setstr("Neo-pluginstate", k, "NO")
 		end
 	end

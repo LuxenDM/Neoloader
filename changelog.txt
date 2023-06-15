@@ -273,3 +273,19 @@ Neoloader June 2023 Public Beta
 		
 	Neoloader now overwrites load-states when a reload is triggered
 		plugins *can* change load-states by just writing to the config.ini, but they should instead use the LME implementation agnostic lib.set_load function instead. To this end, Neoloader will now save known load states when the interface unloads.
+	
+June 2023 Public Beta Hotfix
+	
+	Neoloader Changes:
+		major:	5
+		minor:	3
+		patch:	1
+		
+		FIXED	neomgr
+		FIXED	load state enforcement
+		FIXED	setup and removal
+		FIXED	management rescue
+		
+	The june update introduced lib.set_load() and began enforcing load states during the unload process. neomgr, setup, uninstall, and management rescue processes were overlooked in updating to handle these changes, as it still used the old config.ini manual write method. This has been resolved.
+	
+	Also, load state enforcement was being routed to a debugging section, so it didn't work anyways. This has also been resolved.
