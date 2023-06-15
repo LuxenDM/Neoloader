@@ -240,6 +240,7 @@ Neoloader June 2023 Public Beta
 		CHANGED	default lib.error_handle setting
 		CHANGED command cleaning
 		CHANGED neomgr options
+		NEW		Neoloader load-state enforcement
 		
 	API Changes:
 		API Version	3
@@ -269,4 +270,6 @@ Neoloader June 2023 Public Beta
 		
 	lib.resolve_file now accepts any number of path arguments
 		it just passes them off to lib.find_file, though it does still check the resulting table. Do note that the first valid result is used, so don't pass multiple folders that may contain the same file name.
-	
+		
+	Neoloader now overwrites load-states when a reload is triggered
+		plugins *can* change load-states by just writing to the config.ini, but they should instead use the LME implementation agnostic lib.set_load function instead. To this end, Neoloader will now save known load states when the interface unloads.
