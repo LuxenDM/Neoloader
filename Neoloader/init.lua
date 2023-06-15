@@ -68,7 +68,7 @@ end
 neo = {
 	version = {
 		[1] = 5,
-		[2] = 2,
+		[2] = 3,
 		[3] = 0,
 		[4] = "Beta",
 	},
@@ -87,7 +87,7 @@ neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	minor = 5, --lib.get_minor
+	minor = 7, --lib.find_file() and lib.set_load()
 	patch = 0,
 	
 	pathlock = false,
@@ -793,7 +793,9 @@ function lib.unlock_class(name, version, key)
 	end
 	if lib.is_exist(name, version) then
 		if neo.plugin_registry[name .. "." .. version].lock == key or mgr_key == key then
+			local old_key = neo.plugin_registry[name .. "." .. version].lock
 			neo.plugin_registry[name .. "." .. version].lock = nil
+			return old_key
 		end
 	end
 end
