@@ -173,58 +173,95 @@ function lib.err_handle(test, log_msg)
 end
 local err_han = lib.err_handle --fast shortcut
 
-function lib.resolve_file(file, path, path2)
+function lib.find_file(file, ...)
+	if err_han( type(file) ~= "string" , "lib.find_file expected a string as argument 1, got " .. type(file) ) then
+		return false, "file not a string"
+	end
+	
+	local path_checks = {}
+	local pathlist = {...}
+	
+	--this is to maintain compatibility with previous resolve_file(file, nil, path) usage
+	if pathlist[2] and not pathlist[1] then
+		table.remove(pathlist, 1)
+	end
+	
+	--lib.log_error("Attempting to find " .. file)
+	
+	local last_slash_index = string.find(file, "/[^/]*$")
+		
+	if last_slash_index then
+		--the first argument was a path/to/file and not just a file; break apart and handle
+		--lib.log_error("	first arg was a path/to/file")
+		local path = string.sub(file, 1, last_slash_index)
+		file = string.sub(file, last_slash_index + 1)
+		
+		table.insert(path_checks, {
+			path .. file,
+			"../" .. path .. file,
+			"../../" .. path .. file,
+		})
+		--lib.log_error("	fixed to finding " .. file .. " with path provided: " .. path)
+	end
+	
+	for index, path in ipairs(pathlist) do
+		table.insert(path_checks, {
+			path .. file,
+			"../" .. path .. file,
+			"../../" .. path .. file,
+		})
+	end
+	
+	table.insert(path_checks, {
+		file,
+		"../" .. file,
+		"../../" .. file,
+	})
+	
+	--lib.log_error("trying these: ")
+	
+	local first_valid_path = false
+	local valid_path_table
+	
+	for index, path in ipairs(path_checks) do
+		--lib.log_error("	" .. path[1])
+		if gksys.IsExist(path[1]) then
+			first_valid_path = first_valid_path or path[1]
+			valid_path_table = path
+		end
+	end
+	
+	return first_valid_path, valid_path_table or "unable to find file"
+end
+	
+	
+
+function lib.resolve_file(file, ...)
 	if err_han( type(file) ~= "string" , "lib.resolve_file expected a string as argument 1, got " .. type(file) ) then
 		return false, "file not a string"
 	end
-	if err_han( type(path) ~= "string" and path ~= nil , "lib.resolve_file expected nil or a string for argument 2, got " .. type(path) ) then
-		return false, "path not a string or nil"
+	
+	local path, pathtable = lib.find_file(file, ...)
+	
+	if not path then
+		lib.log_error("unable to resolve file provided (" .. tostring(file) .. "); file not found")
+		return false, "unable to find file"
 	end
-	if path == nil then
-		--assume that we were given file = path/to/file.lua; we extract the path ourselves. thank stack overflow for the answer here.
-		local last_slash_index = string.find(file, "/[^/]*$")
-		
-		if not last_slash_index then
-			path = ""
+	
+	local file_loaded
+	lib.log_error("Attempting to resolve " .. tostring(pathtable[1]))
+	for i=1, 3 do
+		local status, err = loadfile(pathtable[i]) --pcall?
+		if status then --success!
+			file_loaded = status
+			break
 		else
-			path = string.sub(file, 1, last_slash_index)
-			file = string.sub(file, last_slash_index + 1)
-		end
-		
-		--path, file = string.match(file, "(.*)([^/]*)$")
-		--lib.log_error("result: path = " .. path .. "\n	file = " .. file)
-	end
-	path2 = tostring(path2 or "")
-	
-	
-	
-	local file_loaded, path_to_file
-	for i, filepath in ipairs {
-		path .. file, 				--preset paths aren't being used
-		file, 						--preset paths are being used; the default plugin loader must be executing
-		"../../" .. path .. file, 	--preset paths are used but we're accessing a file somewhere else (hope this works?)
-		path2 .. file, 				--try the plugin's registration path
-		"../../" .. path2 .. file, 	--try the plugin's registration path with preset backtracking?
-	} do
-		if gksys.IsExist(filepath) or neo.pathlock == true then --pathlock bypasses invalid detections
-			lib.log_error("Attempting to resolve " .. filepath)
-			local status, err = loadfile(filepath)
-			if status then	--success!
-				file_loaded = status
-				path_to_file = filepath
-				break
-			else			--error! fyi, file has to be retested for "existance"; gksys.IsExist() doesn't count for preset paths, hence the pathlock bypass
-				if not string.find(err, "No such file or directory") then
-					lib.log_error("unable to resolve file: " .. tostring(err or "error"))
-					return false, err or "error"
-				end
+			if not string.find(err, "No such file or directory") then
+				lib.log_error("Unable to resolve file: " .. tostring(err or "error?"))
+				return false, "error resolving file"
 			end
-		else
-			--file doesn't exist
 		end
 	end
-	
-	
 	
 	if file_loaded then
 		return true, file_loaded()
@@ -755,7 +792,7 @@ function lib.unlock_class(name, version, key)
 		version = lib.get_latest(name)
 	end
 	if lib.is_exist(name, version) then
-		if neo.plugin_registry[name .. "." .. version].lock == key then
+		if neo.plugin_registry[name .. "." .. version].lock == key or mgr_key == key then
 			neo.plugin_registry[name .. "." .. version].lock = nil
 		end
 	end
