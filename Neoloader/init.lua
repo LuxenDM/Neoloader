@@ -221,17 +221,17 @@ function lib.find_file(file, ...)
 	--lib.log_error("trying these: ")
 	
 	local first_valid_path = false
-	local valid_path_table
+	local valid_path_table = {}
 	
 	for index, path in ipairs(path_checks) do
 		--lib.log_error("	" .. path[1])
 		if gksys.IsExist(path[1]) then
 			first_valid_path = first_valid_path or path[1]
-			valid_path_table = path
+			table.insert(valid_path_table, path)
 		end
 	end
 	
-	return first_valid_path, valid_path_table or "unable to find file"
+	return first_valid_path, valid_path_table
 end
 	
 	
@@ -249,17 +249,22 @@ function lib.resolve_file(file, ...)
 	end
 	
 	local file_loaded
-	lib.log_error("Attempting to resolve " .. tostring(pathtable[1]))
-	for i=1, 3 do
-		local status, err = loadfile(pathtable[i]) --pcall?
-		if status then --success!
-			file_loaded = status
-			break
-		else
-			if not string.find(err, "No such file or directory") then
-				lib.log_error("Unable to resolve file: " .. tostring(err or "error?"))
-				return false, "error resolving file"
+	lib.log_error("Attempting to resolve " .. tostring(pathtable[1][1]))
+	for k, path_table in ipairs(pathtable) do
+		for i=1, 3 do
+			local status, err = loadfile(pathtable[k][i]) --pcall?
+			if status then --success!
+				file_loaded = status
+				break
+			else
+				if not string.find(err, "No such file or directory") then
+					lib.log_error("Unable to resolve file: " .. tostring(err or "error?"))
+					return false, "error resolving file"
+				end
 			end
+		end
+		if file_loaded then
+			break
 		end
 	end
 	
