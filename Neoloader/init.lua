@@ -99,6 +99,7 @@ neo = {
 	echoLogging = gkreadstr("Neoloader", "rEchoLogging", "YES"),
 	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "NO"),
 	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "NO"),
+	protectResolveFile = gkreadstr("Neoloader", "rProtectResolveFile", "YES"),
 	listPresorted = gkini.ReadString("Neoloader", "rPresortedList", "NO"),
 	clearCommands = gkini.ReadString("Neoloader", "rClearCommands", "NO"),
 	
@@ -252,7 +253,7 @@ function lib.resolve_file(file, ...)
 	lib.log_error("Attempting to resolve " .. tostring(pathtable[1][1]))
 	for k, path_table in ipairs(pathtable) do
 		for i=1, 3 do
-			local status, err = loadfile(pathtable[k][i]) --pcall?
+			local status, err = loadfile(pathtable[k][i])
 			if status then --success!
 				file_loaded = status
 				break
@@ -269,8 +270,11 @@ function lib.resolve_file(file, ...)
 	end
 	
 	if file_loaded then
-		return true, file_loaded()
-		--if devplugine then dofile(path_to_file) instead
+		if neo.protectResolveFile == "YES" then
+			return pcall(file_loaded)
+		else
+			return true, file_loaded()
+		end
 	else
 		return false, "unable to resolve file: file does not appear to exist or cannot be accessed using known methods"
 	end
@@ -580,6 +584,7 @@ function lib.activate_plugin(id, version, verify_key)
 							end
 						else
 							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF")
+							lib.log_error("	error message: " .. tostring(err))
 							lib.notify("PLUGIN_FAILURE", id, version)
 							return false, "failed to activate, " .. err or "?"
 						end
