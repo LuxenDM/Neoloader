@@ -226,4 +226,47 @@ Neoloader May 2023 Public Beta
 	
 	lib.log_error would trigger a severe error when passed nil due to how table.insert() works (github issue #2). This has been fixed.
 	
-	lib.notify() now accepts >1 argument, to be passed to whatever management interface is registered to handle them. The data that gets passed will be forced into a table format if it isnt already. This is in preparation of alternate interfaces that can provide much better notification handling, which was introduced in only a minor capacity early in Neoloader's development. ***Further changes to this system may occur that break compatibility with this version's changes. This only applies to the changes made in this update; the prior implementation of lib.notify are still official and supported.
+	lib.notify() now accepts >1 argument, to be passed to whatever management interface is registered to handle them. The data that gets passed will be forced into a table format if it isnt already. This is in preparation of alternate interfaces that can provide much better notification handling, which was introduced in only a minor capacity early in Neoloader's development.
+	
+
+
+Neoloader June 2023 Public Beta
+	
+	Neoloader Changes:
+		major:	5
+		minor:	3
+		patch:	0
+		
+		CHANGED	default lib.error_handle setting
+		CHANGED command cleaning
+		CHANGED neomgr options
+		
+	API Changes:
+		API Version	3
+		minor level 7
+		patch level 0
+		
+		NEW		lib.set_load
+		NEW		lib.find_file
+		CHANGED	lib.resolve_file
+		CHANGED lib.unlock_class
+		
+	QoL changes to Neoloader itself
+		The devs mostly fixed the issue that neccesitated command cleaning, so it is now an optional feature instead of a required step. The default setting is to have this feature disabled.
+		
+		the default setting for lib.error_handle was to error() out - the opposite is now true, as normal pilots want to reduce *visible* errors. This is a mod developer-intended setting, as the intention is to REDUCE error popups for pilots, especially during initial game load.
+		
+		neomgr is now CCD1-compliant. it is NOT a CCD1 provider, though. Implementation is minimal, as usual. The utility now has buttons that will open the user's web browser to check for updates on VOUPR and NexusMods
+		
+	lib.unlock_class accepts the Neoloader auth_key now
+		Any authorized-by-the-user plugins can now forcefully unlock a class by providing their authorization key. If a class successfully unlocks, the key that was used to lock it is returned (to reduce destructively unlocking things)
+		
+	lib.set_load provides an official method to set a mod's load state
+		load states are restricted to valid ones, and an authorization key must be provided. future LME implementations may obscure load states in the config.ini (and Neoloader MIGHT do that in the future too), and this function allows compliant and authorized plugins to change states as neccessary.
+		
+	lib.find_file looks for if a file exists and returns a valid path
+		This improves on the old locator used in lib.resolve_file (which now uses lib.find_file instead); any number of paths may be provided as arguments. All valid locations are returned in a table. This will allow plugin developers to handle their own file loading (for instance, using loadfile() and passing arguments to the result), or finding non-lua files.
+		
+	lib.resolve_file now accepts any number of path arguments
+		it just passes them off to lib.find_file, though it does still check the resulting table. Do note that the first valid result is used, so don't pass multiple folders that may contain the same file name.
+	
