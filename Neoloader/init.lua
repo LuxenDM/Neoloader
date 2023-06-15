@@ -887,7 +887,7 @@ function lib.reload()
 		ProcessEvent("PRE_RELOAD_INTERFACE")
 		
 		--unregister commands
-		if neo.clearCommands == "true" then
+		if neo.clearCommands == "YES" then
 			local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
 			local commands = GetRegisteredUserCommands()
 			for i=1, #commands do
