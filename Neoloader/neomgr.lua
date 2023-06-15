@@ -682,9 +682,25 @@ function public.open()
 	
 	local setting_apply = iup.vbox {
 		iup.fill {
-			size = gkinterface.GetYResolution() * (1/4)
+			size = gkinterface.GetYResolution() * (1/4),
 		},
 		iup.hbox {
+			alignment = "ABOTTOM",
+			iup.label {
+				title = "Open Neoloader on: ",
+			},
+			iup.button {
+				title = "VOUPR",
+				action = function()
+					Game.OpenWebBrowser("https://voupr.spenced.com/plugin.php?name=neoloader")
+				end,
+			},
+			iup.button {
+				title = "NexusMods",
+				action = function()
+					Game.OpenWebBrowser("https://www.nexusmods.com/vendettaonline/mods/3")
+				end,
+			},
 			iup.fill { },
 			iup.button {
 				title = "Apply Changes",
