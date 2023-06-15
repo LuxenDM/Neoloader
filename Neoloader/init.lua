@@ -1500,8 +1500,6 @@ end, "PLUGINS_LOADED")
 
 RegisterEvent(function()
 	--enforce known load states for plugins
-	
-	lib.log_error("dbg: Enforcing load state")
 	local plist = lib.get_gstate().pluginlist
 	for k, v in ipairs(plist) do
 		local new_state = neo.plugin_registry[v[1] .. "." .. v[2]].nextload
@@ -1512,7 +1510,7 @@ RegisterEvent(function()
 		end
 	end
 	
-	gkinterface.GKSafeCfg()
+	gkinterface.GKSaveCfg()
 	
 end, "UNLOAD_INTERFACE")
 
