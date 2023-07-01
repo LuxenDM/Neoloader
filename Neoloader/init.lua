@@ -133,12 +133,14 @@ lib[1] = "Neoloader"
 local waiting_for_dependencies = {} --storage for functions with unfulfilled dependencies tested by lib.require
 local converted_dep_tables = {} --storage for build results of compiled ini files
 
-function lib.log_error(msg, alert)
-	val = tostring(msg) or ""
+function lib.log_error(msg, alert, id, version)
 	alert = tonumber(alert or 2) or 2
 	if alert < neo.dbgIgnoreLevel then
 		return
 	end
+	val = tostring(msg) or ""
+	id = tostring(id) or "null"
+	version = tostring(version) or "0"
 	if neo.dbgFormatting == "YES" then
 		local status = "ALERT"
 		for i, v in ipairs {
@@ -155,17 +157,13 @@ function lib.log_error(msg, alert)
 	if neo.echoLogging == "YES" then
 		console_print(val)
 	end
+	if lib.is_exist(id, version) then
+		table.insert(neo.plugin_registry[id .. "." .. version].errors, val)
+	end
 	if plog then
 		plog(val)
 	end
 	table.insert(neo.log, val)
-end
-
-function lib.log_message(id, version, message, alert)
-	lib.log_error(message, alert)
-	if lib.is_exist(id, version) then
-		--add to mod's personal error registry
-	end
 end
 
 RegisterEvent(function() neo.pathlock = true end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
