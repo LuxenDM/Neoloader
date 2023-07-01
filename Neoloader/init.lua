@@ -101,7 +101,9 @@ neo = {
 	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "NO"),
 	protectResolveFile = gkreadstr("Neoloader", "rProtectResolveFile", "YES"),
 	listPresorted = gkini.ReadString("Neoloader", "rPresortedList", "NO"),
-	clearCommands = gkini.ReadString("Neoloader", "rClearCommands", "NO"),
+	clearCommands = gkreadstr("Neoloader", "rClearCommands", "NO"),
+	dbgFormatting = gkreadstr("Neoloader", "rDbgFormatting", "YES"),
+	dbgIgnoreLevel = gkreadint("Neoloader", "iDbgIgnoreLevel", 2),
 	
 	number_plugins_registered = 0,
 	
@@ -131,8 +133,25 @@ lib[1] = "Neoloader"
 local waiting_for_dependencies = {} --storage for functions with unfulfilled dependencies tested by lib.require
 local converted_dep_tables = {} --storage for build results of compiled ini files
 
-function lib.log_error(...)
-	val = tostring(...)
+function lib.log_error(msg, alert)
+	val = tostring(msg) or ""
+	alert = tonumber(alert or 2) or 2
+	if alert < neo.dbgIgnoreLevel then
+		return
+	end
+	if neo.dbgFormatting == "YES" then
+		local status = "ALERT"
+		for i, v in ipairs {
+			[1] = "DEBUG",
+			[2] = "INFO",
+			[3] = "WARNING",
+			[4] = "ERROR",
+		} do
+			status = i == alert and v or status
+		end
+		
+		val = "[" .. os.date() .. "." .. tostring(gk_get_microsecond()) .. "] [" .. status .. "] " .. val
+	end
 	if neo.echoLogging == "YES" then
 		console_print(val)
 	end
@@ -140,6 +159,13 @@ function lib.log_error(...)
 		plog(val)
 	end
 	table.insert(neo.log, val)
+end
+
+function lib.log_message(id, version, message, alert)
+	lib.log_error(message, alert)
+	if lib.is_exist(id, version) then
+		--add to mod's personal error registry
+	end
 end
 
 RegisterEvent(function() neo.pathlock = true end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
