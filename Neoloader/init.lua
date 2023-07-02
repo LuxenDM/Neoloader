@@ -379,11 +379,11 @@ function lib.resolve_dep_table(intable)
 		if err_han( type(v) ~= "table", "lib.resolve_dep_table was given an improperly formatted table; table values should be tables!" ) then
 			return false, "bad table format"
 		else
-			if v.name ~= "null" then
-				if not lib.is_ready(v.name or "null", v.version or "0") then
-					status = false
-					break
-				end
+			v.name = tostring(v.name or "null")
+			v.version = tostring(v.version or "0")
+			if not lib.is_ready(v.name, v.version) then
+				status = false
+				break
 			end
 		end
 	end
@@ -414,6 +414,7 @@ local function silent_register(iniFilePointer)
 		local data = copy_table(iniTable)
 		data.dependencies_met = false
 		data.complete = false --true when all checks complete and plugin is run
+		data.dependent_freeze = 0
 		data.load = gkreadstr("Neo-pluginstate", data.plugin_id .. "." .. data.plugin_version, neo.defaultLoadState)
 		data.index = #neo.plugin_container
 		data.load_position = neo.number_plugins_registered
@@ -480,6 +481,7 @@ function lib.register(iniFilePointer)
 		local data = copy_table(iniTable)
 		data.dependencies_met = false
 		data.complete = false
+		data.dependent_freeze = 0
 		data.load = false
 		data.index = #neo.plugin_container
 		data.load_position = neo.number_plugins_registered
@@ -596,15 +598,18 @@ function lib.activate_plugin(id, version, verify_key)
 	--libraries should be set as loaded/disabled by the user themselves and resolved ONLY by the user using a plugin manager or during Init
 	if verify_key == mgr_key then
 		if lib.is_exist(id, version) then
-			if lib.resolve_dep_table(neo.plugin_registry[plugin_id].plugin_dependencies) or neo.plugin_registry[plugin_id].flag == "FORCE" then
+			local modreg = neo.plugin_registry[plugin_id]
+			if lib.resolve_dep_table(modreg.plugin_dependencies) or modreg.flag == "FORCE" then
 				if valid_load_states[lib.get_state(id, version).load] then
-					if neo.plugin_registry[plugin_id].plugin_path ~= "" then
-						local status, err = lib.resolve_file(neo.plugin_registry[plugin_id].plugin_path, nil, neo.plugin_registry[plugin_id].plugin_folder)
+					if modreg.plugin_path ~= "" then
+						local status, err = lib.resolve_file(modreg.plugin_path, nil, modreg.plugin_folder)
 						if status then
-							neo.plugin_registry[plugin_id].complete = true
+							modreg.complete = true
 							lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!")
 							if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
-								lib.check_queue()
+								if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
+									lib.check_queue()
+								end
 							end
 						else
 							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF")
@@ -613,15 +618,19 @@ function lib.activate_plugin(id, version, verify_key)
 							return false, "failed to activate, " .. err or "?"
 						end
 					else
-						neo.plugin_registry[plugin_id].complete = true
+						modreg.complete = true
 						lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)")
 						if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
+							--can't be frozen if there's no activated code
 							lib.check_queue()
 						end
 					end
-					if neo.plugin_registry[plugin_id].flag == "AUTH" then
+					if modreg.flag == "AUTH" then
 						lib.execute(id, version, "mgr_key", mgr_key)
 					end
+					
+					neo.plugin_registry[plugin_id] = modreg
+					
 				else
 					lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!")
 					return false, "load state is NO"
