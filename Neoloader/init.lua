@@ -703,9 +703,9 @@ function lib.get_state(name, version)
 			plugin_folder = ref.plugin_folder,
 			plugin_ini_file = ref.plugin_regpath,
 			
-			plugin_frozen = ref.dependent_freeze > 0 and "YES" or "NO"
+			plugin_frozen = ref.dependent_freeze > 0 and "YES" or "NO",
 			
-			plugin_dependencies = ref.plugin_dependencies
+			plugin_dependencies = ref.plugin_dependencies,
 		}
 	end
 	
@@ -1109,12 +1109,12 @@ end
 
 function lib.set_waiting(id, ver, state, key)
 	local valid_states = {
-		"YES" = 1,
-		"NO" = 0,
+		["YES"] = 1,
+		["NO"] = 0,
 		[true] = 1,
 		[false] = 0,
-		"ON" = 1,
-		"OFF" = 0,
+		["ON"] = 1,
+		["OFF"] = 0,
 		[1] = 1,
 		[0] = 0,
 	}
