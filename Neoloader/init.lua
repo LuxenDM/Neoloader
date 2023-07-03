@@ -380,9 +380,19 @@ function lib.resolve_dep_table(intable)
 			return false, "bad table format"
 		else
 			v.name = tostring(v.name or "null")
-			v.version = tostring(v.version or "0")
-			if not lib.is_ready(v.name, v.version) then
-				status = false
+			v.version = tostring(v.version or lib.get_latest(v.name) or "0")
+			for i, v2 in ipairs {
+				lib.is_exist(v.name, v.version),
+				neo.plugin_registry[v.name .. "." .. v.version] and neo.plugin_registry[v.name .. "." .. v.version].dependent_freeze < 1,
+			} do
+				if v2 == false then
+					status = false
+					break
+				end
+			end
+			
+			if not status then
+				--break again for container loop
 				break
 			end
 		end
@@ -693,6 +703,8 @@ function lib.get_state(name, version)
 			plugin_folder = ref.plugin_folder,
 			plugin_ini_file = ref.plugin_regpath,
 			
+			plugin_frozen = ref.dependent_freeze > 0 and "YES" or "NO"
+			
 			plugin_dependencies = ref.plugin_dependencies
 		}
 	end
@@ -730,6 +742,8 @@ function lib.get_gstate()
 	data.if_list = neo.list_if
 	
 	data.newstate = neo.defaultLoadState
+	data.format_log = neo.dbgFormatting
+	data.log_level = neo.dbgIgnoreLevel
 	
 	return data
 end
@@ -1089,6 +1103,34 @@ function lib.set_load(auth, id, version, state)
 		if lib.is_exist(id, version) then
 			gkini.WriteString("Neo-pluginstate", id .. "." .. version, state)
 			neo.plugin_registry[id .. "." .. version].nextload = state
+		end
+	end
+end
+
+function lib.set_waiting(id, ver, state, key)
+	local valid_states = {
+		"YES" = 1,
+		"NO" = 0,
+		[true] = 1,
+		[false] = 0,
+		"ON" = 1,
+		"OFF" = 0,
+		[1] = 1,
+		[0] = 0,
+	}
+	state = valid_state[state] or 0
+	id = tostring(id or "null")
+	ver = tostring(ver or lib.get_latest(id))
+	if not key then
+		return false, "waiting state key must be provided"
+	elseif lib.is_exist(id, ver) then
+		mod = id .. "." .. version
+		if state > 0 then
+			neo.plugin_registry[mod].dependent_freeze = 1
+			neo.plugin_registry[mod].freeze_key = key
+		elseif neo.plugin_registry[mod].dependent_freeze == 1 and key == neo.plugin_registry[mod].freeze_key then
+			neo.plugin_registry[mod].dependent_freeze = 0
+			lib.check_queue()
 		end
 	end
 end
