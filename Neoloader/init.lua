@@ -140,7 +140,10 @@ function lib.log_error(msg, alert, id, version)
 	end
 	val = tostring(msg) or ""
 	id = tostring(id) or "null"
-	version = tostring(version) or "0"
+	version = tostring(version)
+	if version == "0" then
+		version = lib.get_latest(id)
+	end
 	if neo.dbgFormatting == "YES" then
 		local status = "ALERT"
 		for i, v in ipairs {
@@ -668,6 +671,7 @@ function lib.get_latest(id)
 		end
 		return version
 	end
+	return "?"
 end
 
 
