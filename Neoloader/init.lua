@@ -220,7 +220,7 @@ function lib.find_file(file, ...)
 		
 	if last_slash_index then
 		--the first argument was a path/to/file and not just a file; break apart and handle
-		--lib.log_error("	first arg was a path/to/file")
+		--lib.log_error("			first arg was a path/to/file")
 		local path = string.sub(file, 1, last_slash_index)
 		file = string.sub(file, last_slash_index + 1)
 		
@@ -229,7 +229,7 @@ function lib.find_file(file, ...)
 			"../" .. path .. file,
 			"../../" .. path .. file,
 		})
-		--lib.log_error("	fixed to finding " .. file .. " with path provided: " .. path)
+		--lib.log_error("			fixed to finding " .. file .. " with path provided: " .. path)
 	end
 	
 	for index, path in ipairs(pathlist) do
@@ -252,7 +252,7 @@ function lib.find_file(file, ...)
 	local valid_path_table = {}
 	
 	for index, path in ipairs(path_checks) do
-		--lib.log_error("	" .. path[1])
+		--lib.log_error("			" .. path[1])
 		if gksys.IsExist(path[1]) then
 			first_valid_path = first_valid_path or path[1]
 			table.insert(valid_path_table, path)
@@ -383,9 +383,13 @@ function lib.resolve_dep_table(intable)
 			return false, "bad table format"
 		else
 			v.name = tostring(v.name or "null")
-			v.version = tostring(v.version or lib.get_latest(v.name) or "0")
+			v.version = tostring(v.version or "0")
+			if v.version == "0" then
+				v.version = lib.get_latest(v.name)
+			end
 			for i, v2 in ipairs {
-				lib.is_exist(v.name, v.version),
+				--lib.is_exist(v.name, v.version),
+				lib.is_ready(v.name, v.version),
 				neo.plugin_registry[v.name .. "." .. v.version] and neo.plugin_registry[v.name .. "." .. v.version].dependent_freeze < 1,
 			} do
 				if v2 == false then
@@ -485,7 +489,7 @@ function lib.register(iniFilePointer)
 		--	multiple plugins may use the same sharable library
 		--duplicate plugin entry in config.ini; we need to remove this plugin
 		--and mark the original with a triggered error
-		lib.log_error("	plugin registration failed: duplicate plugin!")
+		lib.log_error("			plugin registration failed: duplicate plugin!")
 		return false, "Duplicate of plugin exists"
 	else
 		table.insert(neo.plugin_container, {})
@@ -540,6 +544,7 @@ end
 function lib.check_queue()
 	for k, v in ipairs(waiting_for_dependencies) do
 		if lib.resolve_dep_table(v[1]) then
+			lib.log_error("		A dependency was resolved for a mod in the processing queue!", 1)
 			local temp = v[2]
 			table.remove(waiting_for_dependencies, k)
 			temp()
@@ -591,6 +596,7 @@ function lib.is_ready(id, version)
 end
 
 function lib.activate_plugin(id, version, verify_key)
+	local time_start = gk_get_microsecond()
 	lib.log_error("attempting activation of " .. tostring(id) .. "." .. tostring(version))
 	if err_han( type(id) ~= "string", "lib.activate_plugin expected a string for its first argument, got " .. type(id) ) then
 		return false, "plugin ID not a string"
@@ -626,7 +632,7 @@ function lib.activate_plugin(id, version, verify_key)
 							end
 						else
 							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF")
-							lib.log_error("	error message: " .. tostring(err))
+							lib.log_error("		error message: " .. tostring(err))
 							lib.notify("PLUGIN_FAILURE", id, version)
 							return false, "failed to activate, " .. err or "?"
 						end
@@ -660,6 +666,8 @@ function lib.activate_plugin(id, version, verify_key)
 		lib.log_error("Attempted to activate a plugin, but key is incorrect!")
 		--don't return false, no plugin ID to report to init
 	end
+	
+	lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1)
 end
 
 function lib.get_latest(id)
@@ -1112,7 +1120,7 @@ function lib.set_load(auth, id, version, state)
 end
 
 function lib.set_waiting(id, ver, state, key)
-	local valid_states = {
+	local valid_state = {
 		["YES"] = 1,
 		["NO"] = 0,
 		[true] = 1,
@@ -1124,15 +1132,20 @@ function lib.set_waiting(id, ver, state, key)
 	}
 	state = valid_state[state] or 0
 	id = tostring(id or "null")
-	ver = tostring(ver or lib.get_latest(id))
+	ver = tostring(ver or "0")
+	if ver == "0" then
+		ver = lib.get_latest(id)
+	end
 	if not key then
 		return false, "waiting state key must be provided"
 	elseif lib.is_exist(id, ver) then
-		mod = id .. "." .. version
+		mod = id .. "." .. ver
 		if state > 0 then
+			lib.log_error(mod .. " is now waiting", 1)
 			neo.plugin_registry[mod].dependent_freeze = 1
 			neo.plugin_registry[mod].freeze_key = key
 		elseif neo.plugin_registry[mod].dependent_freeze == 1 and key == neo.plugin_registry[mod].freeze_key then
+			lib.log_error(mod .. " has reactivated", 1)
 			neo.plugin_registry[mod].dependent_freeze = 0
 			lib.check_queue()
 		end
@@ -1240,7 +1253,7 @@ if neo.init ~= neo.API then
 	
 elseif gkini.ReadString("Neoloader", "installing", "done") == "now" then
 	--there was an error during installation; abort and bug the user!
-	lib.log_error("There was an error during the last installation! stub handler...")
+	lib.log_error("There was an error during the last installation! stub handler...", 4)
 	--dumptable(neo)
 	neo.error_flag = true
 	dofile("vo/if.lua")
@@ -1290,8 +1303,8 @@ else
 		local valid = gkini.ReadString2("modreg", "id", "null", file)
 		if valid == "null" then
 			--this file doesn't exist, or isn't meant to be a plugin package descriptor; we'll skip this entry.
-			lib.log_error("The plugin at position " .. tostring(counter) .. " appears broken or missing, and will not load!")
-			lib.log_error("the file being accessed is " .. file)
+			lib.log_error("The plugin at position " .. tostring(counter) .. " appears broken or missing, and will not load!", 1)
+			lib.log_error("the file being accessed is " .. file, 1)
 			--we need to increment the "number_plugins_registered" value here because otherwise new registrations will overwrite EXISTING entries in config.ini!!!
 			neo.number_plugins_registered = neo.number_plugins_registered + 1
 		else
@@ -1301,7 +1314,7 @@ else
 	end
 	
 	lib.log_error("Neoloader found " .. tostring(counter) .. " plugins/libraries.")
-	lib.log_error("[timestat] Init stage 1: " .. tostring(timestat_advance()))
+	lib.log_error("[timestat] Init stage 1: " .. tostring(timestat_advance()), 1)
 	--[[Init Stage 2
 		Everything in the registered plugins queue should be valid, working plugins; now, we build and add these to Neoloader's registry and give them a container. execution doesn't happen yet, and plugins are added even if they won't be run; we need to track what exists, and that's what is handled here.
 	]]--
@@ -1311,7 +1324,7 @@ else
 		--yarr
 		if id == false then
 			--this plugin failed for some reason
-			lib.log_error("failed to create registry entry for " .. v)
+			lib.log_error("failed to create registry entry for " .. v, 3)
 		else
 			--the plugin's INI built and was added; now we see if it needs to be loaded
 			local loadstate = gkreadstr("Neo-pluginstate", id .. "." .. version, "NO")
@@ -1325,7 +1338,7 @@ else
 	end
 	
 	lib.log_error("Of those plugins, " .. tostring(#validqueue) .. " are set to be loaded\nNow breaking down dependency tree...")
-	lib.log_error("[timestat] Init stage 2: " .. tostring(timestat_advance()))
+	lib.log_error("[timestat] Init stage 2: " .. tostring(timestat_advance()), 1)
 	--[[Init Stage 3
 		We have filtered down to only plugins that SHOULD run; now we need to figure their load order based on dependencies.
 		
@@ -1380,7 +1393,7 @@ else
 		local pluginID = obj[1] .. "." .. obj[2]
 		local status, err = lib.resolve_file(neo.plugin_registry[pluginID].plugin_path)
 		if status == false then
-			lib.log_error("Failed to launch the registered interface manager; failsafing to the DefaultUI")
+			lib.log_error("Failed to launch the registered interface manager; failsafing to the DefaultUI", 3)
 			dofile("vo/if.lua")
 		else
 			lib.log_error("Successfully loaded the registered interface manager!")
@@ -1396,13 +1409,13 @@ else
 	end
 	
 	if neo.listPresorted == "YES" then
-		lib.log_error("WARNING! Config.ini claims to be presorted by an external application; dependency load ordering has been skipped!")
+		lib.log_error("WARNING! Config.ini claims to be presorted by an external application; dependency load ordering has been skipped!", 3)
 	end
 	
 	for k, v in ipairs(valid_copy) do
 		local obj = neo.plugin_registry[v[1] .. "." .. v[2]]
 		if (obj.plugin_dependencies == nil) or (#obj.plugin_dependencies == 0) then --no dependencies; this is a root object
-			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to processing queue")
+			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to instant processing queue")
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
@@ -1417,29 +1430,22 @@ else
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		else --There is a dependency
-			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; breaking into dependency tree...")
+			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version)
 			for k2, v2 in ipairs(obj.plugin_dependencies) do
-				
-				lib.log_error("	requires " .. v2.name .. " v" .. v2.version)
-				if v2.version == "" or v2.version == "0" then --handle soft dependencies (not-version-specific); discouraged but doable
-				--future idea: allow version ranges?
-					v2.version = lib.get_latest(v2.name) or "0"
-				end
-				
-				--split apart v2[name.version] dependencies and link (=this plugin's name.version) in dependency_tree
-				
-				--first, create the entry container; this is the plugin that is being depended on
-				
-				dependency_tree[v2.name .. "." .. v2.version] = dependency_tree[v2.name .. "." .. v2.version] or {}
-				
-				--now, create the entry to the plugin that is dependent
-				
-				table.insert(dependency_tree[v2.name .. "." .. v2.version], {v[1], v[2] or 0})
+				lib.log_error("			requires " .. v2.name .. " v" .. v2.version)
 			end
+			lib.log_error("Adding " .. obj.plugin_id .. " to the delayed queue", 1)
+			lib.require(obj.plugin_dependencies, function()
+				local err_flag, err_detail = lib.activate_plugin(obj.plugin_id, obj.plugin_version, mgr_key)
+				if err_flag == false then
+					neo.error_flag = true
+					table.insert(neo.plugin_registry[v[1] .. "." .. v[2]].errors, err_detail)
+				end
+			end)
 		end
 	end
 	
-	lib.log_error("[timestat] Init stage 3: " .. tostring(timestat_advance()))
+	lib.log_error("[timestat] Init stage 3: " .. tostring(timestat_advance()), 1)
 	
 	--[[Init Stage 4
 	We have broken the plugins down to show what their dependent on; we now reverse-built this into a linear list so all of them that CAN be loaded, are.
@@ -1451,111 +1457,24 @@ else
 	
 	if #these_are_loaded[1] == 0 then
 		--if there are no "root" plugins/libraries to load, then we won't bother checking other plugins for dependencies.
-		lib.log_error("No 'root' level plugins or libraries are loaded; skipping further checks...")
+		lib.log_error("No 'root' level plugins or libraries are loaded; skipping further checks...", 4)
 		neo.error_flag = true
 		lib.notify("ROOT_FAILURE")
 	else
-		lib.log_error("Sorting plugins based on the dependency tree...")
-		local function addexec(id, ver)
-			if (ver == nil) then
-				ver = "0"
-			end
-			local pluginID = id .. "." .. tostring(ver)
-			these_are_loaded[pluginID] = true
-			table.insert(plugin_table, {id, ver})
-			lib.log_error("Added " .. id .. " v" .. ver .. " to the execution queue")
-		end
-		
-		local function checkreqs(name, version)
-			local id = name .. "." .. tostring(version or 0)
-			local deps = neo.plugin_registry[id].plugin_dependencies
-			local status = true
-			for k, v in ipairs(deps) do
-				local tempver = v.version
-				if tempver == nil or tempver == 0 or tempver == "0" then
-					tempver = lib.get_latest(v.name)
-				end
-				if v.name ~= "null" then
-					if these_are_loaded[(v.name or "null") .. "." .. (tempver or "0")] ~= true then
-						status = false
-						break
-					end
-				end
-			end
-			return status
-		end
-		
-		lib.log_error("Dependency tree is: " .. spickle(dependency_tree or {0}))
-		
-		local function loadpass()
-			local new_change = false
-			
-			for k, v in pairs(dependency_tree) do
-				--k: pluginID of the thing dependend on
-				--v: table of dependents
-				for k2, v2 in ipairs(dependency_tree[k]) do
-					--k2: index of dependent object
-					--v2: {id, version} of dependent object
-					local pluginID = v2[1] .. "." .. v2[2]
-					if these_are_loaded[pluginID] ~= true then
-						if checkreqs(v2[1], v2[2]) == true then
-							addexec(v2[1], v2[2])
-							new_change = true
-							table.remove(dependency_tree[k], k2)
-						end
-					else
-						--this is a duplicate entry of an item that was already loaded; this is caused by objects having multiple dependencies that were already fulfilled
-						table.remove(dependency_tree[k], k2)
-					end
-				end
-				if #dependency_tree[k] == 0 then
-					--this plugin group has been emptied of all items dependent on it; we can remove it now to prevent future unneccesary iteration
-					dependency_tree[k] = nil
-				end
-			end
-			return new_change
-		end
-		
-		local startTime = os.time()
-		
-		while loadpass() do
-			if neo.initLoopTimeout > 0 then
-				if os.time() - startTime > neo.initLoopTimeout then
-					--timed out
-					break
-				end
-			end
-		end
-		loadpass() --one more time for good measure
-		
-		
-		
-		--unless there's no root-level plugins to load, this will have the highest "time" taken. Look into making stage 4's code more efficient
-		lib.log_error("[timestat] Init stage 4: " .. tostring(timestat_advance()))
-		
-		--[[Init Stage 5:
-			if everything is doing what its supposed to do, then all plugins should load appropriately as we iterate over both library and plugin tables!
-		]]--
-		
-		
-		
-		
-		local plugin_start
-		
 		for k, v in ipairs(plugin_table) do
-			plugin_start = gk_get_microsecond()
 			local err_flag, err_detail = lib.activate_plugin(v[1], v[2], mgr_key)
 			if err_flag == false then
 				neo.error_flag = true
 				table.insert(neo.plugin_registry[v[1] .. "." .. v[2]].errors, err_detail)
 			end
-			lib.log_error("[timestat] plugin activated in: " .. tostring(gk_get_microsecond() - plugin_start))
 		end
+		
+		lib.check_queue()
 		
 		lib.log_error("All plugins have been loaded!")
 		ProcessEvent("LME_PLUGINS_LOADED")
 		
-		lib.log_error("[timestat] Init stage 5: " .. tostring(timestat_advance()))
+		lib.log_error("[timestat] Init stage 4: " .. tostring(timestat_advance()), 1)
 		if neo.error_flag == false then
 			lib.notify("SUCCESS")
 		end
