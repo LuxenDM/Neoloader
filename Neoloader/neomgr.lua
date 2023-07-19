@@ -726,7 +726,7 @@ function public.open()
 		readonly = "YES",
 		expand = "HORIZONTAL",
 		size = HUDSize(0.7, 0.2),
-		value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader.",
+		value = "",
 	}
 	
 	local setting_uninstaller = iup.hbox {
@@ -891,6 +891,8 @@ function public.open()
 	update_setting_width(scrolling_disp_width - Font.H1)
 	
 	neo_diag = diag
+	
+	setting_uninstaller_msg.value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader."
 	
 	neo_diag:show()
 end
