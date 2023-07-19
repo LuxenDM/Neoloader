@@ -190,7 +190,7 @@ function lib.err_handle(test, log_msg)
 			return false --returns inverse; test is the error condition, so returns true if there IS an error.
 		else
 			local err = debug.traceback("Neoloader captured an error: " .. tostring(log_msg))
-			lib.log_error(err)
+			lib.log_error(err, 4)
 			lib.notify("CAPTURED_ERROR", err)
 			if neo.doErrPopup == "YES" and neo.statelock == true then
 				error(err)
@@ -214,13 +214,13 @@ function lib.find_file(file, ...)
 		table.remove(pathlist, 1)
 	end
 	
-	--lib.log_error("Attempting to find " .. file)
+	lib.log_error("Attempting to find " .. file, 1)
 	
 	local last_slash_index = string.find(file, "/[^/]*$")
 		
 	if last_slash_index then
 		--the first argument was a path/to/file and not just a file; break apart and handle
-		--lib.log_error("			first arg was a path/to/file")
+		lib.log_error("			first arg was a path/to/file", 1)
 		local path = string.sub(file, 1, last_slash_index)
 		file = string.sub(file, last_slash_index + 1)
 		
@@ -229,7 +229,7 @@ function lib.find_file(file, ...)
 			"../" .. path .. file,
 			"../../" .. path .. file,
 		})
-		--lib.log_error("			fixed to finding " .. file .. " with path provided: " .. path)
+		lib.log_error("			fixed to finding " .. file .. " with path provided: " .. path, 1)
 	end
 	
 	for index, path in ipairs(pathlist) do
@@ -246,13 +246,13 @@ function lib.find_file(file, ...)
 		"../../" .. file,
 	})
 	
-	--lib.log_error("trying these: ")
+	lib.log_error("trying these: ", 1)
 	
 	local first_valid_path = false
 	local valid_path_table = {}
 	
 	for index, path in ipairs(path_checks) do
-		--lib.log_error("			" .. path[1])
+		lib.log_error("			" .. path[1], 1)
 		if gksys.IsExist(path[1]) then
 			first_valid_path = first_valid_path or path[1]
 			table.insert(valid_path_table, path)
@@ -272,12 +272,12 @@ function lib.resolve_file(file, ...)
 	local path, pathtable = lib.find_file(file, ...)
 	
 	if not path then
-		lib.log_error("unable to resolve file provided (" .. tostring(file) .. "); file not found")
+		lib.log_error("unable to resolve file provided (" .. tostring(file) .. "); file not found", 1)
 		return false, "unable to find file"
 	end
 	
 	local file_loaded
-	lib.log_error("Attempting to resolve " .. tostring(pathtable[1][1]))
+	lib.log_error("Attempting to resolve " .. tostring(pathtable[1][1]), 1)
 	for k, path_table in ipairs(pathtable) do
 		for i=1, 3 do
 			local status, err = loadfile(pathtable[k][i])
@@ -286,7 +286,7 @@ function lib.resolve_file(file, ...)
 				break
 			else
 				if not string.find(err, "No such file or directory") then
-					lib.log_error("Unable to resolve file: " .. tostring(err or "error?"))
+					lib.log_error("Unable to resolve file: " .. tostring(err or "error?"), 1)
 					return false, "error resolving file"
 				end
 			end
@@ -303,7 +303,8 @@ function lib.resolve_file(file, ...)
 			return true, file_loaded()
 		end
 	else
-		return false, "unable to resolve file: file does not appear to exist or cannot be accessed using known methods"
+		lib.log_error("unable to resolve file: file does not appear to exist or cannot be accessed using known methods", 1)
+		return false, "error resolving file"
 	end
 end
 
@@ -331,7 +332,7 @@ function lib.build_ini(iniFilePointer)
 		local pluginversion = getstr("modreg", "version", "0", ifp)
 		local pluginapi = getint("modreg", "api", 0, ifp)
 		if err_han( pluginapi ~= neo.API and neo.allowBadAPIVersion == "NO" , "lib.build_ini failed; API mismatched. expected " .. tostring(neo.API) .. ", got " .. tostring(pluginapi) ) then
-			lib.log_error("INI Builder failed: API Mismatch!")
+			lib.log_error("INI Builder failed: API Mismatch!", 1)
 			return false, "API mismatch"
 		end
 		
@@ -462,7 +463,7 @@ local function silent_register(iniFilePointer)
 			end
 		end
 		
-		lib.log_error("Added " .. id .. " v" .. data.plugin_version .. " to Neoloader's plugin registry!")
+		lib.log_error("Added " .. id .. " v" .. data.plugin_version .. " to Neoloader's plugin registry!", 1)
 		neo.plugin_registry[id .. "." .. data.plugin_version] = data
 		return id, data.plugin_version
 	end
@@ -483,13 +484,13 @@ function lib.register(iniFilePointer)
 	end
 	neo.listPresorted = "NO"
 	gkini.WriteString("Neoloader", "rPresortedList", "NO")
-	lib.log_error("Attempting to register data for " .. id .. " v" .. iniTable.plugin_version)
+	lib.log_error("Attempting to register data for " .. id .. " v" .. iniTable.plugin_version, 1)
 	if lib.is_exist(id, iniTable.plugin_version) then
 		--don't use the error handler here; duplicate registration can be attempted and shouldn't trigger errors for the user
 		--	multiple plugins may use the same sharable library
 		--duplicate plugin entry in config.ini; we need to remove this plugin
 		--and mark the original with a triggered error
-		lib.log_error("			plugin registration failed: duplicate plugin!")
+		lib.log_error("			plugin registration failed: duplicate plugin!", 1)
 		return false, "Duplicate of plugin exists"
 	else
 		table.insert(neo.plugin_container, {})
@@ -597,7 +598,7 @@ end
 
 function lib.activate_plugin(id, version, verify_key)
 	local time_start = gk_get_microsecond()
-	lib.log_error("attempting activation of " .. tostring(id) .. "." .. tostring(version))
+	lib.log_error("attempting activation of " .. tostring(id) .. "." .. tostring(version), 1)
 	if err_han( type(id) ~= "string", "lib.activate_plugin expected a string for its first argument, got " .. type(id) ) then
 		return false, "plugin ID not a string"
 	end
@@ -624,21 +625,21 @@ function lib.activate_plugin(id, version, verify_key)
 						local status, err = lib.resolve_file(modreg.plugin_path, nil, modreg.plugin_folder)
 						if status then
 							modreg.complete = true
-							lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!")
+							lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!", 2)
 							if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
 								if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
 									lib.check_queue()
 								end
 							end
 						else
-							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF")
-							lib.log_error("		error message: " .. tostring(err))
+							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
+							lib.log_error("		error message: " .. tostring(err), 3)
 							lib.notify("PLUGIN_FAILURE", id, version)
 							return false, "failed to activate, " .. err or "?"
 						end
 					else
 						modreg.complete = true
-						lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)")
+						lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)", 1)
 						if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
 							--can't be frozen if there's no activated code
 							lib.check_queue()
@@ -651,19 +652,19 @@ function lib.activate_plugin(id, version, verify_key)
 					neo.plugin_registry[plugin_id] = modreg
 					
 				else
-					lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!")
+					lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!", 1)
 					return false, "load state is NO"
 				end
 			else
-				lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!")
+				lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
 				return false, "unmatched dependencies"
 			end
 		else
-			lib.log_error("Attempted to activate " .. plugin_id .. " but it doesn't exist!")
+			lib.log_error("Attempted to activate " .. plugin_id .. " but it doesn't exist!", 1)
 			--don't return false, no plugin ID to report to init
 		end
 	else
-		lib.log_error("Attempted to activate a plugin, but key is incorrect!")
+		lib.log_error("Attempted to activate a plugin, but key is incorrect!", 1)
 		--don't return false, no plugin ID to report to init
 	end
 	
@@ -781,13 +782,13 @@ function lib.execute(name, version, func, ...)
 			elseif action then
 				retval = action
 			else
-				lib.log_error("Attempted to call " .. name .. " v" .. version .. " class function " .. func .. " but it doesn't exist")
+				lib.log_error("Attempted to call " .. name .. " v" .. version .. " class function " .. func .. " but it doesn't exist", 1)
 			end
 		else
-			lib.log_error("Attempted to call " .. name .. " v" .. version .. " but it isn't loaded")
+			lib.log_error("Attempted to call " .. name .. " v" .. version .. " but it isn't loaded", 1)
 		end
 	else
-		lib.log_error("Attempted to call " .. name .. " v" .. version .. " but it doesn't exist")
+		lib.log_error("Attempted to call " .. name .. " v" .. version .. " but it doesn't exist", 1)
 	end
 	return retval
 end
@@ -847,7 +848,7 @@ function lib.lock_class(name, version, custom_key)
 		if neo.plugin_registry[name .. "." .. version].lock == nil then
 			neo.plugin_registry[name .. "." .. version].lock = custom_key or lib.generate_key()
 		else
-			lib.log_error(name .. " v" .. version .. " is already locked!")
+			lib.log_error(name .. " v" .. version .. " is already locked!", 1)
 		end
 	end
 end
@@ -894,12 +895,12 @@ end
 
 function lib.uninstall(verify_key)
 	if verify_key == mgr_key then
-		lib.log_error("Attempting to uninstall Neoloader!")
+		lib.log_error("Attempting to uninstall Neoloader!", 3)
 		declare("NEO_UNINSTALL", true)
 		declare("NEO_UNINS_KEY", mgr_key)
 		lib.resolve_file("plugins/Neoloader/setup.lua")
 	else
-		lib.log_error("A mod attempted uninstallation of Neoloader, but the verification key did not match!")
+		lib.log_error("A mod attempted uninstallation of Neoloader, but the verification key did not match!", 1)
 	end
 end
 
@@ -1167,7 +1168,7 @@ end
 
 
 
-lib.log_error("[timestat] library function setup: " .. tostring(timestat_advance()))
+lib.log_error("[timestat] library function setup: " .. tostring(timestat_advance()), 1)
 
 do
 	--check that all files exist
@@ -1181,7 +1182,7 @@ do
 		"zcom.lua",
 	} do
 		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
-			lib.log_error("Core file missing from Neoloader: " .. filepath)
+			lib.log_error("Core file missing from Neoloader: " .. filepath, 4)
 			neo.error_flag = true
 		end
 	end
@@ -1191,13 +1192,14 @@ do
 		"neomgr.lua",
 	} do
 		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
-			lib.log_error("Optional file missing from Neoloader: " .. filepath)
+			lib.log_error("Optional file missing from Neoloader: " .. filepath, 2)
 		end
 	end
 end
 
 if neo.clearCommands == "YES" then
 	--try to clear bad behavior from fake-registering commands after a reload
+	lib.log_error("Command clearing is enabled and will now execute", 3)
 	local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
 	local commands = GetRegisteredUserCommands()
 	for i=1, #commands do
@@ -1213,7 +1215,7 @@ mgr_key = lib.generate_key()
 RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
 RegisterUserCommand("reload", lib.reload)
 
-lib.log_error("[timestat] library extra environment setup: " .. tostring(timestat_advance()))
+lib.log_error("[timestat] library extra environment setup: " .. tostring(timestat_advance()), 1)
 
 
 
@@ -1244,7 +1246,7 @@ What we do here:
 ]]--
 
 if neo.init ~= neo.API then
-	lib.log_error("Installing Neoloader for the first time!")
+	lib.log_error("Installing Neoloader for the first time!", 3)
 	gkini.WriteString("Neoloader", "installing", "now")
 	NEO_UNINSTALL = false
 	NEO_FIRST_INSTALL = mgr_key
@@ -1261,7 +1263,7 @@ elseif gkini.ReadString("Neoloader", "installing", "done") == "now" then
 	RegisterEvent(function() print("There was a catastrophic error while trying to setup Neoloader; please contact Luxen and provide your errors.log and config.ini") print("You can use /neodelete to try and remove Neoloader") end, "START")
 	return
 else
-	lib.log_error("\nNeoloader: Init process has started!")
+	lib.log_error("\nNeoloader: Init process has started!", 2)
 	
 	lib.resolve_file("plugins/Neoloader/env.lua")
 	--this contains variables that many of VO's public functions rely on.
@@ -1313,7 +1315,7 @@ else
 		end
 	end
 	
-	lib.log_error("Neoloader found " .. tostring(counter) .. " plugins/libraries.")
+	lib.log_error("Neoloader found " .. tostring(counter) .. " plugins/libraries.", 2)
 	lib.log_error("[timestat] Init stage 1: " .. tostring(timestat_advance()), 1)
 	--[[Init Stage 2
 		Everything in the registered plugins queue should be valid, working plugins; now, we build and add these to Neoloader's registry and give them a container. execution doesn't happen yet, and plugins are added even if they won't be run; we need to track what exists, and that's what is handled here.
@@ -1337,7 +1339,7 @@ else
 		end
 	end
 	
-	lib.log_error("Of those plugins, " .. tostring(#validqueue) .. " are set to be loaded\nNow breaking down dependency tree...")
+	lib.log_error("Of those plugins, " .. tostring(#validqueue) .. " are set to be loaded\nNow breaking down dependency tree...", 2)
 	lib.log_error("[timestat] Init stage 2: " .. tostring(timestat_advance()), 1)
 	--[[Init Stage 3
 		We have filtered down to only plugins that SHOULD run; now we need to figure their load order based on dependencies.
@@ -1372,9 +1374,9 @@ else
 	local dependency_tree = {}
 	
 	--if if-manager exists, then launch NOW; remove from to-load category
-	lib.log_error("Your current interface is: " .. neo.current_if)
+	lib.log_error("Your current interface is: " .. neo.current_if, 2)
 	if lib.is_exist(neo.current_if, lib.get_latest(neo.current_if)) and neo.plugin_registry[neo.current_if .. "." .. lib.get_latest(neo.current_if)].load == "YES" then
-		lib.log_error("Attempting to quick-launch the current interface: " .. neo.current_if)
+		lib.log_error("Attempting to launch the current interface: " .. neo.current_if, 2)
 		local index = 0
 		for k, v in ipairs(valid_copy) do
 			--k: index of table
@@ -1396,7 +1398,7 @@ else
 			lib.log_error("Failed to launch the registered interface manager; failsafing to the DefaultUI", 3)
 			dofile("vo/if.lua")
 		else
-			lib.log_error("Successfully loaded the registered interface manager!")
+			lib.log_error("Successfully loaded the registered interface manager!", 2)
 			neo.plugin_registry[pluginID].complete = true
 		end
 		
@@ -1404,7 +1406,7 @@ else
 		table.insert(these_are_loaded[1], true)
 	else
 		--the if-manager set to load doesn't exist; we need to launch the default interface
-		lib.log_error("Your interface does not exist or is not set to load; DefaultUI will be launched")
+		lib.log_error("Your interface does not exist or is not set to load; DefaultUI will be launched", 2)
 		dofile("vo/if.lua")
 	end
 	
@@ -1415,24 +1417,24 @@ else
 	for k, v in ipairs(valid_copy) do
 		local obj = neo.plugin_registry[v[1] .. "." .. v[2]]
 		if (obj.plugin_dependencies == nil) or (#obj.plugin_dependencies == 0) then --no dependencies; this is a root object
-			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to instant processing queue")
+			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to instant processing queue", 2)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		elseif obj.flag == "FORCE" then
-			lib.log_error("Skipping dependencies for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; development FORCE-load encountered")
+			lib.log_error("Skipping dependencies for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; development FORCE-load encountered", 3)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		elseif neo.listPresorted == "YES" then
-			lib.log_error("Skipped dependency check for " .. obj.plugin_id .. " v" .. obj.plugin_version)
+			lib.log_error("Skipped dependency check for " .. obj.plugin_id .. " v" .. obj.plugin_version, 3)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		else --There is a dependency
-			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version)
+			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version, 2)
 			for k2, v2 in ipairs(obj.plugin_dependencies) do
-				lib.log_error("			requires " .. v2.name .. " v" .. v2.version)
+				lib.log_error("			requires " .. v2.name .. " v" .. v2.version, 2)
 			end
 			lib.log_error("Adding " .. obj.plugin_id .. " to the delayed queue", 1)
 			lib.require(obj.plugin_dependencies, function()
@@ -1447,13 +1449,7 @@ else
 	
 	lib.log_error("[timestat] Init stage 3: " .. tostring(timestat_advance()), 1)
 	
-	--[[Init Stage 4
-	We have broken the plugins down to show what their dependent on; we now reverse-built this into a linear list so all of them that CAN be loaded, are.
-	
-	todo: look into other methods of ordering; we use a brute-force check, which is likely not so efficient. shouldn't matter unless there are LOTS of plugins, but best practice is to pre-prepare!
-	
-	We already have "root" libraries and plugins loaded. Here, we loop through the table "dependency_tree" and see IF a plugin can be loaded, based on what's already in the plugin/library tables.
-	]]--
+	--Init Stage 4
 	
 	if #these_are_loaded[1] == 0 then
 		--if there are no "root" plugins/libraries to load, then we won't bother checking other plugins for dependencies.
@@ -1471,7 +1467,7 @@ else
 		
 		lib.check_queue()
 		
-		lib.log_error("All plugins have been loaded!")
+		lib.log_error("All plugins have been loaded!", 2)
 		ProcessEvent("LME_PLUGINS_LOADED")
 		
 		lib.log_error("[timestat] Init stage 4: " .. tostring(timestat_advance()), 1)
@@ -1484,10 +1480,10 @@ end
 if lib.is_ready(neo.current_mgr) == false then
 	--if the manager isn't found, try the bundled version
 	if lib.is_ready("neomgr") == true then
-		lib.log_error("The last management interface for Neoloader was not found; the bundled manager was loaded instead.")
+		lib.log_error("The last management interface for Neoloader was not found; the bundled manager was loaded instead.", 3)
 		neo.current_mgr = "neomgr"
 	else
-		lib.log_error("The last management interface for Neoloader was not found, and bundled manager is not available for use.")
+		lib.log_error("The last management interface for Neoloader was not found, and bundled manager is not available for use.", 4)
 		print("Neoloader failed to find an installed and enabled management interface; use /neomgr to force the bundled interface tool to load")
 		RegisterUserCommand("neomgr", function()
 			UnregisterUserCommand("neomgr")
@@ -1505,7 +1501,7 @@ if lib.is_ready(neo.current_mgr) == true then
 end
 
 RegisterEvent(function()
-	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step))
+	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step), 2)
 end, "PLUGINS_LOADED")
 
 RegisterEvent(function()
@@ -1524,7 +1520,7 @@ RegisterEvent(function()
 	
 end, "UNLOAD_INTERFACE")
 
-lib.log_error("[timestat] Neoloader completed in " .. tostring(gk_get_microsecond() - timestat_neo_start))
+lib.log_error("[timestat] Neoloader completed in " .. tostring(gk_get_microsecond() - timestat_neo_start), 2)
 timestat_step = gk_get_microsecond()
-lib.log_error("Neoloader has finished initial execution! The standard plugin loader will now take over.\n\n")
+lib.log_error("Neoloader has finished initial execution! The standard plugin loader will now take over.\n\n", 2)
 ProcessEvent("LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
