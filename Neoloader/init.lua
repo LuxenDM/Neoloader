@@ -817,7 +817,7 @@ function lib.set_class(name, version, ftable)
 	if version == "0" then
 		version = lib.get_latest(name)
 	end
-	
+	lib.log_error("Setting class for " .. name .. " v" .. version, 1)
 	if type(ftable) ~= "table" then
 		ftable = {ftable or 0} --is the or_0 neccesary here?
 	end
