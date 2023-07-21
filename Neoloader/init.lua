@@ -25,7 +25,7 @@ copy_table = function(input)
 	return newtable
 end
 
---clean up and improve the timestat system
+
 local gk_get_microsecond = gkmisc.GetGameTime
 
 local timestat_neo_start = gk_get_microsecond()
@@ -67,16 +67,17 @@ end
 --This will be local when released
 neo = {
 	version = {
+		strver = "5.4.0 -beta",
 		[1] = 5,
-		[2] = 3,
-		[3] = 1,
+		[2] = 4,
+		[3] = 0,
 		[4] = "Beta",
 	},
 	notifications = {},
 	log = {},
 	error_flag = false, 
 	plugin_registry = {}, --holds registered plugin details [id .. version]; [id].latest will provide version sstring of latest version for redirect
-	plugin_container = {}, --holds a library's "reserved" data/functions.
+	plugin_container = {}, --holds a library's "class" data/functions.
 	
 	list_if = { --list of possible IFs
 		[1] = "no_entry",
@@ -87,15 +88,16 @@ neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	minor = 7, --lib.find_file() and lib.set_load()
+	minor = 8, --lib.set_waiting and dependency ranges
 	patch = 0,
+	lmever = "3.8.0",
 	
 	pathlock = false,
 	statelock = false,
 	
 	allowDelayedLoad = gkreadstr("Neoloader", "rAllowDelayedLoad", "NO"),
 	allowBadAPIVersion = gkreadstr("Neoloader", "rAllowBadAPIVersion", "YES"),
-	initLoopTimeout = gkreadint("Neoloader", "rInitLoopTimeout", 0),
+	--initLoopTimeout = gkreadint("Neoloader", "iInitLoopTimeout", 0),
 	echoLogging = gkreadstr("Neoloader", "rEchoLogging", "YES"),
 	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "NO"),
 	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "NO"),
@@ -121,14 +123,9 @@ local mgr_key = 0
 
 
 
-
-
-
-
-
 lib = {} --public functions container
 lib[0] = "LME"
-lib[1] = "Neoloader"
+lib[1] = "Neoloader" --LME provider
 
 local waiting_for_dependencies = {} --storage for functions with unfulfilled dependencies tested by lib.require
 local converted_dep_tables = {} --storage for build results of compiled ini files
@@ -173,7 +170,7 @@ RegisterEvent(function() neo.pathlock = true end, "LIBRARY_MANAGEMENT_ENGINE_COM
 --when the default loader is working, dofile() has the 'current working directory' appended in front of any path given. This is reset when all plugins are fully loaded.
 
 RegisterEvent(function() neo.pathlock = false neo.statelock = true end, "PLUGINS_LOADED")
---when all plugins are loaded, it becomes impossible to create global variables because the sandbox metatable's "new index" is removed; to create globals the plugin must use declare("name", value) (but pluginders should do that anyways if their plugin has any execution post-load)
+--when all plugins are loaded, it becomes impossible to create global variables because the sandbox metatable's "new index" is removed; to create globals the plugin must use declare("name", value) (but modders should do that anyways if their plugin has any execution post-load)
 
 
 
@@ -220,7 +217,6 @@ function lib.find_file(file, ...)
 		
 	if last_slash_index then
 		--the first argument was a path/to/file and not just a file; break apart and handle
-		lib.log_error("			first arg was a path/to/file", 1)
 		local path = string.sub(file, 1, last_slash_index)
 		file = string.sub(file, last_slash_index + 1)
 		
@@ -229,7 +225,6 @@ function lib.find_file(file, ...)
 			"../" .. path .. file,
 			"../../" .. path .. file,
 		})
-		lib.log_error("			fixed to finding " .. file .. " with path provided: " .. path, 1)
 	end
 	
 	for index, path in ipairs(pathlist) do
@@ -246,13 +241,11 @@ function lib.find_file(file, ...)
 		"../../" .. file,
 	})
 	
-	lib.log_error("trying these: ", 1)
-	
 	local first_valid_path = false
 	local valid_path_table = {}
 	
 	for index, path in ipairs(path_checks) do
-		lib.log_error("			" .. path[1], 1)
+		lib.log_error("		" .. path[1], 1)
 		if gksys.IsExist(path[1]) then
 			first_valid_path = first_valid_path or path[1]
 			table.insert(valid_path_table, path)
@@ -437,8 +430,8 @@ local function silent_register(iniFilePointer)
 		return false, errid
 	end
 	if err_han( lib.is_exist(id, iniTable.plugin_version) ~= false, "Silent Registry failed! The plugin being registered already exists!" ) then
-		--duplicate plugin entry in config.ini; we need to remove this plugin from the config
-		--and mark the original with a triggered error
+		--duplicate plugin entry in config.ini; we need to remove this plugin from the config and mark the original with a triggered error
+		lib.log_error("registration error: already exists", 3, id, iniTable.plugin_version)
 		return false, 304
 	else
 		table.insert(neo.plugin_container, {})
@@ -488,7 +481,6 @@ function lib.register(iniFilePointer)
 	if err_han( type(iniFilePointer) ~= "string", "lib.register expected a string (file path) for argument 1, got " .. type(iniFilePointer) ) then
 		return false, "file pointer not a string"
 	end
-	--used to add new plugins/libraries to Neoloader
 	local id = gkini.ReadString2("modreg", "id", "null", iniFilePointer)
 	if err_han( id == "null", "lib.register could not open the plugin at " .. iniFilePointer) then
 		return false, "invalid file pointer"
@@ -503,9 +495,8 @@ function lib.register(iniFilePointer)
 	if lib.is_exist(id, iniTable.plugin_version) then
 		--don't use the error handler here; duplicate registration can be attempted and shouldn't trigger errors for the user
 		--	multiple plugins may use the same sharable library
-		--duplicate plugin entry in config.ini; we need to remove this plugin
-		--and mark the original with a triggered error
-		lib.log_error("			plugin registration failed: duplicate plugin!", 1)
+		--duplicate plugin entry in config.ini; we need to remove this plugin and mark the original with a triggered error
+		lib.log_error("			plugin registration failed: duplicate plugin!", 1, id, iniTable.plugin_version)
 		return false, "Duplicate of plugin exists"
 	else
 		table.insert(neo.plugin_container, {})
@@ -641,6 +632,7 @@ function lib.activate_plugin(id, version, verify_key)
 						if status then
 							modreg.complete = true
 							lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!", 2)
+							lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1, id, version)
 							if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
 								if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
 									lib.check_queue()
@@ -648,7 +640,7 @@ function lib.activate_plugin(id, version, verify_key)
 							end
 						else
 							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
-							lib.log_error("		error message: " .. tostring(err), 3)
+							lib.log_error("		error message: " .. tostring(err), 3, id, version)
 							lib.notify("PLUGIN_FAILURE", id, version)
 							return false, "failed to activate, " .. err or "?"
 						end
@@ -682,8 +674,6 @@ function lib.activate_plugin(id, version, verify_key)
 		lib.log_error("Attempted to activate a plugin, but key is incorrect!", 1)
 		--don't return false, no plugin ID to report to init
 	end
-	
-	lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1)
 end
 
 function lib.get_latest(id, min, max)
@@ -764,6 +754,7 @@ function lib.get_gstate()
 	data.major = neo.API
 	data.minor = neo.minor
 	data.patch = neo.patch
+	data.lmever = neo.lmever
 	if not lib.is_exist(neo.current_if) then
 		data.ifmgr = "vo-if"
 	end
@@ -849,7 +840,7 @@ function lib.set_class(name, version, ftable)
 	end
 	lib.log_error("Setting class for " .. name .. " v" .. version, 1)
 	if type(ftable) ~= "table" then
-		ftable = {ftable or 0} --is the or_0 neccesary here?
+		ftable = {ftable}
 	end
 	if lib.is_exist(name, version) then
 		if (neo.plugin_registry[name .. "." .. version].lock == nil) and (neo.plugin_registry[name .. "." .. version].load == "YES") then
@@ -877,7 +868,7 @@ function lib.lock_class(name, version, custom_key)
 		if neo.plugin_registry[name .. "." .. version].lock == nil then
 			neo.plugin_registry[name .. "." .. version].lock = custom_key or lib.generate_key()
 		else
-			lib.log_error(name .. " v" .. version .. " is already locked!", 1)
+			lib.log_error(name .. " v" .. version .. " is already locked!", 1, name, version)
 		end
 	end
 end
@@ -955,9 +946,7 @@ function lib.get_path(plugin_id, version)
 	if err_han( type(plugin_id) ~= "string", "lib.get_path expected a string for its first argument, got " .. type(plugin_id) ) then
 		return false, "plugin ID not a string"
 	end
-	--[[
-	if libraries rely on multiple files but are also meant to be distributed with every plugin that requires them, this function will retrieve the stored "path" registered to the working library, stripping it of the plugin's index.lua
-	]]--
+	--if libraries rely on multiple files but are also meant to be distributed with every plugin that requires them, this function will retrieve the stored "path" registered to the working library
 	version = tostring(version or 0)
 	if version == "0" then
 		version = lib.get_latest(plugin_id)
@@ -982,6 +971,7 @@ function lib.reload()
 		
 		--unregister commands
 		if neo.clearCommands == "YES" then
+			lib.log_error("Command clearing is enabled and will now execute", 3)
 			local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
 			local commands = GetRegisteredUserCommands()
 			for i=1, #commands do
@@ -1171,11 +1161,11 @@ function lib.set_waiting(id, ver, state, key)
 	elseif lib.is_exist(id, ver) then
 		mod = id .. "." .. ver
 		if state > 0 then
-			lib.log_error(mod .. " is now waiting", 1)
+			lib.log_error(mod .. " is now waiting", 1, id, ver)
 			neo.plugin_registry[mod].dependent_freeze = 1
 			neo.plugin_registry[mod].freeze_key = key
 		elseif neo.plugin_registry[mod].dependent_freeze == 1 and key == neo.plugin_registry[mod].freeze_key then
-			lib.log_error(mod .. " has reactivated", 1)
+			lib.log_error(mod .. " has reactivated", 1, id, ver)
 			neo.plugin_registry[mod].dependent_freeze = 0
 			lib.check_queue()
 		end
@@ -1253,25 +1243,15 @@ lib.log_error("[timestat] library extra environment setup: " .. tostring(timesta
 
 
 --init process
---you need to recheck your notes for changes both above and below this
 
 --[[
 What we do here:
-	1) Check and set up config.ini if this is the first time Neoloader is running. No plugins will be loaded (everything SHOULD be load=NO), so break and exit.
+	1) Check if Neoloader needs to install
 	2) Loop through config.ini's [Neo-registry] to obtain every ini file pointer. loop until "null" is reached.
-	3) Resolve every file pointer and build the neccesary table. Missing files are ignored (not removed! That could add a "null" in between existing elements; create a seperate tool that will rebuild and clean the registry later!!!!)
+	3) Resolve every file pointer and build the neccesary table. Missing files are logged and ignored.
 	4) check every plugin state [name.version], default to NO. if YES or FORCE, add to the processing table.
-	
-	5) Begin processing the library table to sort into load order.
-		5a) The plugin registered as the active interface manager is loaded immediately if it exists; otherwise, launch the default interface NOW
-		5b) Libraries with no dependencies are added to the sorted queue immediately
-		5c) Libraries are sorted based on their dependency tree (brute force sorting)
-		5d) plugins are queued after libraries, but otherwise have the same rules
+	5) Begin processing the library table to handle load ordering. queue plugins with no dependencies; add others via lib.require
 	6) Process the queue and load the plugins
-	
-	We need to make sure we are properly adding items to plugin_registry even if they don't get loaded. Use the silent registration (and verify that is doing what we want!!!)
-	
-	TODO: Add more logging to this stuff!
 ]]--
 
 if neo.init ~= neo.API then
@@ -1292,20 +1272,17 @@ elseif gkini.ReadString("Neoloader", "installing", "done") == "now" then
 	RegisterEvent(function() print("There was a catastrophic error while trying to setup Neoloader; please contact Luxen and provide your errors.log and config.ini") print("You can use /neodelete to try and remove Neoloader") end, "START")
 	return
 else
-	lib.log_error("\nNeoloader: Init process has started!", 2)
+	lib.log_error("Neoloader: Init process has started!\n\n", 2)
 	
 	lib.resolve_file("plugins/Neoloader/env.lua")
 	--this contains variables that many of VO's public functions rely on.
 	if gkini.ReadString("Neoloader", "installing", "finishing") == "finishing" then
 		gkini.WriteString("Neoloader", "installing", "done")
-		--notification for first-time installation
 	end
 	
-	local registered_plugins = {} --list of registered ini files describing plugins; we cycle through everything in neo-registry in the config file. We check to make sure the file exists; if it does, we'll add it to this queue. Stage 1
+	local registered_plugins = {} --list of registered ini files describing plugins
 	
 	local validqueue = {} --The registered plugins are filtered into this if their state is valid. Stage 2
-	
-	local lopqueue = {} --load-order-processing queue; plugins and libs are added in order of their dependencies and subcategories. If we have a plugin registered as the active interface manager, that gets loaded immediately, and doesn't enter this queue. Stage 3
 	
 	local valid_states = {
 		["YES"] = true, --allow a plugin to load
@@ -1315,11 +1292,7 @@ else
 	}
 	
 	timestat_step = gk_get_microsecond()
-	--[[Init Stage 1
-		We want to loop through config.ini and find all registered plugins.
-		These are added to the registered_plugins queue.
-			Actual state checking and building the ini doesn't happen yet.
-	]]--
+	--Init Stage 1: Loop through config.ini and find all registered plugins
 	local counter = 0
 	while true do
 		--this loop repeats until an invalid file entry is recieved from Neo-registry in config.ini
@@ -1346,13 +1319,10 @@ else
 	
 	lib.log_error("Neoloader found " .. tostring(counter) .. " plugins/libraries.", 2)
 	lib.log_error("[timestat] Init stage 1: " .. tostring(timestat_advance()), 1)
-	--[[Init Stage 2
-		Everything in the registered plugins queue should be valid, working plugins; now, we build and add these to Neoloader's registry and give them a container. execution doesn't happen yet, and plugins are added even if they won't be run; we need to track what exists, and that's what is handled here.
-	]]--
+	--Init Stage 2: build INI files and register information
 	
 	for k, v in ipairs(registered_plugins) do
 		local id, version = silent_register(v)
-		--yarr
 		if id == false then
 			--this plugin failed for some reason
 			lib.log_error("failed to create registry entry for " .. v, 3)
@@ -1380,22 +1350,10 @@ else
 		
 		2) Everything else is checked for dependencies
 			no dependency: Added immediately to the plugin_table, which is the "ready for launch"
-			dependency found: plugin is added to a table dependency_tree
-				tree {
-					[dependency_1] = {
-						plugin_dependent_on_dep_1,
-						...
-					},
-					...
-				}
-			plugins with multiple dependencies will be added to several keys here, and this is iterated over in stage 4.
-			
-		This seems like an expensive part of the init process (in how long it takes to complete, but that comes from launching the default interface.
-		If you use MultiUI with barebones or another lightweight UI, this is *drastically* faster
+			dependency found: plugin uses lib.require() handling
 	]]--
 	
 	local valid_copy = copy_table(validqueue) --i should check if this is neccesary in the future
-	local lib_table = {}
 	local plugin_table = {}
 	local these_are_loaded = {
 		[1] = {},
@@ -1500,7 +1458,7 @@ else
 		
 		lib.check_queue()
 		
-		lib.log_error("All plugins have been loaded!", 2)
+		lib.log_error("All plugins have been processed!", 2)
 		ProcessEvent("LME_PLUGINS_LOADED")
 		
 		lib.log_error("[timestat] Init stage 4: " .. tostring(timestat_advance()), 1)
