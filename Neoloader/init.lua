@@ -155,10 +155,10 @@ function lib.log_error(msg, alert, id, version)
 			status = i == alert and v or status
 		end
 		
-		val = "[" .. os.date() .. "." .. tostring(gk_get_microsecond()) .. "] [" .. status .. "] " .. val
+		val = "[" .. os.date() .. "." .. tostring(gk_get_microsecond()) .. "] [" .. status .. "] " .. val .. "\127FFFFFF"
 	end
 	if neo.echoLogging == "YES" then
-		console_print(val)
+		console_print(filter_colorcodes(val))
 	end
 	if lib.is_exist(id, version) then
 		table.insert(neo.plugin_registry[id .. "." .. version].errors, val)
@@ -353,6 +353,7 @@ function lib.build_ini(iniFilePointer)
 				table.insert(dependents, {
 					name = getstr("dependency", "depid" .. tostring(i), "null", ifp),
 					version = getstr("dependency", "depvs" .. tostring(i), "0", ifp),
+					ver_max = getstr("dependency", "depmx" .. tostring(i), "~", ifp),
 				})
 			end
 		end
@@ -379,19 +380,33 @@ function lib.resolve_dep_table(intable)
 		return false, "input not a table"
 	end
 	local status = true
-	for k, v in ipairs(intable) do
+	--use a copy here to prevent back-adjustments
+	for k, v in ipairs(copy_table(intable)) do
 		if err_han( type(v) ~= "table", "lib.resolve_dep_table was given an improperly formatted table; table values should be tables!" ) then
 			return false, "bad table format"
 		else
 			v.name = tostring(v.name or "null")
 			v.version = tostring(v.version or "0")
+			v.ver_max = tostring(v.ver_max or "~")
+			if not lib.is_exist(v.name) then
+				--this mod doesn't exist at all in the registry
+				return false
+			end
 			if v.version == "0" then
 				v.version = lib.get_latest(v.name)
 			end
+			if v.ver_max == "0" then
+				v.ver_max = lib.get_latest(v.name)
+			end
+			if v.ver_max ~= "~" then
+				v.version = lib.get_latest(v.name, v.version, v.ver_max)
+			end
+			
 			for i, v2 in ipairs {
 				--lib.is_exist(v.name, v.version),
 				lib.is_ready(v.name, v.version),
 				neo.plugin_registry[v.name .. "." .. v.version] and neo.plugin_registry[v.name .. "." .. v.version].dependent_freeze < 1,
+				v.version ~= "?",
 			} do
 				if v2 == false then
 					status = false
@@ -580,6 +595,7 @@ function lib.is_ready(id, version)
 	if err_han( type(id) ~= "string", "lib.is_ready expected a string for its first argument, got " .. type(id) ) then
 		return false, "plugin ID not a string"
 	end
+	local status = false
 	if lib.is_exist(id) then
 		version = tostring(version or 0)
 		if version == "0" then
@@ -588,12 +604,11 @@ function lib.is_ready(id, version)
 		
 		if lib.is_exist(id, version) then
 			if neo.plugin_registry[id .. "." .. version].complete == true then
-				return true
-			else
-				return false
+				status = true
 			end
 		end
 	end
+	return status
 end
 
 function lib.activate_plugin(id, version, verify_key)
@@ -671,13 +686,27 @@ function lib.activate_plugin(id, version, verify_key)
 	lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1)
 end
 
-function lib.get_latest(id)
+function lib.get_latest(id, min, max)
 	id = tostring(id or "null")
 	if lib.is_exist(id) then
-		local version = tostring(neo.plugin_registry[id].latest)
+		local ver_table = neo.plugin_registry[id]
+		local version = tostring(ver_table.latest)
 		if version == "0" then
-			version = neo.plugin_registry[id][#neo.plugin_registry[id]]
+			version = ver_table[#ver_table]
 		end
+		
+		if max and lib.compare_sem_ver(max, version) < 0 then
+			version = "?"
+			for index=#ver_table, 1, -1 do
+				local ver_available = ver_table[index]
+				
+				if lib.is_ready(id, ver_available) and lib.compare_sem_ver(max, ver_available) >= 0 and lib.compare_sem_ver(min, ver_available) <= 0 then
+					version = ver_available
+					break
+				end
+			end
+		end
+		
 		return version
 	end
 	return "?"
@@ -1434,7 +1463,11 @@ else
 		else --There is a dependency
 			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version, 2)
 			for k2, v2 in ipairs(obj.plugin_dependencies) do
-				lib.log_error("			requires " .. v2.name .. " v" .. v2.version, 2)
+				if v2.ver_max == "~" then
+					lib.log_error("		requires " .. v2.name .. " v" .. v2.version, 2)
+				else
+					lib.log_error("		requires " .. v2.name .. " from v" .. v2.version .. " to v" .. v2.ver_max, 2)
+				end
 			end
 			lib.log_error("Adding " .. obj.plugin_id .. " to the delayed queue", 1)
 			lib.require(obj.plugin_dependencies, function()
