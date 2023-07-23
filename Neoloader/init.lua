@@ -1626,8 +1626,10 @@ RegisterEvent(function()
 	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step), 2)
 end, "PLUGINS_LOADED")
 
-RegisterEvent(function()
-	--enforce known load states for plugins
+local function reset_handler()
+	--used to verify options are properly saved, preventing authorization bypass when possible
+	
+	--enforce known load states for mods
 	local plist = lib.get_gstate().pluginlist
 	for k, v in ipairs(plist) do
 		local new_state = neo.plugin_registry[v[1] .. "." .. v[2]].nextload
@@ -1638,9 +1640,21 @@ RegisterEvent(function()
 		end
 	end
 	
-	gkinterface.GKSaveCfg()
+	--enforce known config options for neoloader
+	for k, v in pairs(configd) do
+		if v.type == "number" then
+			gkini.WriteInt("Neoloader", v.key, neo[k])
+		else
+			gkini.WriteString("Neoloader", v.key, neo[k])
+		end
+	end
 	
-end, "UNLOAD_INTERFACE")
+	--save the config file
+	gkinterface.GKSaveCfg()
+end
+
+RegisterEvent(reset_handler, "UNLOAD_INTERFACE")
+RegisterEvent(reset_handler, "QUIT")
 
 lib.log_error("[timestat] Neoloader completed in " .. tostring(gk_get_microsecond() - timestat_neo_start), 2)
 timestat_step = gk_get_microsecond()
