@@ -113,6 +113,121 @@ neo = {
 	current_mgr = gkreadstr("Neoloader", "mgr", ""),
 }
 
+local configd = {
+	--config defines
+	allowDelayedLoad = {
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rAllowDelayedLoad",
+	},
+	allowBadAPIVersion = {
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rAllowBadAPIVersion",
+	},
+	echoLogging = {
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rEchoLogging",
+	},
+	defaultLoadState = {
+		need_auth = "YES",
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+			"FORCE" = true,
+			"AUTH" = true,
+		},
+		default = "NO",
+		key = "rDefaultLoadState",
+	},
+	doErrPopup = {
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rDoErrPopup",
+	},
+	protectResolveFile = {
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rProtectResolveFile",
+	},
+	listPresorted = {
+		need_auth = "YES",
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rPresortedList",
+	},
+	clearCommands = {
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rClearCommands",
+	},
+	dbgFormatting = {
+		type = "string",
+		valid = {
+			"YES" = true,
+			"NO" = true,
+		},
+		default = "NO",
+		key = "rDbgFormatting",
+	},
+	dbgIgnoreLevel = {
+		type = "number",
+		valid = {
+			[0] = true,
+			[1] = true,
+			[2] = true,
+			[3] = true,
+			[4] = true,
+		},
+		default = 2,
+		key = "iDbgIgnoreLevel",
+	},
+	current_if = {
+		need_auth = "YES",
+		type = "string",
+		valid = "all",
+		default = "",
+		key = "if",
+	},
+	current_mgr = {
+		need_auth = "YES",
+		type = "string",
+		valid = "all",
+		default = "",
+		key = "mgr",
+	},
+}
+
 local mgr_key = 0
 --[[
 	This mgr_key is the random value used to prevent any plugin from calling functions we want to verify ONLY the user can initiate, such as forcing an uninstall or changing a plugin's state.
@@ -1172,7 +1287,23 @@ function lib.set_waiting(id, ver, state, key)
 	end
 end
 
-
+function lib.lme_configure(cfg_option, new_val, auth)
+	cfg_option = tostring(cfg_option)
+	define = configd[cfg_option]
+	if not define then
+		return false, "option does not exist"
+	else 
+		if (type(define.valid) == "table" and define.valid[new_val] or define.valid == "ALL") and (define.need_auth == "YES" and auth == mgr_key or not define.need_auth) then
+			lib.log_error("Configuration change: " .. cfg_option .. " >> " .. tostring(new_val), 1)
+			neo[cfg_option] = new_val
+			if define.type == "number" then
+				gkini.WriteInt("Neoloader", define.key, tonumber(new_val) or 0)
+			else
+				gkini.WriteString("Neoloader", define.key, tostring(new_val))
+			end
+		end
+	end
+end
 
 
 
