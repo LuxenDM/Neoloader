@@ -274,6 +274,8 @@ Neoloader June 2023 Public Beta
 	Neoloader now overwrites load-states when a reload is triggered
 		plugins *can* change load-states by just writing to the config.ini, but they should instead use the LME implementation agnostic lib.set_load function instead. To this end, Neoloader will now save known load states when the interface unloads.
 	
+
+
 June 2023 Public Beta Hotfix
 	
 	Neoloader Changes:
@@ -289,3 +291,59 @@ June 2023 Public Beta Hotfix
 	The june update introduced lib.set_load() and began enforcing load states during the unload process. neomgr, setup, uninstall, and management rescue processes were overlooked in updating to handle these changes, as it still used the old config.ini manual write method. This has been resolved.
 	
 	Also, load state enforcement was being routed to a debugging section, so it didn't work anyways. This has also been resolved.
+
+
+
+Neoloader July 2023 Public Beta
+	
+	Neoloader Changes:
+		major:	5
+		minor:	4
+		patch:	0
+		
+		CHANGED	mod registration file dependency declaration options
+		CHANGED launch handling of plugins with dependencies
+		CHANGED	log formatting options
+		CHANGED	logging information during initialization
+		
+	API Changes:
+		API Version	3
+		minor level 8
+		patch level 0
+		
+		CHANGED	lib.resolve_file
+		CHANGED	lib.log_error
+		CHANGED	lib.get_latest
+		CHANGED	lib.resolve_dep_table
+		CHANGED	lib.get_state
+		CHANGED	lib.get_gstate
+		NEW		lib.set_waiting
+		NEW		lib.lme_configure
+		
+	Mods can now delay execution of their dependents
+		using the new lib.set_waiting, it is possible for mods to delay their dependents. This is intended for use by mods made in a more classical manner but patched/altered to ALSO support Neoloader, such as DroidButtons. A mod can set up its bare essentials through Neoloader, then "freeze" until its main body is executed at default loader time.
+		
+	Configuring Neoloader must now be done through lib.lme_configure
+		As certain LME configuration options directly control how plugins are loaded through Neoloader, allowing these options to be managed directly through the config.ini made little sense. Just as load states were enforced in the previous update, configuration of the LME provider is now done through a control function. Certain options can be changed freely, while others will require an auth key.
+		
+	lib.log_error now formats its input based on LME configuration
+		message formatting mirrors usual logs found in other games; every message posts the time of execution, and can be filtered between one of four potential error states: "debug", "info", "warning", and "error".
+		
+	lib.log_error can now store the provided message in a calling plugin's error table.
+		use arguments 3 and 4 of lib.log_error to push a log towards a plugin in particular. Plugins can now independently store and list their own errors; the error table can be retrieved with lib.get_state like always.
+		
+	lib.get_state and lib.get_gstate now retrieve the new relevant options
+		lib.get_state will now list if a plugin is "frozen" or not, which determines if a plugin's dependents are executed or not. lib.get_gstate now list log formatting options, and will deliver a string representing the LME's/Neoloader's versions, relevant for use with lib.compare_sem_ver.
+		
+	Mods can finally declare a range of versions as valid for dependencies!
+		Plugins can now rely on a primary range of versions instead of only a single version. In a mod's declaration file, if a dependency index includes a "modmx" entry, then the prior modid entry is treated as a minimum value and the mx (or maximum) is treated as the maximum value of a version range. lib.require, lib.resolve_dep_table, and lib.get_latest all have been modified to support this feature.
+		
+		in a lib.require soft dependency table, use the ver_max key to signify a range along with the previously standard id/version keys.
+	
+	lib.resolve_file will now pcall any files it resolves, assuming the option is set in the LME configuration.
+		This provides further safety-netting to any code being launched by Neoloader than the previous mere loadfile method.
+		
+	The initialization process now just uses lib.require.
+		The old brute-force sorting algorithm used by Neoloader has been removed, improving Neoloader's execution time. This also fixed minor issues that were cropping up with the old loader; plugins with multiple dependencies are more likely to not stumble due to incorrect sorting, and all code for handling dependencies is more unified.
+		
+	All of these features have been dedicated to ensuring that porting plugins to be Neoloader compatible is even more seamless and easy, while protecting the end user even more.
