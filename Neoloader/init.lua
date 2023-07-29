@@ -737,58 +737,59 @@ function lib.activate_plugin(id, version, verify_key)
 	local plugin_id = id .. "." .. version
 	--this is called to start a plugin that is already registered. it SHOULD NOT be used without the user's knowledge.
 	--libraries should be set as loaded/disabled by the user themselves and resolved ONLY by the user using a plugin manager or during Init
-	if verify_key == mgr_key then
-		if lib.is_exist(id, version) then
-			local modreg = neo.plugin_registry[plugin_id]
-			if lib.resolve_dep_table(modreg.plugin_dependencies) or modreg.flag == "FORCE" then
-				if valid_load_states[lib.get_state(id, version).load] then
-					if modreg.plugin_path ~= "" then
-						local status, err = lib.resolve_file(modreg.plugin_path, nil, modreg.plugin_folder)
-						if status then
-							modreg.complete = true
-							lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!", 2)
-							lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1, id, version)
-							if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
-								if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
-									lib.check_queue()
-								end
-							end
-						else
-							lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
-							lib.log_error("		error message: " .. tostring(err), 3, id, version)
-							lib.notify("PLUGIN_FAILURE", id, version)
-							return false, "failed to activate, " .. err or "?"
-						end
-					else
-						modreg.complete = true
-						lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)", 1)
-						if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
-							--can't be frozen if there's no activated code
-							lib.check_queue()
-						end
-					end
-					if modreg.flag == "AUTH" then
-						lib.execute(id, version, "mgr_key", mgr_key)
-					end
-					
-					neo.plugin_registry[plugin_id] = modreg
-					
-				else
-					lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!", 1)
-					return false, "load state is NO"
-				end
-			else
-				lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
-				return false, "unmatched dependencies"
-			end
-		else
-			lib.log_error("Attempted to activate " .. plugin_id .. " but it doesn't exist!", 1)
-			--don't return false, no plugin ID to report to init
-		end
-	else
+	if verify_key ~= mgr_key then
 		lib.log_error("Attempted to activate a plugin, but key is incorrect!", 1)
 		--don't return false, no plugin ID to report to init
+		return
 	end
+
+	if !lib.is_exist(id, version) then
+		lib.log_error("Attempted to activate " .. plugin_id .. " but it doesn't exist!", 1)
+		--don't return false, no plugin ID to report to init
+		return
+	end
+
+	local modreg = neo.plugin_registry[plugin_id]
+	if ~(lib.resolve_dep_table(modreg.plugin_dependencies) or modreg.flag == "FORCE") then
+		lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
+		return false, "unmatched dependencies"
+	end
+
+	if ~valid_load_states[lib.get_state(id, version).load] then
+		lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!", 1)
+		return false, "load state is NO"
+	end
+
+	if modreg.plugin_path ~= "" then
+		local status, err = lib.resolve_file(modreg.plugin_path, nil, modreg.plugin_folder)
+		if ~status then
+			lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
+			lib.log_error("		error message: " .. tostring(err), 3, id, version)
+			lib.notify("PLUGIN_FAILURE", id, version)
+			return false, "failed to activate, " .. err or "?"
+		end
+
+		modreg.complete = true
+		lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!", 2)
+		lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1, id, version)
+		if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
+			if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
+				lib.check_queue()
+			end
+		end
+	else
+		modreg.complete = true
+		lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)", 1)
+		if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
+			--can't be frozen if there's no activated code
+			lib.check_queue()
+		end
+	end
+	if modreg.flag == "AUTH" then
+		lib.execute(id, version, "mgr_key", mgr_key)
+	end
+	
+	neo.plugin_registry[plugin_id] = modreg
 end
 
 function lib.get_latest(id, min, max)
