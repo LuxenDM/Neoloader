@@ -743,26 +743,26 @@ function lib.activate_plugin(id, version, verify_key)
 		return
 	end
 
-	if !lib.is_exist(id, version) then
+	if not lib.is_exist(id, version) then
 		lib.log_error("Attempted to activate " .. plugin_id .. " but it doesn't exist!", 1)
 		--don't return false, no plugin ID to report to init
 		return
 	end
 
 	local modreg = neo.plugin_registry[plugin_id]
-	if ~(lib.resolve_dep_table(modreg.plugin_dependencies) or modreg.flag == "FORCE") then
+	if not (lib.resolve_dep_table(modreg.plugin_dependencies) or modreg.flag == "FORCE") then
 		lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
 		return false, "unmatched dependencies"
 	end
 
-	if ~valid_load_states[lib.get_state(id, version).load] then
+	if not valid_load_states[lib.get_state(id, version).load] then
 		lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!", 1)
 		return false, "load state is NO"
 	end
 
 	if modreg.plugin_path ~= "" then
 		local status, err = lib.resolve_file(modreg.plugin_path, nil, modreg.plugin_folder)
-		if ~status then
+		if not status then
 			lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
 			lib.log_error("		error message: " .. tostring(err), 3, id, version)
 			lib.notify("PLUGIN_FAILURE", id, version)
