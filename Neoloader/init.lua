@@ -106,6 +106,7 @@ neo = {
 	clearCommands = gkreadstr("Neoloader", "rClearCommands", "NO"),
 	dbgFormatting = gkreadstr("Neoloader", "rDbgFormatting", "YES"),
 	dbgIgnoreLevel = gkreadint("Neoloader", "iDbgIgnoreLevel", 2),
+	ignoreOverrideState = gkreadint("Neoloader", "rOverrideDisabledState", "NO"),
 	
 	number_plugins_registered = 0,
 	
@@ -113,8 +114,23 @@ neo = {
 	current_mgr = gkreadstr("Neoloader", "mgr", ""),
 }
 
+if neo.ignoreOverrideState == "NO" and gkini.ReadInt("Vendetta", "plugins", 1) == 0 then
+	console_print("Plugins are disabled, and Neoloader is not configured to override this setting! The default interface will load, and Neoloader will exit!")
+	dofile("vo/if.lua")
+	return
+end
+
 local configd = {
 	--config defines
+	ignoreOverrideState = {
+		type = "string",
+		valid = {
+			["YES"] = true,
+			["NO"] = true,
+		},
+		default = "NO",
+		key = "rOverrideDisabledState",
+	},
 	allowDelayedLoad = {
 		type = "string",
 		valid = {

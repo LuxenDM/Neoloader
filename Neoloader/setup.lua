@@ -99,6 +99,14 @@ if NEO_UNINSTALL == false then
 			end
 		end
 		
+		
+		local setting_override_disable = iup.list {
+			[1] = "YES",
+			[2] = "NO",
+			value = 2,
+			dropdown = "YES",
+		}
+		
 		local diag = iup.dialog {
 			topmost = "YES",
 			fullscreen = "YES",
@@ -124,6 +132,12 @@ if NEO_UNINSTALL == false then
 								},
 								setting_new_loadstate,
 							},
+							iup.hbox {
+								iup.label {
+									title = "Load Neoloader even if plugins are disabled: ",
+								},
+								setting_override_disable,
+							},
 							obj2,
 							obj3,
 							iup.button {
@@ -137,6 +151,10 @@ if NEO_UNINSTALL == false then
 											console_print("	" .. v[1] .. "	v" .. v[2])
 											lib.set_load(auth, v[1], v[2], "YES")
 										end
+									end
+									if setting_override_disable.value == "1" then
+										gkini.WriteString("Neoloader", "rOverrideDisabledState", "YES")
+										console_print("[SETUP] Neoloader will override plugins being disabled")
 									end
 									--obj
 									if obj3flag == true then
