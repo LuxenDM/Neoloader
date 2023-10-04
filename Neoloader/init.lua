@@ -964,19 +964,16 @@ function lib.get_class(name, version)
 	end
 	
 	if not lib.is_exist(name, version) then
-		return false
+		return false, "Mod doesn't exist"
 	end
 	
 	if lib.get_state(name, version).complete ~= true then
-		return false
+		return false, "Mod isn't complete"
 	end
 	
 	local index = neo.plugin_registry[name .. "." .. version].index
-	if (neo.plugin_registry[name .. "." .. version].lock == nil) then
-		return neo.plugin_container[index]
-	else
-		return copy_table(neo.plugin_container[index])
-	end
+	
+	return copy_table(neo.plugin_container[index])
 end
 
 function lib.set_class(name, version, ftable)
@@ -993,7 +990,7 @@ function lib.set_class(name, version, ftable)
 	end
 	
 	if not lib.is_exist(name, version) then
-		return false
+		return false, "mod doesn't exist"
 	end
 	
 	if (neo.plugin_registry[name .. "." .. version].lock == nil) and (neo.plugin_registry[name .. "." .. version].load == "YES") then
@@ -1017,7 +1014,7 @@ function lib.lock_class(name, version, custom_key)
 		version = lib.get_latest(name)
 	end
 	if not lib.is_exist(name, version) then
-		return false
+		return false, "mod doesn't exist"
 	end
 	
 	if neo.plugin_registry[name .. "." .. version].lock == nil then
@@ -1036,7 +1033,7 @@ function lib.unlock_class(name, version, key)
 		version = lib.get_latest(name)
 	end
 	if not lib.is_exist(name, version) then
-		return false
+		return false, "mod doesn't exist"
 	end
 	
 	if neo.plugin_registry[name .. "." .. version].lock == key or mgr_key == key then
