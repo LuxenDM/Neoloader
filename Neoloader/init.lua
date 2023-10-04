@@ -313,18 +313,20 @@ function lib.err_handle(test, log_msg)
 		log_msg = test
 		test = true
 	end
-	if type(test) == "boolean" then
-		if test == false then
-			return false --returns inverse; test is the error condition, so returns true if there IS an error.
-		else
-			local err = debug.traceback("Neoloader captured an error: " .. tostring(log_msg))
-			lib.log_error(err, 4)
-			lib.notify("CAPTURED_ERROR", err)
-			if neo.doErrPopup == "YES" and neo.statelock == true then
-				error(err)
-			end
-			return true
+	if type(test) ~= "boolean" then
+		test = test ~= nil --if we aren't provided a bool, then any value is "true"
+	end
+	
+	if test == false then
+		return false --returns inverse; test is the error condition, so returns true if there IS an error.
+	else
+		local err = debug.traceback("Neoloader captured an error: " .. tostring(log_msg))
+		lib.log_error(err, 4)
+		lib.notify("CAPTURED_ERROR", err)
+		if neo.doErrPopup == "YES" and neo.statelock == true then
+			error(err)
 		end
+		return true
 	end
 end
 local err_han = lib.err_handle --fast shortcut
@@ -697,19 +699,20 @@ function lib.is_exist(name, version)
 	version = tostring(version or 0)
 	if type(neo.plugin_registry[name]) ~= "table" then
 		return false, "doesn't exist as ID only"
-	else
+	end
+	
+	if version == "0" then
+		version = neo.plugin_registry[name].latest --can't use lib.get_latest: lib.get_latest uses this function, causes an infinite loop
 		if version == "0" then
-			version = neo.plugin_registry[name].latest --can't use lib.get_latest: lib.get_latest uses this function, causes an infinite loop
-			if version == "0" then
-				--no active versions, get latest inactive version registered
-				version = neo.plugin_registry[name][#neo.plugin_registry[name]]
-			end
+			--no active versions, get latest inactive version registered
+			version = neo.plugin_registry[name][#neo.plugin_registry[name]]
 		end
-		if type(neo.plugin_registry[name .. "." .. version]) ~= "table" then
-			return false, "specific version doesn't exist"
-		else
-			return true
-		end
+	end
+	
+	if type(neo.plugin_registry[name .. "." .. version]) ~= "table" then
+		return false, "specific version doesn't exist"
+	else
+		return true
 	end
 end
 
@@ -718,18 +721,23 @@ function lib.is_ready(id, version)
 		return false, "plugin ID not a string"
 	end
 	local status = false
-	if lib.is_exist(id) then
-		version = tostring(version or 0)
-		if version == "0" then
-			version = lib.get_latest(id)
-		end
-		
-		if lib.is_exist(id, version) then
-			if neo.plugin_registry[id .. "." .. version].complete == true then
-				status = true
-			end
-		end
+	if not lib.is_exist(id) then
+		return false, "plugin doesn't exist"
 	end
+	
+	version = tostring(version or 0)
+	if version == "0" then
+		version = lib.get_latest(id)
+	end
+	
+	if not lib.is_exist(id, version) then
+		return false, "plugin doesn't exist"
+	end
+	
+	if neo.plugin_registry[id .. "." .. version].complete == true then
+		status = true
+	end
+	
 	return status
 end
 
@@ -810,28 +818,29 @@ end
 
 function lib.get_latest(id, min, max)
 	id = tostring(id or "null")
-	if lib.is_exist(id) then
-		local ver_table = neo.plugin_registry[id]
-		local version = tostring(ver_table.latest)
-		if version == "0" then
-			version = ver_table[#ver_table]
-		end
-		
-		if max and lib.compare_sem_ver(max, version) < 0 then
-			version = "?"
-			for index=#ver_table, 1, -1 do
-				local ver_available = ver_table[index]
-				
-				if lib.is_ready(id, ver_available) and lib.compare_sem_ver(max, ver_available) >= 0 and lib.compare_sem_ver(min, ver_available) <= 0 then
-					version = ver_available
-					break
-				end
+	if not lib.is_exist(id) then
+		return "?"
+	end
+	
+	local ver_table = neo.plugin_registry[id]
+	local version = tostring(ver_table.latest)
+	if version == "0" then
+		version = ver_table[#ver_table]
+	end
+	
+	if max and lib.compare_sem_ver(max, version) < 0 then
+		version = "?"
+		for index=#ver_table, 1, -1 do
+			local ver_available = ver_table[index]
+			
+			if lib.is_ready(id, ver_available) and lib.compare_sem_ver(max, ver_available) >= 0 and lib.compare_sem_ver(min, ver_available) <= 0 then
+				version = ver_available
+				break
 			end
 		end
-		
-		return version
 	end
-	return "?"
+	
+	return version
 end
 
 
@@ -954,11 +963,19 @@ function lib.get_class(name, version)
 		version = lib.get_latest(name)
 	end
 	
-	if lib.is_exist(name, version) then
-		if lib.get_state(name, version).complete == true then
-			local index = neo.plugin_registry[name .. "." .. version].index
-			return copy_table(neo.plugin_container[index])
-		end
+	if not lib.is_exist(name, version) then
+		return false
+	end
+	
+	if lib.get_state(name, version).complete ~= true then
+		return false
+	end
+	
+	local index = neo.plugin_registry[name .. "." .. version].index
+	if (neo.plugin_registry[name .. "." .. version].lock == nil) then
+		return neo.plugin_container[index]
+	else
+		return copy_table(neo.plugin_container[index])
 	end
 end
 
@@ -974,16 +991,19 @@ function lib.set_class(name, version, ftable)
 	if type(ftable) ~= "table" then
 		ftable = {ftable}
 	end
-	if lib.is_exist(name, version) then
-		if (neo.plugin_registry[name .. "." .. version].lock == nil) and (neo.plugin_registry[name .. "." .. version].load == "YES") then
-			local index = neo.plugin_registry[name .. "." .. version].index
-			neo.plugin_container[index] = ftable
-			if ftable.IF == true then
-				table.insert(neo.list_if, name)
-			end
-			if ftable.mgr == true then
-				table.insert(neo.list_mgr, name)
-			end
+	
+	if not lib.is_exist(name, version) then
+		return false
+	end
+	
+	if (neo.plugin_registry[name .. "." .. version].lock == nil) and (neo.plugin_registry[name .. "." .. version].load == "YES") then
+		local index = neo.plugin_registry[name .. "." .. version].index
+		neo.plugin_container[index] = ftable
+		if ftable.IF == true then
+			table.insert(neo.list_if, name)
+		end
+		if ftable.mgr == true then
+			table.insert(neo.list_mgr, name)
 		end
 	end
 end
@@ -996,12 +1016,14 @@ function lib.lock_class(name, version, custom_key)
 	if version == "0" then
 		version = lib.get_latest(name)
 	end
-	if lib.is_exist(name, version) then
-		if neo.plugin_registry[name .. "." .. version].lock == nil then
-			neo.plugin_registry[name .. "." .. version].lock = custom_key or lib.generate_key()
-		else
-			lib.log_error(name .. " v" .. version .. " is already locked!", 1, name, version)
-		end
+	if not lib.is_exist(name, version) then
+		return false
+	end
+	
+	if neo.plugin_registry[name .. "." .. version].lock == nil then
+		neo.plugin_registry[name .. "." .. version].lock = custom_key or lib.generate_key()
+	else
+		lib.log_error(name .. " v" .. version .. " is already locked!", 1, name, version)
 	end
 end
 
@@ -1013,12 +1035,14 @@ function lib.unlock_class(name, version, key)
 	if version == "0" then
 		version = lib.get_latest(name)
 	end
-	if lib.is_exist(name, version) then
-		if neo.plugin_registry[name .. "." .. version].lock == key or mgr_key == key then
-			local old_key = neo.plugin_registry[name .. "." .. version].lock
-			neo.plugin_registry[name .. "." .. version].lock = nil
-			return old_key
-		end
+	if not lib.is_exist(name, version) then
+		return false
+	end
+	
+	if neo.plugin_registry[name .. "." .. version].lock == key or mgr_key == key then
+		local old_key = neo.plugin_registry[name .. "." .. version].lock
+		neo.plugin_registry[name .. "." .. version].lock = nil
+		return old_key
 	end
 end
 
@@ -1098,24 +1122,26 @@ function lib.open_if_config()
 end
 
 function lib.reload()
-	if neo.statelock then
-		ProcessEvent("PRE_RELOAD_INTERFACE")
-		
-		--unregister commands
-		if neo.clearCommands == "YES" then
-			lib.log_error("Command clearing is enabled and will now execute", 3)
-			local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
-			local commands = GetRegisteredUserCommands()
-			for i=1, #commands do
-				if not expected[commands[i]] then
-					RegisterUserCommand(commands[i], function() print("Error") end)
-				end
+	if not neo.statelock then
+		return
+	end
+	
+	ProcessEvent("PRE_RELOAD_INTERFACE")
+	
+	--unregister commands
+	if neo.clearCommands == "YES" then
+		lib.log_error("Command clearing is enabled and will now execute", 3)
+		local _, expected = lib.resolve_file("plugins/Neoloader/zcom.lua")
+		local commands = GetRegisteredUserCommands()
+		for i=1, #commands do
+			if not expected[commands[i]] then
+				RegisterUserCommand(commands[i], function() print("Error") end)
 			end
 		end
-		
-		--delay till after START/PLUGINS_LOADED events
-		ReloadInterface()
 	end
+	
+	--delay till after START/PLUGINS_LOADED events
+	ReloadInterface()
 end
 
 function lib.request_auth(name, callback)
@@ -1249,25 +1275,27 @@ function lib.set_load(auth, id, version, state)
 	id = tostring(id)
 	version = tostring(version)
 	
-	if auth == mgr_key then
-		version = tostring(version or 0)
-		if version == "0" then
-			version = lib.get_latest(id)
-		end
-		
-		local valid_states = {
-			YES = true,
-			NO = true,
-			FORCE = true,
-			AUTH = true,
-		}
-		if not valid_states[state] then
-			state = "NO"
-		end
-		if lib.is_exist(id, version) then
-			gkini.WriteString("Neo-pluginstate", id .. "." .. version, state)
-			neo.plugin_registry[id .. "." .. version].nextload = state
-		end
+	if auth ~= mgr_key then
+		return
+	end
+	
+	version = tostring(version or 0)
+	if version == "0" then
+		version = lib.get_latest(id)
+	end
+	
+	local valid_states = {
+		YES = true,
+		NO = true,
+		FORCE = true,
+		AUTH = true,
+	}
+	if not valid_states[state] then
+		state = "NO"
+	end
+	if lib.is_exist(id, version) then
+		gkini.WriteString("Neo-pluginstate", id .. "." .. version, state)
+		neo.plugin_registry[id .. "." .. version].nextload = state
 	end
 end
 
@@ -1290,17 +1318,19 @@ function lib.set_waiting(id, ver, state, key)
 	end
 	if not key then
 		return false, "waiting state key must be provided"
-	elseif lib.is_exist(id, ver) then
-		mod = id .. "." .. ver
-		if state > 0 then
-			lib.log_error(mod .. " is now waiting", 1, id, ver)
-			neo.plugin_registry[mod].dependent_freeze = 1
-			neo.plugin_registry[mod].freeze_key = key
-		elseif neo.plugin_registry[mod].dependent_freeze == 1 and key == neo.plugin_registry[mod].freeze_key then
-			lib.log_error(mod .. " has reactivated", 1, id, ver)
-			neo.plugin_registry[mod].dependent_freeze = 0
-			lib.check_queue()
-		end
+	elseif not lib.is_exist(id, ver) then
+		return false, "mod to set waiting needs to exist"
+	end
+	
+	mod = id .. "." .. ver
+	if state > 0 then
+		lib.log_error(mod .. " is now waiting", 1, id, ver)
+		neo.plugin_registry[mod].dependent_freeze = 1
+		neo.plugin_registry[mod].freeze_key = key
+	elseif neo.plugin_registry[mod].dependent_freeze == 1 and key == neo.plugin_registry[mod].freeze_key then
+		lib.log_error(mod .. " has reactivated", 1, id, ver)
+		neo.plugin_registry[mod].dependent_freeze = 0
+		lib.check_queue()
 	end
 end
 
