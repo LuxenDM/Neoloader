@@ -1,3 +1,5 @@
+console_print("\n\n\nVendetta Online has loaded\nNeoloader is Initializing...")
+
 NEO_EXISTS = true --use lib/lib[0] instead if you are testing for a generic library management implementation
 
 local plog
@@ -25,7 +27,6 @@ copy_table = function(input)
 	return newtable
 end
 
-
 local gk_get_microsecond = gkmisc.GetGameTime
 
 local timestat_neo_start = gk_get_microsecond()
@@ -36,9 +37,6 @@ local function timestat_advance()
 	timestat_step = next_step
 	return retval
 end
-
-print("\n\n\nVendetta Online is now starting.")
-print("Neoloader is Initializing...")
 
 local override_switch = gkini.ReadString2("Override", "doOverride", "NO", "plugins/Neoloader/config-override.ini")
 
@@ -1568,8 +1566,13 @@ else
 		table.insert(these_are_loaded[1], true)
 	else
 		--the if-manager set to load doesn't exist; we need to launch the default interface
-		lib.log_error("Your interface does not exist or is not set to load; DefaultUI will be launched", 2)
-		dofile("vo/if.lua")
+		if neo.current_if == "vo-if" then
+			lib.log_error("Now loading the default interface for Vendetta Online...")
+			dofile("vo/if.lua")
+		else
+			lib.log_error("Your interface does not exist or is not set to load; DefaultUI will be launched", 2)
+			dofile("vo/if.lua")
+		end
 	end
 	
 	if neo.listPresorted == "YES" then
