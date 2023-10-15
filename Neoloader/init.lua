@@ -260,6 +260,7 @@ local waiting_for_dependencies = {} --storage for functions with unfulfilled dep
 local converted_dep_tables = {} --storage for build results of compiled ini files
 
 function lib.log_error(msg, alert, id, version)
+	id, version = lib.pass_ini_identifier(id, version)
 	alert = tonumber(alert or 2) or 2
 	if alert < neo.dbgIgnoreLevel then
 		return
@@ -460,10 +461,10 @@ function lib.build_ini(iniFilePointer)
 			return false, "API mismatch"
 		end
 		
-		if converted_dep_tables[id .. pluginversion] then
+		if converted_dep_tables[iniFilePointer] then
 			--this plugin has already been registered
 			--pass along existing table and exit
-			return converted_dep_tables[id .. pluginversion]
+			return converted_dep_tables[iniFilePointer]
 		end
 		
 		local author = getstr("modreg", "author", "", ifp)
@@ -482,7 +483,7 @@ function lib.build_ini(iniFilePointer)
 			end
 		end
 		
-		converted_dep_tables[id .. pluginversion] = {
+		converted_dep_tables[iniFilePointer] = {
 			plugin_id = id,
 			plugin_type = plugintype,
 			plugin_name = name,
@@ -494,7 +495,7 @@ function lib.build_ini(iniFilePointer)
 			plugin_dependencies = dependents,
 			plugin_regpath = iniFilePointer,
 		}
-		return converted_dep_tables[id .. pluginversion]
+		return converted_dep_tables[iniFilePointer]
 	end
 end
 
@@ -626,7 +627,7 @@ function lib.register(iniFilePointer)
 		--don't use the error handler here; duplicate registration can be attempted and shouldn't trigger errors for the user
 		--	multiple plugins may use the same sharable library
 		--duplicate plugin entry in config.ini; we need to remove this plugin and mark the original with a triggered error
-		lib.log_error("			plugin registration skipped: plugin is already registered", 1, id, iniTable.plugin_version)
+		lib.log_error("	plugin registration skipped: plugin is already registered", 1, id, iniTable.plugin_version)
 		return false, "Duplicate of plugin exists"
 	else
 		table.insert(neo.plugin_container, {})
@@ -690,6 +691,7 @@ function lib.check_queue()
 end
 
 function lib.is_exist(name, version)
+	name, version = lib.pass_ini_identifier(name, version)
 	if err_han( type(name) ~= "string", "lib.is_exist expected a string for its first argument, got " .. type(name) ) then
 		return false, "plugin ID not a string"
 	end
@@ -714,6 +716,7 @@ function lib.is_exist(name, version)
 end
 
 function lib.is_ready(id, version)
+	id, version = lib.pass_ini_identifier(id, version)
 	if err_han( type(id) ~= "string", "lib.is_ready expected a string for its first argument, got " .. type(id) ) then
 		return false, "plugin ID not a string"
 	end
@@ -739,6 +742,7 @@ function lib.is_ready(id, version)
 end
 
 function lib.activate_plugin(id, version, verify_key)
+	id, version = lib.pass_ini_identifier(id, version)
 	local time_start = gk_get_microsecond()
 	lib.log_error("attempting activation of " .. tostring(id) .. "." .. tostring(version), 1)
 	if err_han( type(id) ~= "string", "lib.activate_plugin expected a string for its first argument, got " .. type(id) ) then
@@ -851,6 +855,7 @@ end
 
 
 function lib.get_state(name, version)
+	name, version = lib.pass_ini_identifier(name, version)
 	--returns most neoloader info about a plugin
 	
 	if err_han( type(name) ~= "string", "lib.get_state expected a string for its first argument, got " .. type(name) ) then
@@ -929,6 +934,7 @@ function lib.get_gstate()
 end
 
 function lib.execute(name, version, func, ...)
+	name, version = lib.pass_ini_identifier(name, version)
 	if err_han( type(name) ~= "string", "lib.execute expected a string for its first argument, got " .. type(name) ) then
 		return false, "plugin ID not a string"
 	end
@@ -961,6 +967,7 @@ function lib.execute(name, version, func, ...)
 end
 
 function lib.get_class(name, version)
+	name, version = lib.pass_ini_identifier(name, version)
 	if err_han( type(name) ~= "string", "lib.get_class expected a string for its first argument, got " .. type(name) ) then
 		return false, "plugin ID not a string"
 	end
@@ -983,6 +990,7 @@ function lib.get_class(name, version)
 end
 
 function lib.set_class(name, version, ftable)
+	name, version = lib.pass_ini_identifier(name, version)
 	if err_han( type(name) ~= "string", "lib.set_class expected a string for its first argument, got " .. type(name) ) then
 		return false, "plugin ID not a string"
 	end
@@ -1012,6 +1020,7 @@ function lib.set_class(name, version, ftable)
 end
 
 function lib.lock_class(name, version, custom_key)
+	name, version = lib.pass_ini_identifier(name, version)
 	if err_han( type(name) ~= "string", "lib.lock_class expected a string for its first argument, got " .. type(name) ) then
 		return false, "plugin ID not a string"
 	end
@@ -1031,6 +1040,7 @@ function lib.lock_class(name, version, custom_key)
 end
 
 function lib.unlock_class(name, version, key)
+	name, version = lib.pass_ini_identifier(name, version)
 	if err_han( type(name) ~= "string", "lib.unlock_class expected a string for its first argument, got " .. type(name) ) then
 		return false, "plugin ID not a string"
 	end
@@ -1088,6 +1098,7 @@ function lib.generate_key()
 end
 
 function lib.plugin_read_str(name, version, header, key)
+	name, version = lib.pass_ini_identifier(name, version)
 	if err_han( type(name) ~= "string", "lib.plugin_read_str expected a string for its first argument, got " .. type(name) ) then
 		return false, "plugin ID not a string"
 	end
@@ -1102,6 +1113,7 @@ function lib.plugin_read_str(name, version, header, key)
 end
 
 function lib.get_path(plugin_id, version)
+	plugin_id, ver = lib.pass_ini_identifier(plugin_id, ver)
 	if err_han( type(plugin_id) ~= "string", "lib.get_path expected a string for its first argument, got " .. type(plugin_id) ) then
 		return false, "plugin ID not a string"
 	end
@@ -1274,6 +1286,7 @@ function lib.compare_sem_ver(obj1, obj2)
 end
 
 function lib.set_load(auth, id, version, state)
+	id, ver = lib.pass_ini_identifier(id, ver)
 	auth = tostring(auth)
 	id = tostring(id)
 	version = tostring(version)
@@ -1303,6 +1316,7 @@ function lib.set_load(auth, id, version, state)
 end
 
 function lib.set_waiting(id, ver, state, key)
+	id, ver = lib.pass_ini_identifier(id, ver)
 	local valid_state = {
 		["YES"] = 1,
 		["NO"] = 0,
@@ -1352,6 +1366,26 @@ function lib.lme_configure(cfg_option, new_val, auth)
 				gkini.WriteString("Neoloader", define.key, tostring(new_val))
 			end
 		end
+	end
+end
+
+function lib.pass_ini_identifier(id, ver)
+	--tests if id exists; if true, pass id/ver back to caller.
+	--if not, check if its an INI file and pass id/ver from prebuild
+	--	we don't build other INIs, only use ones from registry
+	--else, let caller deal with it.
+	if type(neo.plugin_registry[id]) == "table" then
+		return id, ver
+	elseif type(id) == "string" then
+		local build = converted_dep_tables[id]
+		
+		if not build then
+			return id, ver
+		end
+		
+		return build.plugin_id, build.plugin_version
+	else
+		return id, ver
 	end
 end
 
