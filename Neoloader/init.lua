@@ -621,13 +621,12 @@ function lib.register(iniFilePointer)
 		return false, errid
 	end
 	neo.listPresorted = "NO"
-	gkini.WriteString("Neoloader", "rPresortedList", "NO")
 	lib.log_error("Attempting to register data for " .. id .. " v" .. iniTable.plugin_version, 1)
 	if lib.is_exist(id, iniTable.plugin_version) then
 		--don't use the error handler here; duplicate registration can be attempted and shouldn't trigger errors for the user
 		--	multiple plugins may use the same sharable library
 		--duplicate plugin entry in config.ini; we need to remove this plugin and mark the original with a triggered error
-		lib.log_error("			plugin registration failed: duplicate plugin!", 1, id, iniTable.plugin_version)
+		lib.log_error("			plugin registration skipped: plugin is already registered", 1, id, iniTable.plugin_version)
 		return false, "Duplicate of plugin exists"
 	else
 		table.insert(neo.plugin_container, {})
@@ -802,16 +801,25 @@ function lib.activate_plugin(id, version, verify_key)
 	else
 		modreg.complete = true
 		lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)", 1)
-		if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
-			--can't be frozen if there's no activated code
-			lib.check_queue()
-		end
+		
+		local freeze_key = lib.plugin_read_str(id, version, "modreg", "freeze_key")
+		
+		freeze_key = freeze_key == "" and id or freeze_key
+		lib.set_waiting(id, version, "YES", freeze_key)
+		
+		RegisterEvent(function()
+			lib.set_waiting(id, version, "NO", freeze_key)
+		end, "PLUGINS_LOADED")
+		
+		--don't check queue; mod was frozen.
 	end
 	if modreg.flag == "AUTH" then
 		lib.execute(id, version, "mgr_key", mgr_key)
 	end
 	
 	neo.plugin_registry[plugin_id] = modreg
+	
+	ProcessEvent("LME_PLUGIN_ACTIVATED")
 end
 
 function lib.get_latest(id, min, max)
