@@ -106,7 +106,8 @@ neo = {
 	dbgIgnoreLevel = gkreadint("Neoloader", "iDbgIgnoreLevel", 2),
 	ignoreOverrideState = gkreadint("Neoloader", "rOverrideDisabledState", "NO"),
 	
-	number_plugins_registered = 0,
+	number_plugins_registered = 0, --registry index
+	number_plugins_exist = 0, --actually present counter
 	
 	current_if = gkreadstr("Neoloader", "if", ""),
 	current_mgr = gkreadstr("Neoloader", "mgr", ""),
@@ -246,6 +247,16 @@ local mgr_key = 0
 --[[
 	This mgr_key is the random value used to prevent any plugin from calling functions we want to verify ONLY the user can initiate, such as forcing an uninstall or changing a plugin's state.
 ]]--
+
+local load_position_tracker = {}
+--[[
+	Tracks where a declaration file is found in the config registry. THis is checked to determine the plugin's load position
+]]--
+
+
+
+
+
 
 
 
@@ -568,6 +579,7 @@ local function silent_register(iniFilePointer)
 	else
 		table.insert(neo.plugin_container, {})
 		neo.number_plugins_registered = neo.number_plugins_registered + 1
+		neo.number_plugins_exist = neo.number_plugins_exist + 1
 		
 		local data = copy_table(iniTable)
 		data.dependencies_met = false
@@ -575,7 +587,7 @@ local function silent_register(iniFilePointer)
 		data.dependent_freeze = 0
 		data.load = gkreadstr("Neo-pluginstate", data.plugin_id .. "." .. data.plugin_version, neo.defaultLoadState)
 		data.index = #neo.plugin_container
-		data.load_position = neo.number_plugins_registered
+		data.load_position = load_position_tracker[data.plugin_regpath]
 		data.errors = {}
 		if lib.resolve_dep_table(data.plugin_dependencies) then
 			data.dependencies_met = true
@@ -1518,6 +1530,9 @@ else
 			counter = counter - 1
 			break
 		end
+		table.insert(load_position_tracker, file)
+		load_position_tracker[file] = #load_position_tracker
+		
 		
 		local valid = gkini.ReadString2("modreg", "id", "null", file)
 		if valid == "null" then
