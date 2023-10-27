@@ -1365,7 +1365,7 @@ end
 
 function lib.lme_configure(cfg_option, new_val, auth)
 	cfg_option = tostring(cfg_option)
-	define = configd[cfg_option]
+	local define = configd[cfg_option]
 	if not define then
 		return false, "option does not exist"
 	else 
@@ -1392,7 +1392,7 @@ function lib.lme_get_config(cfg_option)
 	end
 	
 	cfg_option = tostring(cfg_option)
-	define = configd[cfg_option]
+	local define = configd[cfg_option]
 	if not define then
 		return false, "option does not exist"
 	else
