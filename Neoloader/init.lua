@@ -1382,6 +1382,15 @@ function lib.lme_configure(cfg_option, new_val, auth)
 end
 
 function lib.lme_get_config(cfg_option)
+	if not cfg_option then
+		--no options provided, return all valid options in table
+		local cfg_available = {}
+		for k, v in pairs(configd) do
+			table.insert(cfg_available, k)
+		end
+		return cfg_available
+	end
+	
 	cfg_option = tostring(cfg_option)
 	define = configd[cfg_option]
 	if not define then
