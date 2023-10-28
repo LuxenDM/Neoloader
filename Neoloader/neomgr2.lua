@@ -64,36 +64,43 @@ function update_class()
 	local class = {
 		CCD1 = true,
 		smart_config = {
-			title = "Neoloader Minimal Management Utility",
-			cb = function() end,
-			nocfg1 = {
-				type = "text",
-				align = "right",
-				display = "neomgr is a minimal utility bundled with Neoloader",
+			title = "Neoloader Lightweight Management Utility",
+			cb = function(cfg, val)
+				if config[cfg] then
+					config[cfg] = val
+					gkini.WriteString("neomgr", cfg, val)
+				end
+			end,
+			auto_open = {
+				type = "toggle",
+				display = "Open neomgr when the game starts",
+				[1] = config.auto_open,
 			},
-			nocfg2 = {
-				type = "text",
-				align = "right",
-				display = "Configure it through its own interface",
+			echo_notif = {
+				type = "toggle",
+				display = "Print LME notifications in chat",
+				[1] = config.echo_notif,
 			},
-			nocfg3 = {
-				type = "text",
-				align = "right",
-				display = "Live configuration is not supported",
-			},
-			"nocfg1",
-			"nocfg2",
-			"nocfg3",
+			"auto_open",
+			"echo_notif",
 		},
-		description = "neomgr is the bundled management interace for Neoloader. It provides a minimal interface for configuring Neoloader and managing plugins.",
+		description = "neomgr is the bundled management interace for Neoloader. It provides a lightweight interface for configuring Neoloader and managing plugins.",
 		commands = {
 			"/neo: open neoloader's manager",
 			"/neosetup: setup neoloader if uninstalled",
 			"/neomgr: enable neomgr if all managers are disabled",
 		},
 		manifest = {
-			"plugins/Neoloader/neomgr.lua",
-			"plugins/Neoloader/neomgr.ini",
+			"plugins/Neoloader/neomgr2.lua",
+			"plugins/Neoloader/neomgr2.ini",
+			
+			"plugins/Neoloader/img/notif_placeholder.png",
+			"plugins/Neoloader/img/thumb.png",
+			
+			"plugins/Neoloader/lang/en.ini",
+			"plugins/Neoloader/lang/es.ini",
+			"plugins/Neoloader/lang/fr.ini",
+			"plugins/Neoloader/lang/pt.ini",
 		},
 	}
 	
@@ -154,7 +161,7 @@ local new_notif_generator = function(notif_to_handle, echo_func, data_func)
 					iup.vbox {
 						iup.label {
 							title = "",
-							image = data.img or "plugins/Neoloader/notif_placeholder.png",
+							image = data.img or "plugins/Neoloader/img/notif_placeholder.png",
 							size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
 						},
 					},
@@ -219,7 +226,6 @@ local notif_creator = function(status, data)
 	iup.Append(notif_frame, obj)
 	iup.Refresh(iup.GetDialog(notif_frame))
 	iup.Refresh(notif_scrollframe)
-	iup.Refresh(iup.GetDialog(notif_scrollframe))
 	
 	for i, v in ipairs(notif_listener) do
 		local status, err = pcall(v, notif_constructor[status].data(data))
@@ -254,7 +260,7 @@ new_notif_generator("SUCCESS",
 				iup.vbox {
 					iup.label {
 						title = "",
-						image = "plugins/Neoloader/notif_placeholder.png",
+						image = "plugins/Neoloader/img/thumb.png",
 						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
 					},
 				},
@@ -278,7 +284,7 @@ new_notif_generator("NEW_REGISTRY",
 				iup.vbox {
 					iup.label {
 						title = "",
-						image = "plugins/Neoloader/notif_placeholder.png",
+						image = "plugins/Neoloader/img/thumb.png",
 						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
 					},
 				},
@@ -306,7 +312,7 @@ new_notif_generator("PLUGIN_FAILURE",
 				iup.vbox {
 					iup.label {
 						title = "",
-						image = "plugins/Neoloader/notif_placeholder.png",
+						image = "plugins/Neoloader/img/thumb.png",
 						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
 					},
 				},
@@ -338,51 +344,12 @@ iup.Append(notif_scrollframe, iup.dialog {
 })
 notif_scrollframe[1] = 1
 
-
-local notif_diag = iup.dialog {
-	topmost = "YES",
-	fullscreen = "YES",
-	bgcolor = "0 0 0 100 *",
-	iup.frame { --HUDFrame Left?
-		iup.vbox {
-			iup.hbox {
-				iup.fill { },
-				iup.label {
-					title = "Recent Notifications",
-					font = Font.H5,
-				},
-				iup.fill { },
-				iup.stationbutton {
-					title = "Clear All",
-					action = function(self)
-						notif_clearall()
-						HideDialog(iup.GetDialog(self))
-					end,
-				},
-				iup.stationbutton {
-					title = "Close",
-					action = function(self)
-						HideDialog(iup.GetDialog(self))
-					end,
-				},
-			},
-			notif_scrollframe,
-		},
-	}
-}
-notif_diag:map()
-
 neo.notif = notif_creator
 neo.handle_new_notif_type = new_notif_generator
-neo.open_notifications = function()
-	ShowDialog(notif_diag)
-end
 neo.get_thumb_image = function() return {
-	image = "plugins/Neoloader/notif_placeholder.png",
+	image = "plugins/Neoloader/img/notif_placeholder.png",
 	size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
 } end
-
-declare("testnotif", notif_diag)
 
 
 
@@ -466,6 +433,7 @@ local diag_constructor = function()
 			for k, v in ipairs(actual_items) do
 				v:detach()
 				iup.GetNextChild(v):detach()
+				--v:destroy()
 			end
 			actual_items = {}
 			
@@ -536,19 +504,25 @@ local diag_constructor = function()
 		local apply_actions = {}
 		local apply_flag = false
 		
-		--[[
-			status toggle	plugin name		id vVersion
-			[				description					]
-			CCD1 Manage		open			.config
-		]]--
+		--
+		
+		--
 		
 		local apply_changes = iup.stationbutton {
 			title = "Apply pending changes >>>",
 			visible = "NO",
-			action = function()
+			action = function(self)
+				if #apply_actions < 1 then
+					self.visible = "NO"
+					return
+				end
+				
+				
 				local apply_func = function(auth)
-					for k, v in pairs(apply_actions) do
-						lib.set_load(auth, k[1], k[2], v)
+					cp("Applying load states to " .. tostring(#apply_actions) .. " mods")
+					for k, v in ipairs(apply_actions) do
+						cp("Applying load state " .. tostring(v[3]) .. " to mod " .. tostring(v[1]) .. " v" .. tostring(v[2]))
+						lib.set_load(auth, v[1], v[2], v[3])
 					end
 					lib.reload()
 				end
@@ -564,13 +538,45 @@ local diag_constructor = function()
 			title = "Not loaded",
 			action = function(self)
 				apply_flag = true
+					--[[
+					apply_actions[cur_sel_str()] = index of apply_actions
+					apply_actions[index] = {
+						id,
+						ver
+						state
+					}
+					]]--
 				if apply_actions[cur_sel_str()] then
+					cp("removing " .. cur_sel_str())
+					local index = apply_actions[cur_sel_str()]
+						--index to clear
+					table.remove(apply_actions, index)
+						--remove application details
 					apply_actions[cur_sel_str()] = nil
+						--remove pointer index in table
+					local data = pluginlist[pluginlist[cur_sel_str()]]
+					
+					self.title = data.load == "YES" and "Loaded" or "Not Loaded"
+					iup.Refresh(self)
 				else
 					local index = pluginlist[cur_sel_str()]
-					local load_to_apply = pluginlist[index].load == "NO" and "YES" or "NO"
-					apply_actions[cur_sel_str()] = load_state_to_apply
+						--index to grab
+					local data = pluginlist[index]
+						--data to use
+					table.insert(apply_actions, {
+						data.plugin_id,
+						data.plugin_version,
+						data.load == "NO" and "YES" or "NO",
+					})
+						--application detail
+					
+					apply_actions[cur_sel_str()] = #apply_actions
+					cp("apply: " .. data.plugin_id .. " v" .. data.plugin_version .. " >> " .. (data.load == "NO" and "YES" or "NO"))
+						--index pointer to data
 					apply_changes.visible = "YES"
+					
+					self.title = data.load == "YES" and "Will not load" or "Will load"
+					iup.Refresh(self)
 				end
 			end,
 		}
@@ -639,6 +645,11 @@ local diag_constructor = function()
 			
 			load_toggle.title = load_status[data.current_state] or "???"
 			load_toggle.state = data.next_state or data.current_state or -1
+				--what was this again?
+			
+			if apply_actions[cur_sel_str()] then
+				load_toggle.title = data.load == "YES" and "Will not load" or "Will load"
+			end
 			
 			name_view.title = data.plugin_name
 			version_view.title = data.plugin_version
@@ -664,11 +675,12 @@ local diag_constructor = function()
 		local mod_view = iup.stationsubframe {
 			iup.vbox {
 				iup.hbox {
+					load_toggle,
 					iup.fill { },
 					apply_changes,
 				},
 				iup.hbox {
-					load_toggle,
+					alignment = "ABOTTOM",
 					iup.fill {},
 					name_view,
 					iup.fill {},
@@ -846,6 +858,7 @@ local diag_constructor = function()
 		
 		local sort_select = iup.stationsublist {
 			dropdown = "YES",
+			size = "x" .. tostring(Font.Default * 2),
 			action = function(self, t, i, c)
 				if c == 1 then
 					for k, v in ipairs {
@@ -876,6 +889,7 @@ local diag_constructor = function()
 		
 		local sort_dir_select = iup.stationsublist {
 			dropdown = "YES",
+			size = "x" .. tostring(Font.Default * 2),
 			action = function(self, t, i, c)
 				if c == 1 then
 					if i < 2 then
@@ -901,6 +915,7 @@ local diag_constructor = function()
 					},
 				},
 				iup.hbox {
+					alignment = "ACENTER",
 					iup.label {
 						title = "Sort by ",
 					},
@@ -921,35 +936,418 @@ local diag_constructor = function()
 	
 	local create_log_view = function()
 		--paged, not single multiline!
+		
+		local readout = iup.multiline {
+			readonly = "YES",
+			value = "",
+			size = "x%50",
+			expand = "HORIZONTAL",
+		}
+		
+		local num_logentries = iup.label {
+			title = "<update>",
+		}
+		
+		local select_delay = Timer()
+		local page_select = iup.iup.canvas {
+			size = "%70x" .. tostring(Font.Default),
+			border = "NO",
+			xmin = 1,
+			xmax = 100,
+			dx = 25,
+			posx = 1,
+			expand = "NO",
+			scrollbar = "HORIZONTAL",
+			scroll_cb = function(self, ...)
+				
+				select_delay:SetTimeout(1, function()
+					local log_copy = lib.get_gstate().log
+					readout.value = ""
+					for i=(self.posx or 1), (self.posx or 1) + 100 do
+						if log_copy[i] then
+							readout.value = readout.value .. tostring(i) .. ":" .. log_copy[i] .. "\n\127FFFFFF"
+						else
+							break
+						end
+					end
+					readout.caret = 1
+					select_delay:Kill()
+				end)
+			end,
+		}
+		
+		local update_logsize = iup.stationbutton {
+			title = "Refresh",
+			action = function()
+				local entry_amount = #(lib.get_gstate().log)
+				page_select.xmax = entry_amount
+				page_select.posx = 1
+				num_logentries.title = tostring(entry_amount)
+			end,
+		}
+		
+		local root_logview_panel = iup.stationsubframe {
+			iup.vbox {
+				alignment = "ACENTER",
+				iup.fill { },
+				readout,
+				page_select,
+				iup.fill {
+					size = "%4",
+				},
+				iup.hbox {
+					iup.label {
+						title = "Number of entries" .. ": ",
+					},
+					num_logentries,
+				},
+				update_logsize,
+				iup.fill { },
+			},
+		}
+		
+		update_logsize.action()
+		page_select:scroll_cb()
+		
+		return root_logview_panel
 	end
 	
 	local create_settings = function()
 		
+		local valid_config = {
+			allowBadAPIVersion = {
+				--if type is not defined, default toggle
+				display = "Load plugins expecting a different LME version than " .. lib.get_API(),
+				default = "NO",
+			},
+			echoLogging = {
+				display = "Print LME logs to game console",
+				default = "YES",
+			},
+			defaultLoadState = {
+				display = "Auto-load newly registered plugins",
+				default = "NO",
+			},
+			doErrPopup = {
+				display = "Popup standard errors for safely caught LME errors",
+				default = "NO",
+			},
+			protectResolveFile = {
+				display = "Attempt to catch errors when loading plugins",
+				default = "YES",
+			},
+			dbgFormatting = {
+				display = "Format log messages",
+				default = "YES",
+			},
+			dbgIgnoreLevel = {
+				type = "scale",
+				display = "Ignore logging messages below the selected priority",
+				default = "2",
+			},
+			--order of options
+			"allowBadAPIVersion",
+			"echoLogging",
+			"protectResolveFile",
+			"defaultLoadState",
+			"doErrPopup",
+			"dbgFormatting",
+			"dbgIgnoreLevel",
+		}
+		
+		local ctl = control_list_creator()
+		
+		local create_setting_editor = function(setting_to_edit)
+			--obtain current option with lib.get_lme_config(setting_to_edit)
+			cp("Creating setting modifier from " .. tostring(setting_to_edit))
+			local config_being_adjusted = setting_to_edit
+			local rules = valid_config[setting_to_edit]
+			if not rules then
+				return iup.vbox {
+					iup.label {
+						title = "HUH?",
+					},
+				}
+			end
+			
+			cp("rules: " .. spickle(rules))
+			local cfg_panel = iup.vbox {
+				alignment = "ARIGHT",
+				iup.label {
+					title = rules.display,
+				},
+				iup.hbox {
+					iup.fill { },
+				},
+			}
+			
+			local cur_select = lib.lme_get_config(setting_to_edit)
+			cp("existing option is set to " .. tostring(cur_select))
+			if not rules.type then
+				--toggle
+				local cfg_button = iup.stationbutton {
+					title = cur_select,
+					size = "x" .. tostring(Font.Default * 2),
+					fgcolor = cur_select == rules.default and "255 255 255" or "255 215 0",
+					action = function(self)
+						local new_setting = cur_select == "YES" and "NO" or "YES"
+						
+						cp("Player clicked to adjust " .. tostring(setting_to_edit) .. tostring(config_being_adjusted) .. " >> from " .. cur_select .. " to " .. new_setting)
+						lib.lme_configure(setting_to_edit, new_setting, auth_key)
+						self.title = new_setting
+						self.fgcolor = new_setting == rules.default and "255 255 255" or "255 215 0"
+						cur_select = new_setting
+					end,
+				}
+				iup.Append(cfg_panel, cfg_button)
+			elseif rules.type == "scale" then
+				--dropdown
+				local cfg_scale = iup.stationsublist {
+					dropdown = "YES",
+					size = "x" .. tostring(Font.Default * 2),
+					fgcolor = cur_select == rules.default and "255 255 255" or "255 215 0",
+					action = function(self, t, i, c)
+						local new_setting = tostring(i - 1)
+						lib.lme_configure(setting_to_edit, new_setting, auth_key)
+						self.fgcolor = new_setting == rules.default and "255 255 255" or "255 215 0"
+						cur_select = new_setting
+					end,
+					"Ignore Nothing",
+					"Ignore Inconsequential",
+					"Ignore Debug",
+					"Ignore Standard",
+					"Ignore Warnings",
+					value = tonumber(cur_select) + 1,
+				}
+				iup.Append(cfg_panel, cfg_scale)
+			end
+			
+			return iup.stationsubframe {cfg_panel}
+		end
+		
+		for order, item in ipairs(valid_config) do
+			cp(tostring(order) .. " >> " .. tostring(item))
+			ctl:add_item(create_setting_editor(item))
+		end
+		
+		local unins_msg = iup.multiline {
+			readonly = "YES",
+			value = "",
+			expand = "HORIZONTAL",
+			size = "x%10",
+		}
+		unins_msg.value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader."
+		
+		local setting_panel = iup.stationsubframe {
+			ctl_update = function() ctl:update() end,
+			iup.vbox {
+				iup.vbox {
+					alignment = "ACENTER",
+					visible = (auth_key) and "NO" or "YES",
+					iup.hbox {
+						iup.fill { },
+					},
+					iup.label {
+						wordwrap = "YES",
+						title = "WARNING! This is not your currently selected LME interface! Options requiring authentication may not apply!",
+					},
+					iup.stationbutton {
+						title = "Get authentication for this session",
+						action = function(self)
+							local obtain_key = function(auth)
+								iup.GetParent(self).visible = "NO"
+								auth_key = auth
+							end
+							lib.request_auth("Neoloader Lightweight Manager [neomgr]", obtain_key)
+						end,
+					},
+				},
+				iup.label {
+					title = "LME Configuration Settings",
+				},
+				iup.hbox {
+					iup.fill {},
+					ctl,
+					iup.fill {},
+				},
+				iup.fill {
+					size = "%4",
+				},
+				iup.vbox {
+					iup.hbox {
+						iup.label {
+							title = "Select an interface to load: ",
+						},
+						--item
+					},
+					iup.hbox {
+						iup.label {
+							title = "Select your LME interface: ",
+						},
+						--item
+					},
+				},
+				iup.fill { },
+				iup.hbox {
+					iup.label {
+						title = "Check for updates on ",
+					},
+					iup.stationbutton {
+						title = "NexusMods",
+						action = function()
+							Game.OpenWebBrowser("https://www.nexusmods.com/vendettaonline/mods/3")
+						end,
+					},
+					iup.stationbutton {
+						title = "VOUPR",
+						action = function()
+							Game.OpenWebBrowser("https://voupr.spenced.com/plugin.php?name=neoloader")
+						end,
+					},
+					iup.fill { },
+				},
+				iup.stationsubframe {
+					bgcolor = "200 0 0",
+					iup.vbox {
+						unins_msg,
+						iup.hbox {
+							iup.fill { },
+							iup.stationbutton {
+								title = "Uninstall Neoloader",
+								size = "x" .. tostring(Font.Default * 2),
+								fgcolor = "255 0 0",
+								action = function()
+									lib.request_auth(
+										"Neoloader Uninstaller",
+										function()
+											lib.uninstall(auth_key)
+										end
+									)
+								end,
+							},
+						},
+					},
+				},
+			},
+		}
+		
+		return setting_panel
+	end
+	
+	local create_notif_view = function()
+		local notif_panel = iup.stationsubframe {
+			iup.vbox {
+				alignment = "ACENTER",
+				iup.label {
+					title = "Recent Notifications",
+					font = Font.H5,
+				},
+				iup.hbox {
+					iup.fill { },
+					iup.stationbutton {
+						title = "Clear All",
+						size = "x" .. tostring(Font.Default * 2),
+						action = function(self)
+							notif_clearall()
+						end,
+					},
+				},
+				notif_scrollframe,
+			},
+		}
+		
+		return notif_panel
 	end
 	
 	
 	local modlist_panel = create_plugin_display()
+	local logview_panel = create_log_view()
+	local config_panel = create_settings()
+	local notif_panel = create_notif_view()
+	
+	local panel_view = iup.zbox {
+		modlist_panel,
+		notif_panel,
+		logview_panel,
+		config_panel,
+		value = modlist_panel,
+	}
+	local tabs_view = iup.hbox {
+		iup.stationbutton {
+			title = "Manage installed mods",
+			expand = "HORIZONTAL",
+			action = function()
+				panel_view.value = modlist_panel
+			end,
+		},
+		iup.stationbutton {
+			title = "View notifications",
+			expand = "HORIZONTAL",
+			action = function()
+				panel_view.value = notif_panel
+			end,
+		},
+		iup.stationbutton {
+			title = "View log",
+			expand = "HORIZONTAL",
+			action = function()
+				panel_view.value = logview_panel
+			end,
+		},
+		iup.stationbutton {
+			title = "Configure Neoloader",
+			expand = "HORIZONTAL",
+			action = function()
+				panel_view.value = config_panel
+			end,
+		},
+	}
+	
 	local root_diag = iup.dialog {
 		topmost = "YES",
 		fullscreen = "YES",
 		bgcolor = "0 0 0",
 		iup.vbox {
 			iup.hbox {
+				iup.fill { },
+				iup.label {
+					title = "Neoloader Lightweight Management Interface",
+				},
+				iup.fill { },
+			},
+			iup.hbox {
+				iup.label {
+					title = "LME Provider: " .. lib[1] .. " version " .. lib.get_gstate().version.strver,
+				},
 				iup.fill {},
 				iup.stationbutton {
+					title = "Reload",
+					size = "x" .. tostring(Font.Default * 2),
+					action = function(self)
+						lib.reload()
+					end,
+				},
+				iup.fill {
+					size = "%1",
+				},
+				iup.stationbutton {
 					title = "Close",
+					size = "x" .. tostring(Font.Default * 2),
 					action = function(self)
 						HideDialog(iup.GetDialog(self))
 					end,
 				},
 			},
-			modlist_panel,
+			tabs_view,
+			panel_view,
 		}
 	}
+	
 	cp("Mapping Dialog")
 	root_diag:map()
 	cp("updating")
 	modlist_panel.ctl_update(config.sort_type)
+	config_panel.ctl_update()
 	cp("Showing")
 	ShowDialog(root_diag)
 end
@@ -959,4 +1357,5 @@ neo.open = diag_constructor
 
 RegisterUserCommand("neotest", neo.open)
 
+neo.mgr = true
 update_class()
