@@ -1298,7 +1298,7 @@ function lib.compare_sem_ver(obj1, obj2)
 end
 
 function lib.set_load(auth, id, version, state)
-	id, ver = lib.pass_ini_identifier(id, ver)
+	id, version = lib.pass_ini_identifier(id, version)
 	auth = tostring(auth)
 	id = tostring(id)
 	version = tostring(version)
@@ -1732,7 +1732,7 @@ if lib.is_ready(neo.current_mgr) == false then
 		print("Neoloader failed to find an installed and enabled management interface; use /neomgr to force the bundled interface tool to load")
 		RegisterUserCommand("neomgr", function()
 			UnregisterUserCommand("neomgr")
-			lib.set_load(mgr_key, "neomgr", "1", "YES")
+			lib.set_load(mgr_key, "neomgr", "0", "YES")
 			lib.reload()
 		end)
 	end
