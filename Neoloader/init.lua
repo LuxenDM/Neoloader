@@ -65,7 +65,7 @@ end
 --This will be local when released
 neo = {
 	version = {
-		strver = "5.4.0 -beta",
+		strver = "5.5.0 -beta",
 		[1] = 5,
 		[2] = 4,
 		[3] = 0,
@@ -230,14 +230,14 @@ local configd = {
 	current_if = {
 		need_auth = "YES",
 		type = "string",
-		valid = "all",
+		valid = "ALL",
 		default = "",
 		key = "if",
 	},
 	current_mgr = {
 		need_auth = "YES",
 		type = "string",
-		valid = "all",
+		valid = "ALL",
 		default = "",
 		key = "mgr",
 	},
@@ -1368,7 +1368,7 @@ function lib.lme_configure(cfg_option, new_val, auth)
 	local define = configd[cfg_option]
 	if not define then
 		return false, "option does not exist"
-	else 
+	else
 		if (type(define.valid) == "table" and define.valid[new_val] or define.valid == "ALL") and (define.need_auth == "YES" and auth == mgr_key or not define.need_auth) then
 			lib.log_error("Configuration change: " .. cfg_option .. " >> " .. tostring(new_val), 1)
 			neo[cfg_option] = new_val
@@ -1454,7 +1454,7 @@ do
 	
 	for i, filepath in ipairs {
 		"neomgr.ini",
-		"neomgr.lua",
+		"neomgr2.lua",
 	} do
 		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
 			lib.log_error("Optional file missing from Neoloader: " .. filepath, 2)
