@@ -37,8 +37,8 @@ if NEO_UNINSTALL == false then
 	
 	--packaged plugin for basic functionality
 	lib.register("plugins/Neoloader/neomgr.ini")
-	setstr("Neo-pluginstate", "neomgr.1", "YES")
-	lib.set_load(auth, "neomgr", "1", "YES")
+	setstr("Neo-pluginstate", "neomgr.2.0.0", "YES")
+	lib.set_load(auth, "neomgr", "0", "YES")
 	
 	--user options
 	setstr("Neoloader", "rAllowDelayedLoad", "NO")
