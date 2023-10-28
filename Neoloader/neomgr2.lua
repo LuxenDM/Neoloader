@@ -1,5 +1,12 @@
 --bundled manager for Neoloader, version 2
 
+
+
+cp = console_print
+
+
+
+
 --verify API compatibility
 local api_check = lib.get_gstate()
 for k, v in ipairs {
@@ -55,7 +62,8 @@ local config = {
 		load: sort by load order
 	]]--
 	
-	
+	qa_buttons = gkrs("neomgr", "qa_buttons", "YES"),
+		--adds a quick-access button to the options dialog when YES
 }
 
 local neo = {}
@@ -81,8 +89,14 @@ function update_class()
 				display = "Print LME notifications in chat",
 				[1] = config.echo_notif,
 			},
+			qa_buttons = {
+				type = "toggle",
+				display = "Add quick-access buttons to the Options menu",
+				[1] = config.qa_buttons,
+			},
 			"auto_open",
 			"echo_notif",
+			"qa_buttons",
 		},
 		description = "neomgr is the bundled management interace for Neoloader. It provides a lightweight interface for configuring Neoloader and managing plugins.",
 		commands = {
@@ -111,30 +125,31 @@ function update_class()
 	lib.set_class("neomgr", "2.0.0", neo)
 end
 
-
 function neo.mgr_key(new_key)
 	if not auth_key then
 		auth_key = new_key
 	end
 end
 
+local button_scalar = function()
+	local val = ""
+	if gkinterface.IsTouchModeEnabled() then
+		val = tostring(Font.Default * 2)
+	end
+	return val
+end
 
 
 
 
-
-
-local notif_scrollframe = iup.stationsublist {
-	{},
-	control = "YES",
-	bgcolor = "0 0 0 0 *",
-	border = "NO",
-	expand = "YES",
-}
-local notif_frame = iup.vbox {}
+--[[
+	Todo: make the scrollframe generated on-call, not static
+		this way the notification screen could be embedded in any dialog
+		I could also move it away from this block section >.>
+]]--
 local notif_list = {}
-local notif_constructor = {}
 
+local notif_constructor = {}
 local notif_listener = {}
 local new_notif_listener = function(callback_func)
 	if type(callback_func) ~= "function" then
@@ -168,11 +183,11 @@ local new_notif_generator = function(notif_to_handle, echo_func, data_func)
 					iup.vbox {
 						iup.label {
 							title = data.title or notif_to_handle,
-							font = Font.H6,
+							font = Font.H4,
 						},
 						iup.label {
 							title = data.subtitle or "Notification",
-							font = Font.Tiny,
+							font = Font.H6,
 						},
 						iup.label {
 							title = data.line_1 or " ",
@@ -191,6 +206,7 @@ local new_notif_generator = function(notif_to_handle, echo_func, data_func)
 							font = Font.Tiny,
 						},
 					},
+					iup.fill { },
 				},
 			}
 		end
@@ -223,9 +239,6 @@ local notif_creator = function(status, data)
 		timestamp = os.time(),
 		reference = obj,
 	})
-	iup.Append(notif_frame, obj)
-	iup.Refresh(iup.GetDialog(notif_frame))
-	iup.Refresh(notif_scrollframe)
 	
 	for i, v in ipairs(notif_listener) do
 		local status, err = pcall(v, notif_constructor[status].data(data))
@@ -245,8 +258,6 @@ local notif_clearall = function()
 		iup.Destroy(notif_list[i].reference)
 		table.remove(notif_list, i)
 	end
-	
-	iup.Refresh(notif_frame)
 end
 
 new_notif_generator("UNHANDLED_NOTIFICATION", nil, nil)
@@ -270,6 +281,7 @@ new_notif_generator("SUCCESS",
 						Font.H4,
 					},
 				},
+				iup.fill { },
 			}
 		}
 	end
@@ -298,7 +310,8 @@ new_notif_generator("NEW_REGISTRY",
 						font = Font.H6,
 					},
 				},
-			}
+				iup.fill { },
+			},
 		}
 	end
 )
@@ -330,19 +343,11 @@ new_notif_generator("PLUGIN_FAILURE",
 						font = Font.H6,
 					},
 				},
-			}
+				iup.fill { },
+			},
 		}
 	end
 )
-iup.Append(notif_scrollframe, iup.dialog {
-	border = "NO",
-	menubox = "NO",
-	resize = "NO",
-	expand = "YES",
-	bgcolor = "0 0 0 0 *",
-	notif_frame,
-})
-notif_scrollframe[1] = 1
 
 neo.notif = notif_creator
 neo.handle_new_notif_type = new_notif_generator
@@ -357,9 +362,18 @@ neo.get_thumb_image = function() return {
 
 
 
-cp = console_print
 
-cp("mgr2 test")
+
+
+
+
+
+
+
+
+
+
+
 
 local diag_constructor = function()
 	
@@ -432,7 +446,9 @@ local diag_constructor = function()
 			
 			for k, v in ipairs(actual_items) do
 				v:detach()
-				iup.GetNextChild(v):detach()
+				if iup.IsValid(iup.GetNextChild(v)) then
+					iup.GetNextChild(v):detach()
+				end
 				--v:destroy()
 			end
 			actual_items = {}
@@ -484,8 +500,252 @@ local diag_constructor = function()
 		return ctl
 	end
 	
+	
 	local create_CCD1_view = function(id, version)
 		--rudimentary CCD1 support
+		
+		cp("creating CCD1 view for " .. tostring(id) .. " v" .. tostring(version))
+		
+		local ctable = {} --content table
+		ctable = lib.get_class(id, version)
+		if not ctable.CCD1 then
+			cp("ccd1 disabled")
+			return
+		end
+		ctable = ctable.smart_config
+		
+		
+		--[[
+		element_builder(ref, data)
+			ref: the element's reference ID
+			data: the table used to build an element
+		]]--
+		
+		local mk_prepend = function(data)
+			return iup.hbox {
+				iup.label {
+					title = data.display or "?",
+					expand = "HORIZONTAL",
+				},
+				iup.fill { },
+			}
+		end
+		
+		local mk_toggle = function(ref, data)
+			return iup.hbox {
+				mk_prepend(data),
+				iup.stationtoggle {
+					title = "",
+					value = data[1] == "NO" and "OFF" or "ON",
+					action = function(self)
+						ctable.cb(ref, self.value == "ON" and "YES" or "NO")
+					end,
+				},
+			}
+		end
+		
+		local mk_dropdown = function(ref, data)
+			local dropdown_obj = iup.stationsublist {
+				dropdown = "YES",
+				action = function(self, t, i, cv)
+					if cv == 1 then
+						ctable.cb(ref, t)
+					end
+				end,
+			}
+			
+			for k, v in ipairs(data) do
+				dropdown_obj[k] = tostring(v)
+			end
+			if #data < 1 then
+				dropdown_obj[1] = "???"
+			end
+			dropdown_obj.value = data.default
+			
+			return iup.hbox {
+				mk_prepend(data),
+				dropdown_obj,
+			}
+		end
+		
+		local mk_slider = function(ref, data)
+			local slider = iup.canvas {
+				size = "200x" .. button_scalar(),
+				border = "NO",
+				xmin = tonumber(data.min) or 1,
+				xmax = tonumber(data.max) or 100,
+				posx = tonumber(data.default) or 50,
+				dx = (tonumber(data.max) - tonumber(data.min))/10,
+				expand = "NO",
+				scroll_cb = function(self)
+					ctable.cb(ref, self.posx)
+				end,
+			}
+			
+			return iup.hbox {
+				mk_prepend(data),
+				slider,
+			}
+		end
+		
+		local mk_edit = function(ref, data)
+			return iup.hbox {
+				mk_prepend(data),
+				iup.text {
+					expand = "NO",
+					size = "200x",
+					value = tostring(data.default),
+					action = function(self)
+						ctable.cb(ref, data)
+					end,
+				},
+			}
+		end
+		
+		local mk_header = function(ref, data)
+			return iup.hbox {
+				iup.label {
+					title = tostring(data.display or "???"),
+					font = Font.Big,
+					alignment = "ACENTER",
+					expand = "HORIZONTAL",
+					wordwrap = "YES",
+				},
+			}
+		end
+		
+		local mk_text = function(ref, data)
+			local al = (data.align == "right" and "ARIGHT") or (data.align == "center" and "ACENTER") or ("ALEFT")
+			return iup.hbox {
+				iup.label {
+					title = tostring(data.display or "???"),
+					expand = "HORIZONTAL",
+					alignment = al,
+					wordwrap = "YES",
+				},
+			}
+		end
+		
+		local mk_img = function(ref, data)
+			if not gksys.IsExist(data[1]) then
+				data[1] = IMAGE_DIR .. "hud_target.png"
+			end
+			
+			return iup.hbox {
+				iup.fill { },
+				iup.label {
+					title = "",
+					image = data[1],
+				},
+				iup.fill { },
+			}
+		end
+		
+		local mk_spacer = function()
+			return iup.hbox {
+				iup.label {
+					title = " ",
+				},
+			}
+		end
+		
+		local mk_rule = function()
+			return iup.stationsubframe {
+				iup.hbox {
+					iup.fill { },
+				},
+			}
+		end
+		
+		local mk_action = function(ref, data)
+			return iup.hbox {
+				mk_prepend(data),
+				iup.stationbutton {
+					title = tostring(data[1] or "???"),
+					action = function()
+						ctable.cb(ref, "_action")
+					end,
+				},
+			}
+		end
+		
+		local mk_table = {
+			header = mk_header,
+			text = mk_text,
+			image = mk_img,
+			spacer = mk_spacer,
+			rule = mk_rule,
+			
+			toggle = mk_toggle,
+			dropdown = mk_dropdown,
+			slider = mk_slider,
+			input = mk_edit,
+			action = mk_action,
+		}
+		
+		
+		
+		
+		local disp_frame = control_list_creator()
+		disp_frame.size = "x%40"
+		local disp_obj = {}
+		
+		local function mk_item(ihandle)
+			--adds item to frame and obj table
+			table.insert(disp_obj, ihandle)
+			disp_frame:add_item(ihandle)
+		end
+			
+		for k, v in ipairs(ctable) do
+			cp("Entry is " .. tostring(ctable[v].type))
+			if mk_table[ctable[v].type] then
+				mk_item(mk_table[ctable[v].type](v, ctable[v]))
+			end
+		end
+		
+		local CCD1_manager = iup.dialog {
+			topmost = "YES",
+			fullscreen = "YES",
+			bgcolor = "0 0 0 200 *",
+			iup.vbox {
+				iup.fill { },
+				iup.hbox {
+					iup.fill { },
+					iup.stationbuttonframe {
+						expand = "NO",
+						iup.vbox {
+							iup.hbox {
+								iup.fill {
+									size = "%50",
+								},
+								iup.stationbutton {
+									title = "Close",
+									action = function(self)
+										HideDialog(iup.GetDialog(self))
+									end,
+								},
+							},
+							iup.label {
+								title = tostring(ctable.title or "CCD1 Untitled SCM"),
+							},
+							iup.fill {
+								size = "%2",
+							},
+							disp_frame,
+							iup.fill {
+								size = "%2",
+							},
+						},
+					},
+					iup.fill { },
+				},
+				iup.fill { },
+			},
+		}
+		
+		CCD1_manager:map()
+		disp_frame:update()
+		ShowDialog(CCD1_manager)
 	end
 	
 	local create_plugin_display = function()
@@ -858,7 +1118,7 @@ local diag_constructor = function()
 		
 		local sort_select = iup.stationsublist {
 			dropdown = "YES",
-			size = "x" .. tostring(Font.Default * 2),
+			size = "x" .. button_scalar(),
 			action = function(self, t, i, c)
 				if c == 1 then
 					for k, v in ipairs {
@@ -889,7 +1149,7 @@ local diag_constructor = function()
 		
 		local sort_dir_select = iup.stationsublist {
 			dropdown = "YES",
-			size = "x" .. tostring(Font.Default * 2),
+			size = "x" .. button_scalar(),
 			action = function(self, t, i, c)
 				if c == 1 then
 					if i < 2 then
@@ -935,7 +1195,8 @@ local diag_constructor = function()
 	end
 	
 	local create_log_view = function()
-		--paged, not single multiline!
+		
+		local log_copy = lib.get_gstate().log
 		
 		local readout = iup.multiline {
 			readonly = "YES",
@@ -948,9 +1209,8 @@ local diag_constructor = function()
 			title = "<update>",
 		}
 		
-		local select_delay = Timer()
-		local page_select = iup.iup.canvas {
-			size = "%70x" .. tostring(Font.Default),
+		local page_select = iup.canvas {
+			size = "%70x" .. button_scalar(),
 			border = "NO",
 			xmin = 1,
 			xmax = 100,
@@ -959,27 +1219,21 @@ local diag_constructor = function()
 			expand = "NO",
 			scrollbar = "HORIZONTAL",
 			scroll_cb = function(self, ...)
-				
-				select_delay:SetTimeout(1, function()
-					local log_copy = lib.get_gstate().log
-					readout.value = ""
-					for i=(self.posx or 1), (self.posx or 1) + 100 do
-						if log_copy[i] then
-							readout.value = readout.value .. tostring(i) .. ":" .. log_copy[i] .. "\n\127FFFFFF"
-						else
-							break
-						end
-					end
-					readout.caret = 1
-					select_delay:Kill()
-				end)
+				readout.value = ""
+				local end_point = (tonumber(self.posx) or 1) + 100
+				if end_point > #log_copy then
+					end_point = #log_copy
+				end
+				readout.value = table.concat(log_copy, "\n\127FFFFFF", (tonumber(self.posx) or 1), end_point)
+				readout.caret = 1
 			end,
 		}
 		
 		local update_logsize = iup.stationbutton {
 			title = "Refresh",
 			action = function()
-				local entry_amount = #(lib.get_gstate().log)
+				log_copy = lib.get_gstate().log
+				local entry_amount = #log_copy
 				page_select.xmax = entry_amount
 				page_select.posx = 1
 				num_logentries.title = tostring(entry_amount)
@@ -1087,7 +1341,7 @@ local diag_constructor = function()
 				--toggle
 				local cfg_button = iup.stationbutton {
 					title = cur_select,
-					size = "x" .. tostring(Font.Default * 2),
+					size = "x" .. button_scalar(),
 					fgcolor = cur_select == rules.default and "255 255 255" or "255 215 0",
 					action = function(self)
 						local new_setting = cur_select == "YES" and "NO" or "YES"
@@ -1104,7 +1358,7 @@ local diag_constructor = function()
 				--dropdown
 				local cfg_scale = iup.stationsublist {
 					dropdown = "YES",
-					size = "x" .. tostring(Font.Default * 2),
+					size = "x" .. button_scalar(),
 					fgcolor = cur_select == rules.default and "255 255 255" or "255 215 0",
 					action = function(self, t, i, c)
 						local new_setting = tostring(i - 1)
@@ -1214,7 +1468,7 @@ local diag_constructor = function()
 							iup.fill { },
 							iup.stationbutton {
 								title = "Uninstall Neoloader",
-								size = "x" .. tostring(Font.Default * 2),
+								size = "x" .. button_scalar(),
 								fgcolor = "255 0 0",
 								action = function()
 									lib.request_auth(
@@ -1235,6 +1489,16 @@ local diag_constructor = function()
 	end
 	
 	local create_notif_view = function()
+		local notif_ctl = control_list_creator()
+		
+		new_notif_listener(function()
+			notif_ctl:clear_items()
+			for k, v in ipairs(notif_list) do
+				notif_ctl:add_item(v.reference)
+			end
+			notif_ctl:update()
+		end)
+		
 		local notif_panel = iup.stationsubframe {
 			iup.vbox {
 				alignment = "ACENTER",
@@ -1246,15 +1510,25 @@ local diag_constructor = function()
 					iup.fill { },
 					iup.stationbutton {
 						title = "Clear All",
-						size = "x" .. tostring(Font.Default * 2),
+						size = "x" .. button_scalar(),
 						action = function(self)
 							notif_clearall()
+							notif_ctl:clear_items()
+							notif_ctl:update()
 						end,
 					},
 				},
-				notif_scrollframe,
+				notif_ctl,
 			},
 		}
+		
+		notif_panel.ctl_update = function()
+			notif_ctl:clear_items()
+			for k, v in ipairs(notif_list) do
+				notif_ctl:add_item(v.reference)
+			end
+			notif_ctl:update()
+		end
 		
 		return notif_panel
 	end
@@ -1284,6 +1558,7 @@ local diag_constructor = function()
 			title = "View notifications",
 			expand = "HORIZONTAL",
 			action = function()
+				notif_panel:ctl_update()
 				panel_view.value = notif_panel
 			end,
 		},
@@ -1322,7 +1597,7 @@ local diag_constructor = function()
 				iup.fill {},
 				iup.stationbutton {
 					title = "Reload",
-					size = "x" .. tostring(Font.Default * 2),
+					size = "x" .. button_scalar(),
 					action = function(self)
 						lib.reload()
 					end,
@@ -1332,7 +1607,7 @@ local diag_constructor = function()
 				},
 				iup.stationbutton {
 					title = "Close",
-					size = "x" .. tostring(Font.Default * 2),
+					size = "x" .. button_scalar(),
 					action = function(self)
 						HideDialog(iup.GetDialog(self))
 					end,
@@ -1355,7 +1630,76 @@ end
 neo.open = diag_constructor
 
 
-RegisterUserCommand("neotest", neo.open)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local open_button_creator = function()
+	--this adds the neoloader button to options
+	if config.auto_open == "YES" then
+		neo.open()
+	end
+	
+	local angular_check = gkini.ReadString("Vendetta", "usenewui", "n")
+	
+	if config.qa_buttons == "YES" then
+		if angular_check == "1" and Platform == "Windows" then
+			local odbutton = OptionsDialog[1][1][15]
+			
+			local x_pos = tonumber(odbutton.cx)
+			local y_pos = tonumber(odbutton.cy)
+			local sizes = {}
+			for value in string.gmatch(odbutton.size, "%d+") do
+				table.insert(sizes, tonumber(value))
+			end
+			y_pos = y_pos - (sizes[2] * 1.5)
+			
+			local neobutton = iup.button {
+				title = "Open Mod Manager",
+				size = odbutton.size,
+				cx = x_pos,
+				cy = y_pos,
+				image = odbutton.image,
+				action = neo.open,
+			}
+			
+			iup.Append(OptionsDialog[1][1], neobutton)
+		else
+			local neobutton = stationbutton {
+				title = "Open Mod Manager",
+				expand = "HORIZONTAL",
+				action = neo.open,
+			}
+			
+			iup.Append(OptionsDialog[1][1][1], neobutton)
+		end
+	end
+end
+
+RegisterEvent(open_button_creator, "PLUGINS_LOADED")
+
+RegisterUserCommand("neotest", neo.open)
 neo.mgr = true
 update_class()
