@@ -71,7 +71,7 @@ neo = {
 		[3] = 0,
 		[4] = "Beta",
 	},
-	notifications = {},
+	--notifications = {} <- no longer tracked (nor did it ever get implemented) by Neoloader
 	log = {},
 	error_flag = false, 
 	plugin_registry = {}, --holds registered plugin details [id .. version]; [id].latest will provide version sstring of latest version for redirect
@@ -81,6 +81,9 @@ neo = {
 		[1] = "no_entry",
 	},
 	list_mgr = { --list of possible managers
+		[1] = "no_entry",
+	},
+	list_notif = { --list of possible notification handlers
 		[1] = "no_entry",
 	},
 	
@@ -111,6 +114,7 @@ neo = {
 	
 	current_if = gkreadstr("Neoloader", "if", ""),
 	current_mgr = gkreadstr("Neoloader", "mgr", ""),
+	current_notif = gkreadstr("Neoloader", "current_notif", ""),
 }
 
 if neo.ignoreOverrideState == "NO" and gkini.ReadInt("Vendetta", "plugins", 1) == 0 then
@@ -240,6 +244,13 @@ local configd = {
 		valid = "ALL",
 		default = "",
 		key = "mgr",
+	},
+	current_notif = {
+		need_auth = "YES",
+		type = "string",
+		valid = "ALL",
+		default = "",
+		key = "current_notif",
 	},
 }
 
@@ -911,18 +922,25 @@ end
 function lib.get_gstate()
 	local data = {}
 	data.version = neo.version
-	data.pathlock = neo.pathlock
-	data.statelock = neo.statelock
-	data.manager = neo.current_mgr
-	data.ifmgr = neo.current_if
+	data.lmever = neo.lmever
 	data.major = neo.API
 	data.minor = neo.minor
 	data.patch = neo.patch
-	data.lmever = neo.lmever
+	
+	data.pathlock = neo.pathlock
+	data.statelock = neo.statelock
+	
+	data.mgr_list = neo.list_mgr
+	data.if_list = neo.list_if
+	data.notif_list = neo.list_notif
+	
+	data.manager = neo.current_mgr
+	data.ifmgr = neo.current_if
+	data.current_notif = neo.current_notif
 	if not lib.is_exist(neo.current_if) then
 		data.ifmgr = "vo-if"
 	end
-	data.notifications = neo.notifications
+	
 	data.log = neo.log
 	
 	data.pluginlist = {}
@@ -935,9 +953,7 @@ function lib.get_gstate()
 		end
 	end
 	
-	data.mgr_list = neo.list_mgr
-	data.if_list = neo.list_if
-	
+	--depreciated; too many settings, so they should be obtained through lib.lme_get_config(). These will remain here, but no more will be added.
 	data.newstate = neo.defaultLoadState
 	data.format_log = neo.dbgFormatting
 	data.log_level = neo.dbgIgnoreLevel
@@ -1078,7 +1094,7 @@ function lib.notify(status, ...)
 	end
 	
 	if lib.is_ready(neo.current_mgr) then
-		lib.execute(neo.current_mgr, lib.get_latest(neo.current_mgr), "notif", status, ...)
+		lib.execute(neo.current_notif, lib.get_latest(neo.current_notif), "notif", status, ...)
 	end
 end
 
