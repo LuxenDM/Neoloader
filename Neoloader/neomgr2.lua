@@ -45,7 +45,6 @@ local gkrs = gkini.ReadString
 local auth_key
 local config = {
 	auto_open = gkrs("neomgr", "auto_open", "NO"),
-	echo_notif = gkrs("neomgr", "echo_notif", "YES"),
 	--[[
 		depreciated en/disabling "on-top" visual notifications
 		
@@ -84,18 +83,12 @@ function update_class()
 				display = "Open neomgr when the game starts",
 				[1] = config.auto_open,
 			},
-			echo_notif = {
-				type = "toggle",
-				display = "Print LME notifications in chat",
-				[1] = config.echo_notif,
-			},
 			qa_buttons = {
 				type = "toggle",
 				display = "Add quick-access buttons to the Options menu",
 				[1] = config.qa_buttons,
 			},
 			"auto_open",
-			"echo_notif",
 			"qa_buttons",
 		},
 		description = "neomgr is the bundled management interace for Neoloader. It provides a lightweight interface for configuring Neoloader and managing plugins.",
@@ -107,9 +100,6 @@ function update_class()
 		manifest = {
 			"plugins/Neoloader/neomgr2.lua",
 			"plugins/Neoloader/neomgr2.ini",
-			
-			"plugins/Neoloader/img/notif_placeholder.png",
-			"plugins/Neoloader/img/thumb.png",
 			
 			"plugins/Neoloader/lang/en.ini",
 			"plugins/Neoloader/lang/es.ini",
@@ -142,219 +132,8 @@ end
 
 
 
---[[
-	Todo: make the scrollframe generated on-call, not static
-		this way the notification screen could be embedded in any dialog
-		I could also move it away from this block section >.>
-]]--
-local notif_list = {}
 
-local notif_constructor = {}
-local notif_listener = {}
-local new_notif_listener = function(callback_func)
-	if type(callback_func) ~= "function" then
-		return false
-	end
-	
-	table.insert(notif_listener, callback_func)
-end
 
-local new_notif_generator = function(notif_to_handle, echo_func, data_func)
-	notif_to_handle = tostring(notif_to_handle)
-	
-	if type(echo_func) ~= "function" then
-		echo_func = function(data)
-			return "[" .. (data.title or notif_to_handle).. "] " .. (data.subtitle or "No chat handler for notification")
-		end
-	end
-	
-	if type(data_func) ~= "function" then
-		data_func = function(data)
-			return iup.pdarootframe {
-				iup.hbox {
-					alignment = "ACENTER",
-					iup.vbox {
-						iup.label {
-							title = "",
-							image = data.img or "plugins/Neoloader/img/notif_placeholder.png",
-							size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
-						},
-					},
-					iup.vbox {
-						iup.label {
-							title = data.title or notif_to_handle,
-							font = Font.H4,
-						},
-						iup.label {
-							title = data.subtitle or "Notification",
-							font = Font.H6,
-						},
-						iup.label {
-							title = data.line_1 or " ",
-							font = Font.Tiny,
-						},
-						iup.label {
-							title = data.line_2 or " ",
-							font = Font.Tiny,
-						},
-						iup.label {
-							title = data.line_3 or " ",
-							font = Font.Tiny,
-						},
-						iup.label {
-							title = data.line_4 or " ",
-							font = Font.Tiny,
-						},
-					},
-					iup.fill { },
-				},
-			}
-		end
-	end
-	
-	if not notif_constructor[notif_to_handle] then
-		notif_constructor[notif_to_handle] = {
-			echo = echo_func,
-			data = data_func,
-		}
-	end
-end
-
-local notif_creator = function(status, data)
-	if not notif_constructor[status] then
-		data = {
-			title = "UNHANDLED_NOTIFICATION",
-			subtitle = "Unknown notification type " .. status,
-		}
-		status = "UNHANDLED_NOTIFICATION"
-	end
-	if type(data) ~= "table" then
-		data = {}
-	end
-	
-	lib.log_error(status, 2)
-	
-	local obj = notif_constructor[status].data(data)
-	table.insert(notif_list, {
-		timestamp = os.time(),
-		reference = obj,
-	})
-	
-	for i, v in ipairs(notif_listener) do
-		local status, err = pcall(v, notif_constructor[status].data(data))
-		if not status then
-			lib.log_error("[neomgr] notification handler error - failed to call a notification listener, error returned: " .. tostring(err))
-		end
-	end
-	
-	if config.echo_notif == "YES" then
-		print(notif_constructor[status].echo(data))
-	end
-end
-
-local notif_clearall = function()
-	for i=#notif_list, 1, -1 do
-		notif_list[i].reference:detach()
-		iup.Destroy(notif_list[i].reference)
-		table.remove(notif_list, i)
-	end
-end
-
-new_notif_generator("UNHANDLED_NOTIFICATION", nil, nil)
-new_notif_generator("SUCCESS",
-	function(data) --notification chat print
-		return "NPLME has loaded successfully!"
-	end,
-	function(data) --notification iup generator
-		return iup.pdarootframe {
-			iup.hbox {
-				iup.vbox {
-					iup.label {
-						title = "",
-						image = "plugins/Neoloader/img/thumb.png",
-						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
-					},
-				},
-				iup.vbox {
-					iup.label {
-						title = "Neoloader loaded successfully!",
-						Font.H4,
-					},
-				},
-				iup.fill { },
-			}
-		}
-	end
-)
-new_notif_generator("NEW_REGISTRY",
-	function(data) --notification chat print
-		return "A new plugin has been registered: " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "?")
-	end,
-	function(data) --notification iup generator
-		return iup.iup.pdarootframe {
-			iup.hbox {
-				iup.vbox {
-					iup.label {
-						title = "",
-						image = "plugins/Neoloader/img/thumb.png",
-						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
-					},
-				},
-				iup.vbox {
-					iup.label {
-						title = "A new plugin has been registered!",
-						font = Font.H4,
-					},
-					iup.label {
-						title = tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "?"),
-						font = Font.H6,
-					},
-				},
-				iup.fill { },
-			},
-		}
-	end
-)
-new_notif_generator("PLUGIN_FAILURE",
-	function(data) --notification chat print
-		return "Neoloader encountered an error while loading a plugin: " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
-	end,
-	function(data) --notification iup generator
-		return iup.iup.pdarootframe {
-			iup.hbox {
-				iup.vbox {
-					iup.label {
-						title = "",
-						image = "plugins/Neoloader/img/thumb.png",
-						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
-					},
-				},
-				iup.vbox {
-					iup.label {
-						title = "Neoloader couldn't load a plugin!",
-						font = Font.H4,
-					},
-					iup.label {
-						title = tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???"),
-						font = Font.H6,
-					},
-					iup.label {
-						title = tostring(data.error_string or "<failed to fetch error string>"),
-						font = Font.H6,
-					},
-				},
-				iup.fill { },
-			},
-		}
-	end
-)
-
-neo.notif = notif_creator
-neo.handle_new_notif_type = new_notif_generator
-neo.get_thumb_image = function() return {
-	image = "plugins/Neoloader/img/notif_placeholder.png",
-	size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
-} end
 
 
 
@@ -418,6 +197,7 @@ local diag_constructor = function()
 		end
 		
 		ctl.add_item = function(self, obj)
+			cp("adding an item!")
 			table.insert(contents, obj)
 		end
 		
@@ -437,7 +217,7 @@ local diag_constructor = function()
 			cp("CTL update function")
 			cp("sort type provided is " .. tostring(sorttype))
 			
-			if sort_methods[sorttype] then
+			if sorttype and sort_methods[sorttype] then
 				cp("sorting as " .. sorttype .. " in direction " .. config.sort_dir)
 				table.sort(contents, sort_methods[sorttype])
 			end
@@ -1201,8 +981,7 @@ local diag_constructor = function()
 		local readout = iup.multiline {
 			readonly = "YES",
 			value = "",
-			size = "x%50",
-			expand = "HORIZONTAL",
+			expand = "YES",
 		}
 		
 		local num_logentries = iup.label {
@@ -1234,7 +1013,8 @@ local diag_constructor = function()
 			action = function()
 				log_copy = lib.get_gstate().log
 				local entry_amount = #log_copy
-				page_select.xmax = entry_amount
+				page_select.xmin = 1
+				page_select.xmax = entry_amount > 1 and entry_amount or 2
 				page_select.posx = 1
 				num_logentries.title = tostring(entry_amount)
 			end,
@@ -1243,7 +1023,9 @@ local diag_constructor = function()
 		local root_logview_panel = iup.stationsubframe {
 			iup.vbox {
 				alignment = "ACENTER",
-				iup.fill { },
+				iup.fill {
+					size = "%4",
+				},
 				readout,
 				page_select,
 				iup.fill {
@@ -1256,7 +1038,9 @@ local diag_constructor = function()
 					num_logentries,
 				},
 				update_logsize,
-				iup.fill { },
+				iup.fill {
+					size = "%4",
+				},
 			},
 		}
 		
@@ -1310,6 +1094,8 @@ local diag_constructor = function()
 		}
 		
 		local ctl = control_list_creator()
+		ctl.expand = "VERTICAL"
+		ctl.size = "%60x"
 		
 		local create_setting_editor = function(setting_to_edit)
 			--obtain current option with lib.get_lme_config(setting_to_edit)
@@ -1359,10 +1145,10 @@ local diag_constructor = function()
 				local cfg_scale = iup.stationsublist {
 					dropdown = "YES",
 					size = "x" .. button_scalar(),
-					fgcolor = cur_select == rules.default and "255 255 255" or "255 215 0",
+					fgcolor = (tonumber(cur_select)) == tonumber(rules.default) and "255 255 255" or "255 215 0",
 					action = function(self, t, i, c)
 						local new_setting = tostring(i - 1)
-						lib.lme_configure(setting_to_edit, new_setting, auth_key)
+						lib.lme_configure(setting_to_edit, tonumber(new_setting), auth_key)
 						self.fgcolor = new_setting == rules.default and "255 255 255" or "255 215 0"
 						cur_select = new_setting
 					end,
@@ -1374,6 +1160,14 @@ local diag_constructor = function()
 					value = tonumber(cur_select) + 1,
 				}
 				iup.Append(cfg_panel, cfg_scale)
+			else
+				local cfg_item = iup.vbox {
+					iup.label {
+						title = "There was an error!?",
+						fgcolor = "255 0 0",
+					}
+				}
+				iup.Append(cfg_panel, cfg_item)
 			end
 			
 			return iup.stationsubframe {cfg_panel}
@@ -1390,7 +1184,76 @@ local diag_constructor = function()
 			expand = "HORIZONTAL",
 			size = "x%10",
 		}
-		unins_msg.value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini and try to prevent Neoloader from launching again. You might also want to do this if you are upgrading to a new version of Neoloader."
+		unins_msg.value = "If you are having issues with Neoloader, try uninstalling it. This button will remove as much neoloader-based data as possible from your config.ini, and will prevent it from automatically loading until you are able to remove the plugin's files from your game. You might also want to do this if you are upgrading to a new version of Neoloader. If you want to install Neoloader again, use the button that will appear in your Options menu to trigger the setup process."
+		
+		local gs = lib.get_gstate()
+		
+		local if_select = iup.stationsublist {
+			dropdown = "YES",
+			size = "200x" .. button_scalar(),
+			action = function(self, t, i, cv)
+				if cv == 1 then
+					self.fgcolor = (t ~= gs.current_if) and "255 215 0" or "255 255 255"
+					lib.lme_configure("current_if", t, auth_key)
+				end
+			end,
+		}
+		for k, v in ipairs(lib.get_gstate().if_list) do
+			if v == "no_entry" then
+				v = "vo-if"
+			end
+			if_select[k] = v
+			if v == gs.current_if then
+				console_print("YARR IF IS " .. tostring(k) .. tostring(v))
+				if_select.value = k
+			end
+		end
+		
+		
+		
+		local mgr_select = iup.stationsublist {
+			dropdown = "YES",
+			size = "200x" .. button_scalar(),
+			action = function(self, t, i, cv)
+				if cv == 1 then
+					self.fgcolor = (t ~= gs.current_mgr) and "255 215 0" or "255 255 255"
+					self.fgcolor = (t == "no_entry") and "255 0 0" or self.fgcolor
+					cp("setting current_mgr to " .. tostring(t))
+					lib.lme_configure("current_mgr", t, auth_key)
+				end
+			end,
+		}
+		for k, v in ipairs(lib.get_gstate().mgr_list) do
+			mgr_select[k] = v
+			if v == gs.current_mgr then
+				console_print("YARR MGR IS " .. tostring(k) .. tostring(v))
+				mgr_select.value = k
+			end
+		end
+		
+		
+		
+		local notif_select = iup.stationsublist {
+			dropdown = "YES",
+			size = "200x" .. button_scalar(),
+			action = function(self, t, i, cv)
+				if cv == 1 then
+					self.fgcolor = (t ~= gs.current_notif) and "255 215 0" or "255 255 255"
+					lib.lme_configure("current_notif", t, auth_key)
+				end
+			end,
+		}
+		for k, v in ipairs(lib.get_gstate().notif_list) do
+			notif_select[k] = v
+			if v == gs.current_notif then
+				console_print("YARR NOTIF IS " .. tostring(k) .. tostring(v))
+				notif_select.value = k
+			end
+		end
+		
+		
+		
+		
 		
 		local setting_panel = iup.stationsubframe {
 			ctl_update = function() ctl:update() end,
@@ -1420,40 +1283,55 @@ local diag_constructor = function()
 					title = "LME Configuration Settings",
 				},
 				iup.hbox {
-					iup.fill {},
+					iup.stationsubframe {
+						iup.vbox {
+							alignment = "ALEFT",
+							iup.hbox {
+								iup.fill { },
+							},
+							iup.hbox {
+								iup.label {
+									title = "Select an interface to load: ",
+								},
+								iup.fill { },
+								if_select,
+							},
+							iup.hbox {
+								iup.label {
+									title = "Select your LME manager: ",
+								},
+								iup.fill { },
+								mgr_select,
+							},
+							iup.hbox {
+								iup.label {
+									title = "Select your notification handler: ",
+								},
+								iup.fill { },
+								notif_select,
+							},
+							iup.fill { },
+						},
+					},
 					ctl,
-					iup.fill {},
-				},
-				iup.fill {
-					size = "%4",
-				},
-				iup.vbox {
-					iup.hbox {
-						iup.label {
-							title = "Select an interface to load: ",
-						},
-						--item
-					},
-					iup.hbox {
-						iup.label {
-							title = "Select your LME interface: ",
-						},
-						--item
-					},
 				},
 				iup.fill { },
 				iup.hbox {
+					alignment = "ACENTER",
+					iup.fill { },
 					iup.label {
 						title = "Check for updates on ",
 					},
 					iup.stationbutton {
 						title = "NexusMods",
+						size = "x" .. button_scalar(),
 						action = function()
 							Game.OpenWebBrowser("https://www.nexusmods.com/vendettaonline/mods/3")
 						end,
 					},
 					iup.stationbutton {
 						title = "VOUPR",
+						size = "x" .. button_scalar(),
 						action = function()
 							Game.OpenWebBrowser("https://voupr.spenced.com/plugin.php?name=neoloader")
 						end,
@@ -1490,14 +1368,32 @@ local diag_constructor = function()
 	
 	local create_notif_view = function()
 		local notif_ctl = control_list_creator()
+		local ctl_ref = tostring(notif_ctl)
 		
-		new_notif_listener(function()
-			notif_ctl:clear_items()
-			for k, v in ipairs(notif_list) do
-				notif_ctl:add_item(v.reference)
-			end
-			notif_ctl:update()
-		end)
+		local notif_class = lib.get_class(lib.get_gstate().current_notif, "0")
+		
+		if (type(notif_class) ~= "table") or (not notif_class.notif_handler) then
+			local invalid = iup.stationsubframe {
+				iup.vbox {
+					alignment = "ACENTER",
+					iup.hbox {
+						iup.fill { },
+					},
+					iup.label {
+						title = "Unable to get notification system",
+					},
+					iup.label {
+						title = "Please ensure a notification handler is enabled on the plugins display page.",
+					},
+				},
+			}
+			
+			--stub functions since no notifs are handled
+			invalid.ctl_update = function() end
+			invalid.unreg = function() end
+			
+			return invalid
+		end
 		
 		local notif_panel = iup.stationsubframe {
 			iup.vbox {
@@ -1512,9 +1408,9 @@ local diag_constructor = function()
 						title = "Clear All",
 						size = "x" .. button_scalar(),
 						action = function(self)
-							notif_clearall()
 							notif_ctl:clear_items()
 							notif_ctl:update()
+							notif_class.clear_all()
 						end,
 					},
 				},
@@ -1524,11 +1420,35 @@ local diag_constructor = function()
 		
 		notif_panel.ctl_update = function()
 			notif_ctl:clear_items()
-			for k, v in ipairs(notif_list) do
-				notif_ctl:add_item(v.reference)
+			local history = notif_class.get_history()
+			for k, v in ipairs(history) do
+				local notif_obj = notif_class.make_visual(v.notif, v.data)
+				notif_ctl:add_item(notif_obj)
 			end
 			notif_ctl:update()
 		end
+		notif_panel.unreg = function()
+			notif_class.unregister_listener("neomgr")
+		end
+		
+		local listener_func = function(status, data)
+			cp("neomgr listener called with " .. status .. " >> " .. spickle(data))
+			cp("ctl exists: " .. tostring(notif_ctl))
+			cp("ctl ref should be " .. tostring(ctl_ref))
+			if tostring(notif_ctl) ~= tostring(ctl_ref) then
+				cp("\127FF0000WTF!?")
+			end
+			
+			notif_ctl:clear_items()
+			local history = notif_class.get_history()
+			for k, v in ipairs(history) do
+				local notif_obj = notif_class.make_visual(v.notif, v.data)
+				notif_ctl:add_item(notif_obj)
+			end
+			notif_ctl:update()
+		end
+		
+		notif_class.register_listener("neomgr", listener_func)
 		
 		return notif_panel
 	end
@@ -1609,6 +1529,7 @@ local diag_constructor = function()
 					title = "Close",
 					size = "x" .. button_scalar(),
 					action = function(self)
+						notif_panel.unreg()
 						HideDialog(iup.GetDialog(self))
 					end,
 				},
