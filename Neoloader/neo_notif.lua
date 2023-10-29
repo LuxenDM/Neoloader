@@ -1,0 +1,352 @@
+--Neoloader Default Notification Handler
+
+local cp = console_print
+
+local neo = {}
+local babel, shelf_id, update_class
+local bstr = function(id, def)
+	return def
+end
+
+local babel_support = function()
+	babel = lib.get_class("babel", "0")
+	
+	shelf_id = babel.register("plugins/Neoloader/lang/", {'en', 'es', 'fr', 'pt'})
+	
+	bstr = function(id, def)
+		return babel.fetch(shelf_id, id, def)
+	end
+	
+	update_class()
+end
+
+local config = {
+	echo_notif = gkini.ReadString("neomgr", "echo_notif", "YES"),
+}
+
+update_class = function()
+	local class = {
+		CCD1 = true,
+		smart_config = {
+			title = "Neoloader Notification Handler",
+			cb = function(cfg, val)
+				if config[cfg] then
+					config[cfg] = val
+					gkini.WriteString("neomgr", cfg, val)
+				end
+			end,
+			echo_notif = {
+				type = "toggle",
+				display = "Print LME notifications in chat",
+				[1] = config.echo_notif,
+			},
+			"echo_notif",
+		},
+		description = "neo_notif is the bundled notification handler for Neoloader. It provides a simple system for event handling meant for informing the user about system events.",
+		commands = {
+			"There are no commands registered for neo_notif",
+		},
+		manifest = {
+			"plugins/Neoloader/neo_notif.lua",
+			"plugins/Neolaoder/neo_notif.ini",
+			
+			"plugins/Neoloader/img/notif_placeholder.png",
+			"plugins/Neoloader/img/thumb.png",
+		},
+	}
+	
+	for k, v in pairs(class) do
+		neo[k] = v
+	end
+	
+	lib.set_class("neonotif", "1.0.0", neo)
+end
+
+local notif_history = {} --notification history
+
+local notif_constructor = {} --notifications that can be handled
+local notif_listener = {} --mods accepting notifications
+
+local new_listener = function(id, callback_func)
+	if type(callback_func) ~= "function" then
+		return false
+	end
+	if notif_listener[id] then
+		cp("notif-listener " .. id .. " already exists")
+		return false
+	end
+	
+	table.insert(notif_listener, callback_func)
+	notif_listener[id] = #notif_listener
+end
+
+local unreg_listener = function(id)
+	if not notif_listener[id] then
+		return false
+	end
+	table.remove(notif_listener, notif_listener[id])
+	notif_listener[id] = nil
+end
+
+local new_generator = function(notif_to_handle, echo_func, data_func)
+	notif_to_handle = tostring(notif_to_handle)
+	
+	if type(echo_func) ~= "function" then
+		echo_func = function(data)
+			return "[" .. (data.title or notif_to_handle).. "] " .. (data.subtitle or "No chat handler for notification")
+		end
+	end
+	
+	if type(data_func) ~= "function" then
+		data_func = function(data)
+			return iup.pdarootframe {
+				iup.hbox {
+					alignment = "ACENTER",
+					iup.vbox {
+						iup.label {
+							title = "",
+							image = data.img or "plugins/Neoloader/img/notif_placeholder.png",
+							size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+						},
+					},
+					iup.vbox {
+						iup.label {
+							title = data.title or notif_to_handle,
+							font = Font.H4,
+						},
+						iup.label {
+							title = data.subtitle or "Notification",
+							font = Font.H6,
+						},
+						iup.label {
+							title = data.line_1 or " ",
+							font = Font.Tiny,
+						},
+						iup.label {
+							title = data.line_2 or " ",
+							font = Font.Tiny,
+						},
+						iup.label {
+							title = data.line_3 or " ",
+							font = Font.Tiny,
+						},
+						iup.label {
+							title = data.line_4 or " ",
+							font = Font.Tiny,
+						},
+					},
+					iup.fill { },
+				},
+			}
+		end
+	end
+	
+	if not notif_constructor[notif_to_handle] then
+		notif_constructor[notif_to_handle] = {
+			echo = echo_func,
+			data = data_func,
+		}
+	end
+end
+
+local notif_creator = function(status, data)
+	cp("Notification: " .. tostring(status))
+	if not notif_constructor[status] then
+		data = {
+			title = "UNHANDLED_NOTIFICATION",
+			subtitle = "Unknown notification type " .. status,
+		}
+		status = "UNHANDLED_NOTIFICATION"
+	end
+	if type(data) ~= "table" then
+		data = {}
+	end
+	
+	table.insert(notif_history, {
+		timestamp = os.time(),
+		data = data,
+		notif = status,
+	})
+	
+	for i, v in ipairs(notif_listener) do
+		local status, err = pcall(v, status, data)
+		if not status then
+			lib.log_error("[neomgr] notification handler error - failed to call a notification listener, error returned: " .. tostring(err))
+		end
+	end
+	
+	if config.echo_notif == "YES" then
+		print(notif_constructor[status].echo(data))
+	end
+end
+
+local make_interface = function(status, data)
+	if not notif_constructor[status] then
+		data = {
+			title = "UNHANDLED_NOTIFICATION",
+			subtitle = "Unknown notification type " .. status,
+		}
+		status = "UNHANDLED_NOTIFICATION"
+	end
+	if type(data) ~= "table" then
+		data = {}
+	end
+	cp("Making interface element for " .. status)
+	
+	return notif_constructor[status].data(data)
+end
+
+local get_history = function()
+	return notif_history
+end
+
+local clear_all = function()
+	notif_history = {}
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+new_generator("UNHANDLED_NOTIFICATION", nil, nil)
+new_generator("SUCCESS",
+	function(data) --notification chat print
+		return "NPLME has loaded successfully!"
+	end,
+	function(data) --notification iup generator
+		return iup.pdarootframe {
+			iup.hbox {
+				iup.vbox {
+					iup.label {
+						title = "",
+						image = "plugins/Neoloader/img/thumb.png",
+						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+					},
+				},
+				iup.vbox {
+					iup.label {
+						title = "Neoloader loaded successfully!",
+						Font.H4,
+					},
+				},
+				iup.fill { },
+			}
+		}
+	end
+)
+new_generator("NEW_REGISTRY",
+	function(data) --notification chat print
+		return "A new plugin has been registered: " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "?")
+	end,
+	function(data) --notification iup generator
+		return iup.iup.pdarootframe {
+			iup.hbox {
+				iup.vbox {
+					iup.label {
+						title = "",
+						image = "plugins/Neoloader/img/thumb.png",
+						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+					},
+				},
+				iup.vbox {
+					iup.label {
+						title = "A new plugin has been registered!",
+						font = Font.H4,
+					},
+					iup.label {
+						title = tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "?"),
+						font = Font.H6,
+					},
+				},
+				iup.fill { },
+			},
+		}
+	end
+)
+new_generator("PLUGIN_FAILURE",
+	function(data) --notification chat print
+		return "Neoloader encountered an error while loading a plugin: " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
+	end,
+	function(data) --notification iup generator
+		return iup.iup.pdarootframe {
+			iup.hbox {
+				iup.vbox {
+					iup.label {
+						title = "",
+						image = "plugins/Neoloader/img/thumb.png",
+						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+					},
+				},
+				iup.vbox {
+					iup.label {
+						title = "Neoloader couldn't load a plugin!",
+						font = Font.H4,
+					},
+					iup.label {
+						title = tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???"),
+						font = Font.H6,
+					},
+					iup.label {
+						title = tostring(data.error_string or "<failed to fetch error string>"),
+						font = Font.H6,
+					},
+				},
+				iup.fill { },
+			},
+		}
+	end
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+neo.notif = notif_creator
+neo.make_visual = make_interface
+neo.get_history = get_history
+neo.handle_new_notif_type = new_generator
+neo.register_listener = new_listener
+neo.unregister_listener = unreg_listener
+neo.clear_all = clear_all
+neo.get_thumb_image = function() return {
+	image = "plugins/Neoloader/img/notif_placeholder.png",
+	size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+} end
+neo.notif_handler = true
+
+update_class()
+
+lib.require({{name="babel", version="0"}}, babel_support)
