@@ -934,9 +934,15 @@ function lib.get_gstate()
 	data.if_list = neo.list_if
 	data.notif_list = neo.list_notif
 	
-	data.manager = neo.current_mgr
-	data.ifmgr = neo.current_if
+	--depreciate these
+		data.manager = neo.current_mgr
+		data.ifmgr = neo.current_if
+	--end
+	
+	data.current_mgr = neo.current_mgr
+	data.current_if = neo.current_if
 	data.current_notif = neo.current_notif
+	
 	if not lib.is_exist(neo.current_if) then
 		data.ifmgr = "vo-if"
 	end
@@ -1043,6 +1049,9 @@ function lib.set_class(name, version, ftable)
 		end
 		if ftable.mgr == true then
 			table.insert(neo.list_mgr, name)
+		end
+		if ftable.notif_handler == true then
+			table.insert(neo.list_notif, name)
 		end
 	end
 end
