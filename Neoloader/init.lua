@@ -2,9 +2,9 @@ console_print("\n\n\nVendetta Online has loaded\nNeoloader is Initializing...")
 
 NEO_EXISTS = true --use lib/lib[0] instead if you are testing for a generic library management implementation
 
-local plog
-if gksys.IsExist("plugins/preload.lua") then
-	plog = dofile("plugins/preload.lua")
+--depreciated preload.lua in favor of recovery.lua
+if gksys.IsExist("plugins/Neoloader/recovery.lua") then
+	dofile("plugins/Neoloader/recovery.lua")
 end
 
 if type(print) ~= "function" then
@@ -312,9 +312,6 @@ function lib.log_error(msg, alert, id, version)
 	if lib.is_exist(id, version) then
 		table.insert(neo.plugin_registry[id .. "." .. version].errors, val)
 	end
-	if plog then
-		plog(val)
-	end
 	table.insert(neo.log, val)
 end
 
@@ -419,7 +416,7 @@ function lib.resolve_file(file, ...)
 	local path, pathtable = lib.find_file(file, ...)
 	
 	if not path then
-		lib.log_error("unable to resolve file provided (" .. tostring(file) .. "); file not found", 1)
+		lib.log_error("unable to resolve file provided (" .. tostring(file) .. "); file not found", 2)
 		return false, "unable to find file"
 	end
 	
@@ -433,7 +430,7 @@ function lib.resolve_file(file, ...)
 				break
 			else
 				if not string.find(err, "No such file or directory") then
-					lib.log_error("Unable to resolve file: " .. tostring(err or "error?"), 1)
+					lib.log_error("Unable to resolve file: " .. tostring(err or "error?"), 2)
 					return false, "error resolving file"
 				end
 			end
@@ -1122,9 +1119,7 @@ end
 function lib.uninstall(verify_key)
 	if verify_key == mgr_key then
 		lib.log_error("Attempting to uninstall Neoloader!", 3)
-		declare("NEO_UNINSTALL", true)
-		declare("NEO_UNINS_KEY", mgr_key)
-		lib.resolve_file("plugins/Neoloader/setup.lua")
+		lib.resolve_file("plugins/Neoloader/unins.lua")
 	else
 		lib.log_error("A mod attempted uninstallation of Neoloader, but the verification key did not match!", 1)
 	end
@@ -1463,7 +1458,6 @@ lib.log_error("[timestat] library function setup: " .. tostring(timestat_advance
 do
 	--check that all files exist
 	for i, filepath in ipairs {
-		"config_override.ini",
 		"env.lua",
 		"init.lua",
 		"init.lua.version",
@@ -1478,6 +1472,7 @@ do
 	end
 	
 	for i, filepath in ipairs {
+		"config_override.ini",
 		"neomgr.ini",
 		"neomgr2.lua",
 	} do
@@ -1515,41 +1510,28 @@ lib.log_error("[timestat] library extra environment setup: " .. tostring(timesta
 
 --init process
 
---[[
-What we do here:
-	1) Check if Neoloader needs to install
-	2) Loop through config.ini's [Neo-registry] to obtain every ini file pointer. loop until "null" is reached.
-	3) Resolve every file pointer and build the neccesary table. Missing files are logged and ignored.
-	4) check every plugin state [name.version], default to NO. if YES or FORCE, add to the processing table.
-	5) Begin processing the library table to handle load ordering. queue plugins with no dependencies; add others via lib.require
-	6) Process the queue and load the plugins
-]]--
-
 if neo.init ~= neo.API then
-	lib.log_error("Installing Neoloader for the first time!", 3)
-	gkini.WriteString("Neoloader", "installing", "now")
-	NEO_UNINSTALL = false
-	NEO_FIRST_INSTALL = mgr_key
-	lib.resolve_file("plugins/Neoloader/setup.lua")
-	dofile("vo/if.lua")
+	lib.log_error("Neoloader was updated! API was " .. tostring(neo.init), 3)
+	lib.log_error("If Neoloader becomes unstable, please uninstall and reinstall!")
 	
-elseif gkini.ReadString("Neoloader", "installing", "done") == "now" then
-	--there was an error during installation; abort and bug the user!
-	lib.log_error("There was an error during the last installation! stub handler...", 4)
-	--dumptable(neo)
-	neo.error_flag = true
-	dofile("vo/if.lua")
-	RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
-	RegisterEvent(function() print("There was a catastrophic error while trying to setup Neoloader; please contact Luxen and provide your errors.log and config.ini") print("You can use /neodelete to try and remove Neoloader") end, "START")
-	return
-else
+	--neodelete overwritten with "surefire uninstaller" method, in case something breaks
+	RegisterUserCommand("neodelete", function()
+		gkini.WriteString("Vendetta", "if", "plugins/Neoloader/unins_clean.lua")
+		ReloadInterface()
+	end)
+end
+
+
+do
+	--setup use to occur here
+	
+	
+	
+	
 	lib.log_error("Neoloader: Init process has started!\n\n", 2)
 	
 	lib.resolve_file("plugins/Neoloader/env.lua")
 	--this contains variables that many of VO's public functions rely on.
-	if gkini.ReadString("Neoloader", "installing", "finishing") == "finishing" then
-		gkini.WriteString("Neoloader", "installing", "done")
-	end
 	
 	local registered_plugins = {} --list of registered ini files describing plugins
 	
