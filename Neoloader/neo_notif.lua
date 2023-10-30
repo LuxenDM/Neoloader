@@ -1,6 +1,6 @@
 --Neoloader Default Notification Handler
 
-local cp = console_print
+local cp = function() end --console_print
 
 local neo = {}
 local babel, shelf_id, update_class
@@ -11,7 +11,7 @@ end
 local babel_support = function()
 	babel = lib.get_class("babel", "0")
 	
-	shelf_id = babel.register("plugins/Neoloader/lang/", {'en', 'es', 'fr', 'pt'})
+	shelf_id = babel.register("plugins/Neoloader/lang/neonotif/", {'en', 'es', 'fr', 'pt'})
 	
 	bstr = function(id, def)
 		return babel.fetch(shelf_id, id, def)
@@ -28,7 +28,7 @@ update_class = function()
 	local class = {
 		CCD1 = true,
 		smart_config = {
-			title = "Neoloader Notification Handler",
+			title = bstr(1, "Neoloader Notification Handler"),
 			cb = function(cfg, val)
 				if config[cfg] then
 					config[cfg] = val
@@ -37,14 +37,14 @@ update_class = function()
 			end,
 			echo_notif = {
 				type = "toggle",
-				display = "Print LME notifications in chat",
+				display = bstr(2, "Print LME notifications in chat"),
 				[1] = config.echo_notif,
 			},
 			"echo_notif",
 		},
-		description = "neo_notif is the bundled notification handler for Neoloader. It provides a simple system for event handling meant for informing the user about system events.",
+		description = bstr(3, "neo_notif is the bundled notification handler for Neoloader. It provides a simple system for event handling meant for informing the user about system events."),
 		commands = {
-			"There are no commands registered for neo_notif",
+			bstr(4, "There are no commands registered for neo_notif"),
 		},
 		manifest = {
 			"plugins/Neoloader/neo_notif.lua",
@@ -93,7 +93,7 @@ local new_generator = function(notif_to_handle, echo_func, data_func)
 	
 	if type(echo_func) ~= "function" then
 		echo_func = function(data)
-			return "[" .. (data.title or notif_to_handle).. "] " .. (data.subtitle or "No chat handler for notification")
+			return "[" .. (data.title or notif_to_handle).. "] " .. (data.subtitle or bstr(5, "No handler for notification"))
 		end
 	end
 	
@@ -115,7 +115,7 @@ local new_generator = function(notif_to_handle, echo_func, data_func)
 							font = Font.H4,
 						},
 						iup.label {
-							title = data.subtitle or "Notification",
+							title = data.subtitle or bstr(6, "Notification"),
 							font = Font.H6,
 						},
 						iup.label {
@@ -154,7 +154,7 @@ local notif_creator = function(status, data)
 	if not notif_constructor[status] then
 		data = {
 			title = "UNHANDLED_NOTIFICATION",
-			subtitle = "Unknown notification type " .. status,
+			subtitle = bstr(7, "Unknown notification type") .. " " .. status,
 		}
 		status = "UNHANDLED_NOTIFICATION"
 	end
@@ -184,7 +184,7 @@ local make_interface = function(status, data)
 	if not notif_constructor[status] then
 		data = {
 			title = "UNHANDLED_NOTIFICATION",
-			subtitle = "Unknown notification type " .. status,
+			subtitle = bstr(7, "Unknown notification type") .. " " .. status,
 		}
 		status = "UNHANDLED_NOTIFICATION"
 	end
@@ -229,7 +229,7 @@ end
 new_generator("UNHANDLED_NOTIFICATION", nil, nil)
 new_generator("SUCCESS",
 	function(data) --notification chat print
-		return "NPLME has loaded successfully!"
+		return lib[0] .. " " .. lib[1] .. " " .. bstr(8, "has loaded successfully!")
 	end,
 	function(data) --notification iup generator
 		return iup.pdarootframe {
@@ -243,7 +243,7 @@ new_generator("SUCCESS",
 				},
 				iup.vbox {
 					iup.label {
-						title = "Neoloader loaded successfully!",
+						title = lib[0] .. " " .. lib[1] .. " " .. bstr(8, "has loaded successfully!"),
 						Font.H4,
 					},
 				},
@@ -254,7 +254,7 @@ new_generator("SUCCESS",
 )
 new_generator("NEW_REGISTRY",
 	function(data) --notification chat print
-		return "A new plugin has been registered: " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "?")
+		return bstr(9, "A new plugin has been registered") .. ": " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
 	end,
 	function(data) --notification iup generator
 		return iup.iup.pdarootframe {
@@ -268,7 +268,7 @@ new_generator("NEW_REGISTRY",
 				},
 				iup.vbox {
 					iup.label {
-						title = "A new plugin has been registered!",
+						title = bstr(9, "A new plugin has been registered!"),
 						font = Font.H4,
 					},
 					iup.label {
@@ -283,7 +283,7 @@ new_generator("NEW_REGISTRY",
 )
 new_generator("PLUGIN_FAILURE",
 	function(data) --notification chat print
-		return "Neoloader encountered an error while loading a plugin: " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
+		return lib[1] .. bstr(10, "encountered an error while loading a plugin") .. ": " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
 	end,
 	function(data) --notification iup generator
 		return iup.iup.pdarootframe {
@@ -297,7 +297,7 @@ new_generator("PLUGIN_FAILURE",
 				},
 				iup.vbox {
 					iup.label {
-						title = "Neoloader couldn't load a plugin!",
+						title = bstr(11, "A plugin failed to load") .. "!",
 						font = Font.H4,
 					},
 					iup.label {
@@ -305,7 +305,7 @@ new_generator("PLUGIN_FAILURE",
 						font = Font.H6,
 					},
 					iup.label {
-						title = tostring(data.error_string or "<failed to fetch error string>"),
+						title = tostring(data.error_string or bstr(12, "<failed to fetch error string>")),
 						font = Font.H6,
 					},
 				},
