@@ -1,223 +1,263 @@
---[[
-This file contains all the first-time data that Neoloader sets up during Init. If NEO_UNINSTALL is true, it will remove all this data.
-]]--
+if type(lib) == "table" and lib[0] == "LME" then
+	console_print("Neoloader setup should not run while Neoloader is running")
+	
+	return
+end
 
-local getstr = gkini.ReadString --less typing
-local getint = gkini.ReadInt
-local setstr = gkini.WriteString
-local setint = gkini.WriteInt
 
-if NEO_UNINSTALL == false then
+
+
+local button_scalar = function()
+	local val = ""
+	if gkinterface.IsTouchModeEnabled() then
+		val = tostring(Font.Default * 2)
+	end
+	return val
+end
+
+local gkrs	= gkini.ReadString --less typing
+local gkri	= gkini.ReadInt
+local gkws	= gkini.WriteString
+local gkwi	= gkini.WriteInt
+local cp	= console_print
+
+gkwi("Neoloader", "Init", 3)
+gkws("Neoloader", "mgr", "neomgr")
+gkws("Neoloader", "uninstalled", "NO")
+
+local counter = 1
+while true do
+	if gkrs("Neo-registry", "reg" .. tostring(counter), "") ~= "" then
+		counter = counter + 1
+	else
+		--No entry here
+		break
+	end
+end
+for i=counter, 1, -1 do
+	gkini.gkws("Neo-registry", "reg" .. tostring(i), "")
+end
+
+local plugin_counter = 0
+local register_plugin = function(id, version, ini, state)
+	plugin_counter = plugin_counter + 1
+	gkws("Neo-registry", "reg" .. tostring(plugin_counter), ini)
+	gkws("Neo-pluginstate", id .. "." .. version, state)
+	cp("[LME Setup] Added bundled plugin: " .. id .. " v" .. version)
+	cp("	plugin located in registry at position " .. tostring(plugin_counter))
+end
+
+register_plugin("neomgr", "2.0.0", "plugins/Neoloader/neomgr.ini", "YES")
+
+
+
+local function create_subdlg(ctrl)
+	local dlg = iup.dialog{
+		border="NO",
+		menubox="NO",
+		resize="NO",
+		expand = "YES",
+		shrink = "YES",
+		bgcolor="0 0 0 0 *",
+		ctrl,
+	}
 	
-	local auth = NEO_FIRST_INSTALL
-	NEO_FIRST_INSTALL = 1
+	return dlg
+end
+
+local ctl_create = function()
 	
-	print("Neoloader is performing first-time setup; the game will reset momentarily...")
+	local lockstate = false
+	local contents = {}
 	
-	--Base config data
-	setint("Neoloader", "Init", 3)
-	setstr("Neoloader", "if", "")
-	setstr("Neoloader", "mgr", "neomgr")
-	setstr("Neoloader", "uninstalled", "NO")
+	local ctl = iup.stationsublist {
+		{},
+		control = "YES",
+		expand = "YES",
+	}
 	
-	--before we add packaged plugins, lets remove any possible old plugin registrations from older installations that weren't cleanly removed
+	ctl.unlock = function(self)
+		ctl[1] = nil
+		lockstate = false
+	end
 	
-	local counter = 1
-	while true do
-		if gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "") ~= "" then
-			counter = counter + 1
-		else
-			--No entry here
-			break
+	ctl.lock = function(self)
+		ctl[1] = 1
+		lockstate = true
+	end
+	
+	ctl.add_item = function(self, obj)
+		table.insert(contents, obj)
+	end
+	
+	ctl.clear_items = function(self)
+		contents = {}
+	end
+	
+	ctl.update = function(self, sorttype)
+		if lockstate then
+			self:unlock()
 		end
-	end
-	for i=counter, 1, -1 do
-		gkini.WriteString("Neo-registry", "reg" .. tostring(i), "")
-	end
-	
-	--packaged plugin for basic functionality
-	lib.register("plugins/Neoloader/neomgr.ini")
-	setstr("Neo-pluginstate", "neomgr.2.0.0", "YES")
-	lib.set_load(auth, "neomgr", "0", "YES")
-	
-	--user options
-	setstr("Neoloader", "rAllowDelayedLoad", "NO")
-	setstr("Neoloader", "rAllowBadAPIVersion", "YES")
-	setstr("Neoloader", "rEchoLogging", "YES")
-	setint("Neoloader", "rInitLoopTimeout", 0)
-	setstr("Neoloader", "rDefaultLoadState", "NO")
-	setstr("Neoloader", "rDoErrPopup", "NO")
-	
-	gkini.WriteString("Neoloader", "installing", "finishing")
-	
-	
-	
-	--construct reconfig UI
-	local function reconfig()
-		local setting_new_loadstate = iup.list {
-			[1] = "YES",
-			[2] = "NO",
-			value = 2,
-			dropdown = "YES",
-		}
 		
-		local obj2flag = false
-		local obj2 = iup.hbox { }
-		local obj3flag = false
-		local obj3 = iup.hbox { }
-		
-		
-		
-		local prev_if = gkini.ReadString("Vendetta", "if2", "")
-		if prev_if ~= "" and gksys.IsExist(prev_if) then
-			obj3flag = true
-			
-			local setting_loader = iup.list {
-				[1] = "plugins/Neoloader/init.lua",
-				[2] = prev_if,
-				value = 1,
-				dropdown = "YES",
-			}
-			
-			obj3 = iup.vbox {
-				iup.fill {
-					size = "%2",
-				},
-				iup.label {
-					title = "You already have a custom interface.",
-				},
-				iup.hbox {
-					iup.label {
-						title = "Please select the one to load:",
-					},
-					setting_loader,
-				},
-			}
-			
-			function obj3.get_val()
-				return setting_loader.value
+		for k, v in ipairs(actual_items) do
+			v:detach()
+			if iup.IsValid(iup.GetNextChild(v)) then
+				iup.GetNextChild(v):detach()
 			end
+			--v:destroy()
+		end
+		actual_items = {}
+		
+		--prepare items
+		local x_size = string.match(ctl.size, "%d+") or "480"
+		for k, v in ipairs(contents) do
+			local obj = create_subdlg(v)
+			actual_items[k] = obj
+			obj:map()
+			
+			local sizes = {}
+			for value in string.gmatch(obj.size, "%d+") do
+				value = tonumber(value)
+				table.insert(sizes, value)
+			end
+			obj.size = tostring(tonumber(x_size) - Font.Default) .. "x" .. tostring(sizes[2])
 		end
 		
+		for k, v in ipairs(actual_items) do
+			iup.Append(self, v)
+		end
 		
-		local setting_override_disable = iup.list {
-			[1] = "YES",
-			[2] = "NO",
-			value = 2,
-			dropdown = "YES",
-		}
+		self:lock()
 		
-		local diag = iup.dialog {
-			topmost = "YES",
-			fullscreen = "YES",
-			bgcolor = "0 0 0",
-			iup.vbox {
-				iup.fill { },
-				iup.hbox {
-					iup.fill { },
-					iup.frame {
-						iup.vbox {
-							iup.label {
-								title = "Neoloader has finished setting up and is now enabled on Vendetta Online.",
-							},
-							iup.label {
-								title = "Adjust any settings you want, then click OK to reload and begin playing!",
-							},
-							iup.label {
-								title = "",
-							},
-							iup.hbox {
-								iup.label {
-									title = "Load new LME-compatible plugins by default: ",
-								},
-								setting_new_loadstate,
-							},
-							iup.hbox {
-								iup.label {
-									title = "Load Neoloader even if plugins are disabled: ",
-								},
-								setting_override_disable,
-							},
-							obj2,
-							obj3,
-							iup.button {
-								title = "OK",
-								action = function()
-									if setting_new_loadstate.value == "1" then
-										gkini.WriteString("Neoloader", "rDefaultLoadState", "YES")
-										local pluginlist = lib.get_gstate().pluginlist
-										console_print("[SETUP] Setting default states for")
-										for k, v in ipairs(pluginlist) do
-											console_print("	" .. v[1] .. "	v" .. v[2])
-											lib.set_load(auth, v[1], v[2], "YES")
-										end
-									end
-									if setting_override_disable.value == "1" then
-										gkini.WriteString("Neoloader", "rOverrideDisabledState", "YES")
-										console_print("[SETUP] Neoloader will override plugins being disabled")
-									end
-									--obj
-									if obj3flag == true then
-										local if_val = obj3.get_val()
-										if if_val == '2' then
-											if_val = prev_if 
-										else
-											if_val = "plugins/Neoloader/init.lua"
-										end
-										console_print("[SETUP] IF selected: " .. if_val)
-										gkini.WriteString("Vendetta", "if", if_val)
-									end
-									gkinterface.GKSaveCfg()
-									ReloadInterface()
-								end,
-							},
-						},
-					},
-					iup.fill { },
+		iup.Refresh(self)
+	end
+	
+	iup.Append(ctl, create_subdlg(iup.hbox {}))
+	
+	return ctl
+end
+
+
+
+local config = {
+	defaultLoadState = "NO",
+	first_run = "",
+	
+	if_option = "replace",
+	--[[
+		replace: if will be Neoloader
+		adapt: if will be Neoloader, old if will be imported
+			--not yet implemented
+		keep: if will be kept; Neoloader will not run
+	]]--
+}
+
+local setup_creator = function()
+	local ctl_basic = ctl_create()
+	ctl_basic.expand = "NO"
+	ctl_basic.size = "%30x%30"
+	
+	--rDefaultLoadState
+	ctl_basic:add_item(iup.stationsubframe {
+		iup.vbox {
+			iup.hbox {
+				alignment = "AMIDDLE",
+				iup.label {
+					title = "Load plugins by default: ",
 				},
 				iup.fill { },
+				iup.stationsublist {
+					dropdown = "YES",
+					size = "200x" .. button_scalar(),
+					action = function(self, t, i, cv)
+						if cv == 1 then
+							config.defaultLoadState = t
+						end
+					end,
+					"YES",
+					"NO",
+					value = 2,
+				},
 			},
-		}
-		diag:map()
-		diag:show()
-	end
+			iup.label {
+				title = "YES: New plugins will automatically be enabled",
+			},
+			iup.label {
+				title = "NO: New plugins must be manually enabled",
+			},
+			iup.label {
+				title = "Default is NO",
+			},
+		},
+	})
 	
-	RegisterEvent(function() reconfig() end, "START")
-	RegisterEvent(function() reconfig() end, "PLUGINS_LOADED")
+	--first-run
+	ctl_basic:add_item( iup.stationsubframe {
+		iup.vbox {
+			iup.hbox {
+				alignment = "AMIDDLE",
+				iup.label {
+					title = "Open manager after install: ",
+				},
+				iup.fill { },
+				iup.stationsublist {
+					dropdown = "YES",
+					size = "200x" .. button_scalar(),
+					action = function(self, t, i, cv)
+						if cv == 1 then
+							t = t == "YES" and "neo" or ""
+							config.first_run = t
+						end
+					end,
+					"YES",
+					"NO",
+					value = 1,
+				},
+			},
+			iup.label {
+				title = "Completely Optional, enable to manage your LME after setup",
+			},
+		},
+	})
 	
-else
-	print("Neoloader is performing an uninstallation.")
-	--base settings to mark Neoloader as uninstalled, preventing main.lua from automating installation
-	local auth = NEO_UNINS_KEY
-	setstr("Neoloader", "uninstalled", "YES")
-	setstr("Vendetta", "if", "")
-	setint("Neoloader", "Init", -1)
+	local ctl_adv = ctl_create()
+	ctl_adv.expand = "NO"
+	ctl_adv.size = "%30x%30"
+	ctl_adv.visible = "NO"
 	
-	--try to remove all registered plugins
-	local counter = 1
-	while true do
-		if gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "") ~= "" then
-			counter = counter + 1
-		else
-			--No entry here
-			break
-		end
-	end
-	for i=counter, 1, -1 do
-		gkini.WriteString("Neo-registry", "reg" .. tostring(i), "")
-	end
+	--IF replacement style
+	ctl_adv:add_item( iup.stationsubframe {
+		iup.vbox {
+			iup.hbox {
+				alignment = "AMIDDLE",
+				iup.label {
+					title = "IF replacement method: ",
+				},
+				iup.fill { },
+				iup.stationsublist {
+					dropdown = "YES",
+					size = "200x" .. button_scalar(),
+					action = function(self, t, i, cv)
+						if cv == 1 then
+							config.if_option = t
+						end
+					end,
+					"replace",
+					"adapt",
+					"keep",
+					value = 1,
+				},
+			},
+			iup.label {
+				title = "Default is 'replace'",
+			},
+			iup.label {
+				title = "DO NOT CHANGE unless you know what you're doing!",
+			},
+		},
+	})
 	
-	--try to disable loading of all existing plugins
-	local pluginlist = lib.get_gstate().pluginlist
-	for k, v in ipairs(pluginlist) do
-		if v.plugin_id then
-			lib.set_load(auth, v.plugin_id, v.plugin_version, "NO")
-			setstr("Neo-pluginstate", k, "NO")
-		end
-	end
-	
-	--use a dialog to force the game to close, to make sure Neoloader is purged from execution
-	local diag = iup.dialog {
+	local setup_diag = iup.dialog {
 		topmost = "YES",
 		fullscreen = "YES",
 		bgcolor = "0 0 0",
@@ -225,28 +265,61 @@ else
 			iup.fill { },
 			iup.hbox {
 				iup.fill { },
-				iup.frame {
+				iup.stationsubframe {
 					iup.vbox {
-						margin = 1,
-						iup.fill {
-							size = "%2",
-						},
+						alignment = "ACENTER",
 						iup.label {
-							title = "Neoloader has been uninstalled! Please close Vendetta Online. You can safely remove Neoloader from your plugins folder at this time; if you do not, you can use /neosetup to reinstall Neoloader.",
-							font = Font.H4,
+							title = "Neoloader Setup",
+						},
+						iup.stationsubframe {
+							iup.hbox {
+								iup.vbox {
+									alignment = "ALEFT",
+									iup.stationbutton {
+										--to keep alignment
+										title = "secret",
+										visible = "NO",
+									},
+									ctl_basic,
+								},
+								iup.vbox {
+									alignment = "ARIGHT",
+									iup.stationbutton {
+										title = "Show advanced options",
+										action = function()
+											ctl_adv.visible = "YES"
+											ctl_adv:update()
+										end,
+									},
+									ctl_adv,
+								},
+							},
 						},
 						iup.fill {
-							size = "%2",
+							size = Font.Default,
 						},
-						iup.button {
-							title = "Close Vendetta Online",
-							action = function()
-								Game.Quit()
+						iup.stationbutton {
+							title = "Apply settings and reload Vendetta Online",
+							action = function(self)
+								gkws("Neoloader", "rDefaultLoadState", config.defaultLoadState)
+								gkws("Neoloader", "run_command", config.run_command)
+								
+								if config.if_option == "replace" then
+									cp("IF option was REPLACE; value will be Neoloader")
+									gkws("Vendetta", "if", "plugins/Neoloader/init.lua")
+								elseif config.if_option == "adapt" then
+									cp("IF option was ADAPT; value is " .. "NOT IMPLEMENTED")
+									error("ADAPTION NOT IMPLEMENTED YET")
+								elseif config.if_option == "keep" then
+									cp("IF option was KEPT; value is " .. gkrs("Vendetta", "if", "vo-if"))
+								end
+								
+								gkwi("Neoloader", "Init", 3)
+								
+								ReloadInterface()
 							end,
 						},
-						iup.fill {
-							size = "%2",
-						},
+						iup.fill { },
 					},
 				},
 				iup.fill { },
@@ -255,7 +328,11 @@ else
 		},
 	}
 	
-	diag:map()
-	diag:show()
+	setup_diag:map()
+	ctl_basic:update()
+	ctl_adv:update()
+	
+	ShowDialog(setup_diag)
 end
 
+setup_creator()
