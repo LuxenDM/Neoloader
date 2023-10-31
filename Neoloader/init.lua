@@ -27,6 +27,11 @@ copy_table = function(input)
 	return newtable
 end
 
+local locale = gkini.ReadString("Vendetta", "locale", "en")
+local tprint = function(key, value)
+	return gkini.ReadString2(locale, key, value, "plugins/Neoloader/lang/neo.ini")
+end
+
 local gk_get_microsecond = gkmisc.GetGameTime
 
 local timestat_neo_start = gk_get_microsecond()
@@ -1199,11 +1204,11 @@ function lib.request_auth(name, callback)
 	name = tostring(name or "<untitled>")
 	
 	local grant = iup.button {
-		title = "Give Access",
+		title = tprint("grant_auth", "Give Access"),
 		action = function(self)
 			callback(mgr_key)
 			iup.GetDialog(self):destroy()
-			if not PlayerInStation() and IsConnected()  and HUD and HUD.dlg then
+			if not PlayerInStation() and IsConnected() and HUD and HUD.dlg then
 				HideAllDialogs()
 				ShowDialog(HUD.dlg)
 			end
@@ -1211,10 +1216,10 @@ function lib.request_auth(name, callback)
 	}
 	
 	local deny = iup.button {
-		title = "Deny Access",
+		title = tprint("deny_auth", "Deny Access"),
 		action = function(self)
 			iup.GetDialog(self):destroy()
-			if not PlayerInStation() and IsConnected()  and HUD and HUD.dlg then
+			if not PlayerInStation() and IsConnected() and HUD and HUD.dlg then
 				HideAllDialogs()
 				ShowDialog(HUD.dlg)
 			end
@@ -1237,7 +1242,7 @@ function lib.request_auth(name, callback)
 							size = "%2",
 						},
 						iup.label {
-							title = name .. " is requesting management permission over Neoloader!",
+							title = name .. " " .. tprint("request_auth", "is requesting management permission over Neoloader!"),
 						},
 						iup.fill {
 							size = "%2",
@@ -1450,6 +1455,11 @@ end
 
 
 
+if gkini.ReadString("Neoloader", "STOP", "") == "recovery" then
+	gkini.WriteString("Neoloader", "STOP", "")
+	gkinterface.GKSaveCfg()
+	error("The LME was instructed to load the recovery environment for the user. This error halts all continued execution.")
+end
 
 
 
@@ -1508,24 +1518,22 @@ lib.log_error("[timestat] library extra environment setup: " .. tostring(timesta
 
 
 
---init process
-
+--install check
 if neo.init ~= neo.API then
 	lib.log_error("Neoloader was updated! API was " .. tostring(neo.init), 3)
-	lib.log_error("If Neoloader becomes unstable, please uninstall and reinstall!")
-	
-	--neodelete overwritten with "surefire uninstaller" method, in case something breaks
-	RegisterUserCommand("neodelete", function()
-		gkini.WriteString("Vendetta", "if", "plugins/Neoloader/unins_clean.lua")
-		ReloadInterface()
-	end)
+	lib.log_error("If Neoloader becomes unstable, use the recovery environment to uninstall, then reinstall!")
 end
 
+RegisterUserCommand("neodelete", function()
+	gkini.WriteString("Neoloader", "STOP", "recovery")
+	ReloadInterface()
+end)
 
-do
+
+do --init process
+	
+	
 	--setup use to occur here
-	
-	
 	
 	
 	lib.log_error("Neoloader: Init process has started!\n\n", 2)
