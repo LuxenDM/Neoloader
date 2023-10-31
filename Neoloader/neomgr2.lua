@@ -1334,6 +1334,13 @@ local diag_constructor = function()
 					iup.vbox {
 						unins_msg,
 						iup.hbox {
+							iup.stationbutton {
+								title = bstr(62, "Load LME recovery system"),
+								action = function()
+									gkini.WriteString("Neoloader", "STOP", "recovery")
+									lib.reload()
+								end,
+							},
 							iup.fill { },
 							iup.stationbutton {
 								title = bstr(52, "Uninstall Neoloader"),
