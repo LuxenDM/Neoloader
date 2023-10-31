@@ -1,0 +1,280 @@
+print = console_print
+
+Font = {
+	Default = (gkinterface.GetYResolution()/1080) * 24,
+}
+
+local dumptable
+local tab_amount = 0
+function dumptable(_t)
+	for k, v in pairs(_t) do
+		local tabspace = ""
+		for i=1, tab_amount do
+			tabspace = tabspace .. "	"
+		end
+		if type(v) == "table" then
+			console_print(tabspace .. tostring(k) .. " >> {")
+			tab_amount = tab_amount + 1
+			dumptable(v)
+			console_print(tabspace .. "}")
+			tab_amount = tab_amount - 1
+		else
+			console_print(tabspace .. tostring(k) .. " >> " .. tostring(v))
+		end
+	end
+end
+
+local button_scalar = function()
+	local val = ""
+	if gkinterface.IsTouchModeEnabled() then
+		val = tostring(Font.Default * 2)
+	end
+	return val
+end
+
+local ctl_create = function()
+	local function create_subdlg(ctrl)
+		
+		local dlg = iup.dialog{
+			border="NO",
+			menubox="NO",
+			resize="NO",
+			expand = "YES",
+			shrink = "YES",
+			bgcolor="0 0 0 0 *",
+			ctrl,
+		}
+		
+		return dlg
+	end
+	
+	local lockstate = false
+	local contents = {}
+	local actual_items = {}
+	
+	local ctl = iup.list {
+		{},
+		bgcolor = "0 0 0",
+		control = "YES",
+		expand = "YES",
+		scrollbarwidth = button_scalar(),
+	}
+	
+	ctl.unlock = function(self)
+		ctl[1] = nil
+		lockstate = false
+	end
+	
+	ctl.lock = function(self)
+		ctl[1] = 1
+		lockstate = true
+	end
+	
+	ctl.add_item = function(self, obj)
+		table.insert(contents, obj)
+	end
+	
+	ctl.clear_items = function(self)
+		contents = {}
+	end
+	
+	ctl.update = function(self, sorttype)
+		if lockstate then
+			self:unlock()
+		end
+		
+		for k, v in ipairs(actual_items) do
+			v:detach()
+			if iup.IsValid(iup.GetNextChild(v)) then
+				iup.GetNextChild(v):detach()
+			end
+			--v:destroy()
+		end
+		actual_items = {}
+		
+		--prepare items
+		local x_size = string.match(ctl.size, "%d+") or "480"
+		for k, v in ipairs(contents) do
+			local obj = create_subdlg(v)
+			actual_items[k] = obj
+			obj:map()
+			
+			local sizes = {}
+			for value in string.gmatch(obj.size, "%d+") do
+				value = tonumber(value)
+				table.insert(sizes, value)
+			end
+			obj.size = tostring(tonumber(x_size) - Font.Default) .. "x" .. tostring(sizes[2])
+		end
+		
+		for k, v in ipairs(actual_items) do
+			iup.Append(self, v)
+		end
+		
+		self:lock()
+		
+		iup.Refresh(self)
+	end
+	
+	iup.Append(ctl, create_subdlg(iup.hbox {}))
+	
+	return ctl
+end
+
+--[[
+	recovery is a lightweight system meant to recover from catastrophic NON-CTD errors during LME or plugin load time. By displaying a dialog that will close when the game finishes loading, it can provide an interactive environment that can hopefully help the user get the game working again.
+]]--
+
+local create_recovery_diag = function()
+	local ctl = ctl_create()
+	
+	local recovery_options = {
+		{ --1
+			action = "Reload",
+			descrip = "Reload: Sometimes a bug could be coincidental and fixed just by reloading the game. This is also the option to select if you modify your game files to fix the bug yourself.",
+			lua = function()
+				ReloadInterface()
+			end,
+		},
+		{
+			action = "Close Vendetta Online",
+			descrip = "Close: Sometimes, functions can get snagged and won't be removed with a Reload. To fix these, you need to fully quit the game. This most often occurs when trying to update plugins while the game is running.",
+			lua = function()
+				Game.Quit()
+			end,
+		},
+		{
+			action = "Disable all LME plugins",
+			descrip = "Disable: If one of your plugins loaded by your LME provider is triggering this issue, then disabling that plugin will prevent the buggy code from running.",
+			lua = function()
+				print("not yet implemented")
+			end,
+		},
+		{
+			action = "Disable ALL plugins",
+			descrip = "Disable All: Turns off the game's ability to load plugins and closes the game; when you launch the game again, it will be the vanilla experience. In order to re-enable plugins, you'll need to re-enable them from your options menu. Neoloader will also be disconnected, but its settings won't be touched.",
+			lua = function()
+				gkini.WriteString("Vendetta", "plugins", "0")
+				gkini.WriteString("Vendetta", "if", "")
+				gkini.WriteString("Neoloader", "first_time", "recovery")
+				Game.Quit()
+			end,
+		},
+		{
+			action = "Nuclear",
+			descrip = "Removes as much LME data as possible from your config.ini, disables all plugins, and even reverts some game options to known safe settings. If this doesn't fix your game, then you need help that an automated system cannot provide.",
+			lua = function()
+				
+			end,
+		},
+		{
+			action = "Advanced Users: Show Game Console",
+			descrip = "The game has its own console where you can view printed messages and execute some commands or lua script. Probably only useful if you know what you're doing.",
+			lua = function()
+				gkinterface.GKProcessCommand("ConsoleToggle")
+			end,
+		},
+		{
+			action = "Attempt to launch the game interface anyways",
+			descrip = "Not recommended, but you can try to run the game's interface. If this doesn't make the error worse, you might be able to play the game, but chances are low.",
+			lua = function()
+				iup.GetDialog(iup.GetParent(iup.GetDialog(iup.GetFocus()))):hide()
+				dofile("vo/if.lua")
+				if not IsConnected() then
+					ProcessEvent("START")
+				else
+					if PlayerInStation() then
+						ShowDialog(StationPDADialog)
+					else
+						ShowDialog(HUD)
+					end
+				end
+			end,
+		},
+	}
+	
+	for k, v in ipairs(recovery_options) do
+		local option_button = iup.frame {
+			iup.hbox {
+				iup.label {
+					title = "",
+					image = "plugins/Neoloader/img/notif_placeholder.png",
+				},
+				iup.vbox {
+					iup.button {
+						title = v.action,
+						expand = "HORIZONTAL",
+						size = "x" .. button_scalar(),
+						action = v.lua
+					},
+					iup.multiline {
+						value = v.descrip,
+						readonly = "YES",
+						expand = "HORIZONTAL",
+						size = "x" .. tostring(Font.Default * 4),
+					},
+				},
+			},
+		}
+		
+		ctl:add_item(option_button)
+	end
+	
+	local diag = iup.dialog {
+		topmost = "YES",
+		fullscreen = "YES",
+		bgcolor = "0 0 0",
+		iup.hbox {
+			iup.fill {
+				size = "%6",
+			},
+			iup.vbox {
+				alignment = "ACENTER",
+				iup.fill {
+					size = Font.Default,
+				},
+				iup.label {
+					title = "Neoloader Recovery System",
+				},
+				iup.fill {
+					size = Font.Default,
+				},
+				iup.multiline {
+					size = "x%10",
+					expand = "HORIZONTAL",
+					readonly = "YES",
+					value = "If you see this, then a catastrophic failure occured while your LME or one of your plugins were loading! The options below might help fix your game; it is recommended to try each option top-to-bottom, unless you know what you're doing.",
+					border = "NO",
+				},
+				iup.fill {
+					size = Font.Default,
+				},
+				ctl,
+				iup.fill {
+					size = Font.Default,
+				},
+			},
+			iup.fill {
+				size = "%6",
+			},
+		},
+	}
+	
+	diag:map()
+	ctl:update()
+	diag:show()
+	
+	RegisterEvent(
+		function()
+			diag:hide()
+			RegisterUserCommand("recovery", function()
+				gkini.WriteString("Neoloader", "STOP", "recovery")
+				ReloadInterface()
+			end)
+		end,
+		"PLUGINS_LOADED"
+	)
+end
+
+create_recovery_diag()
+RegisterUserCommand("recovery", create_recovery_diag)
