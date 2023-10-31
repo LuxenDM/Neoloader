@@ -69,6 +69,7 @@ local ctl_create = function()
 	
 	local lockstate = false
 	local contents = {}
+	local actual_items = {}
 	
 	local ctl = iup.stationsublist {
 		{},
