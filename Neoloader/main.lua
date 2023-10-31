@@ -123,6 +123,8 @@ elseif first_time == "MUTE" then
 	print(tprint("mute_remind", "Use /neo to start the installation process!"))
 elseif first_time == "SKIP" then
 	cp("Neoloader was supposed to be launched by an external tool.")
+elseif first_time == "recovery" then
+	print(tprint("recovery_msg", "Neoloader was removed by the recovery tool! Use /neo to reinitialize Neoloader")
 end
 
 RegisterUserCommand("neo", request_setup)
