@@ -70,9 +70,9 @@ end
 --This will be local when released
 neo = {
 	version = {
-		strver = "5.5.0 -beta",
-		[1] = 5,
-		[2] = 4,
+		strver = "6.0.0 -beta",
+		[1] = 6,
+		[2] = 0,
 		[3] = 0,
 		[4] = "Beta",
 	},
@@ -94,9 +94,9 @@ neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	minor = 8, --lib.set_waiting and dependency ranges
+	minor = 10, --lib.pass_ini_identifier, lib.lme_get_config
 	patch = 0,
-	lmever = "3.8.0",
+	lmever = "3.10.0",
 	
 	pathlock = false,
 	statelock = false,
