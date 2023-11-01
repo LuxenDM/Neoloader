@@ -1347,12 +1347,7 @@ local diag_constructor = function()
 								size = "x" .. button_scalar(),
 								fgcolor = "255 0 0",
 								action = function()
-									lib.request_auth(
-										"Neoloader Uninstaller",
-										function()
-											lib.uninstall(auth_key)
-										end
-									)
+									lib.uninstall()
 								end,
 							},
 						},
