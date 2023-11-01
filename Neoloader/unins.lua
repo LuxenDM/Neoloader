@@ -40,6 +40,7 @@ local uninstall_process = function(auth_key)
 		lib.lme_configure(v, "", auth_key)
 	end
 	
+	local counter = 1
 	while true do
 		local ini_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
 		if ini_file ~= "" then
