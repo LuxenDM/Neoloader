@@ -1121,13 +1121,9 @@ function lib.get_patch()
 	return neo.patch
 end
 
-function lib.uninstall(verify_key)
-	if verify_key == mgr_key then
-		lib.log_error("Attempting to uninstall Neoloader!", 3)
-		lib.resolve_file("plugins/Neoloader/unins.lua")
-	else
-		lib.log_error("A mod attempted uninstallation of Neoloader, but the verification key did not match!", 1)
-	end
+function lib.uninstall()
+	lib.log_error("Attempting to uninstall Neoloader!", 3)
+	lib.resolve_file("plugins/Neoloader/unins.lua")
 end
 
 function lib.generate_key()
@@ -1454,11 +1450,15 @@ end
 
 
 
-
-if gkini.ReadString("Neoloader", "STOP", "") == "recovery" then
+local STOP_code = gkini.ReadString("Neoloader", "STOP", "")
+if STOP_code ~= "" then
 	gkini.WriteString("Neoloader", "STOP", "")
 	gkinterface.GKSaveCfg()
-	error("The LME was instructed to load the recovery environment for the user. This error halts all continued execution.")
+	if STOP_code == "recovery" then
+		error("The LME was instructed to load the recovery environment for the user. This error halts all continued execution.")
+	else
+		error("The LME recieved a STOP code of " .. STOP_code)
+	end
 end
 
 
