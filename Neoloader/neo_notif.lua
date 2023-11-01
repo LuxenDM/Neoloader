@@ -68,6 +68,7 @@ local notif_constructor = {} --notifications that can be handled
 local notif_listener = {} --mods accepting notifications
 
 local new_listener = function(id, callback_func)
+	id = tostring(id)
 	if type(callback_func) ~= "function" then
 		return false
 	end
@@ -81,6 +82,7 @@ local new_listener = function(id, callback_func)
 end
 
 local unreg_listener = function(id)
+	id = tostring(id)
 	if not notif_listener[id] then
 		return false
 	end
@@ -150,7 +152,8 @@ local new_generator = function(notif_to_handle, echo_func, data_func)
 end
 
 local notif_creator = function(status, data)
-	cp("Notification: " .. tostring(status))
+	status = tostring(status)
+	cp("Notification: " .. status)
 	if not notif_constructor[status] then
 		data = {
 			title = "UNHANDLED_NOTIFICATION",
@@ -181,6 +184,7 @@ local notif_creator = function(status, data)
 end
 
 local make_interface = function(status, data)
+	status = tostring(status)
 	if not notif_constructor[status] then
 		data = {
 			title = "UNHANDLED_NOTIFICATION",
@@ -204,27 +208,9 @@ local clear_all = function()
 	notif_history = {}
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+--------------------------------------------------------------------------
+--Default Notifications
+--------------------------------------------------------------------------
 
 new_generator("UNHANDLED_NOTIFICATION", nil, nil)
 new_generator("SUCCESS",
@@ -316,23 +302,9 @@ new_generator("PLUGIN_FAILURE",
 )
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+--------------------------------------------------------------------------
+--Public API
+--------------------------------------------------------------------------
 
 neo.notif = notif_creator
 neo.make_visual = make_interface
