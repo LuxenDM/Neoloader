@@ -1,11 +1,15 @@
 if type(lib) == "table" and lib[0] == "LME" then
-	console_print("Neoloader setup should not run while Neoloader is running")
+	lib.log_error("Neoloader setup should not run while Neoloader is running", 4)
 	
 	return
 end
 
 
-
+--get_translate_string()
+local locale = gkini.ReadString("Vendetta", "locale", "en")
+local gts = function(key, val)
+	return gkini.ReadString2(locale, key, val, "plugins/Neoloader/lang/setup.ini")
+end
 
 local button_scalar = function()
 	local val = ""
@@ -164,7 +168,7 @@ local setup_creator = function()
 			iup.hbox {
 				alignment = "AMIDDLE",
 				iup.label {
-					title = "Load plugins by default: ",
+					title = gts("def_load", "Load plugins by default") .. ": ",
 				},
 				iup.fill { },
 				iup.stationsublist {
@@ -181,13 +185,13 @@ local setup_creator = function()
 				},
 			},
 			iup.label {
-				title = "YES: New plugins will automatically be enabled",
+				title = "YES: " .. gts("plug_enable", "New plugins will automatically be enabled"),
 			},
 			iup.label {
-				title = "NO: New plugins must be manually enabled",
+				title = "NO: " .. gts("plug_disable", "New plugins must be manually enabled"),
 			},
 			iup.label {
-				title = "Default is NO",
+				title = gts("def_msg", "Default is") .. " NO",
 			},
 		},
 	})
@@ -198,7 +202,7 @@ local setup_creator = function()
 			iup.hbox {
 				alignment = "AMIDDLE",
 				iup.label {
-					title = "Open manager after install: ",
+					title = gts("open_msg", "Open manager after install") .. ": ",
 				},
 				iup.fill { },
 				iup.stationsublist {
@@ -216,7 +220,7 @@ local setup_creator = function()
 				},
 			},
 			iup.label {
-				title = "Completely Optional, enable to manage your LME after setup",
+				title = gts("open_opt", "Completely Optional, enable to manage your LME after setup"),
 			},
 		},
 	})
@@ -232,7 +236,7 @@ local setup_creator = function()
 			iup.hbox {
 				alignment = "AMIDDLE",
 				iup.label {
-					title = "IF replacement method: ",
+					title = gts("if_method_msg", "Interface replacement method") .. ": ",
 				},
 				iup.fill { },
 				iup.stationsublist {
@@ -250,10 +254,10 @@ local setup_creator = function()
 				},
 			},
 			iup.label {
-				title = "Default is 'replace'",
+				title = gts("def_msg", "Default is") .. " 'replace'",
 			},
 			iup.label {
-				title = "DO NOT CHANGE unless you know what you're doing!",
+				title = gts("if_warning", "DO NOT CHANGE unless you know what you're doing") .. "!",
 			},
 		},
 	})
@@ -270,14 +274,14 @@ local setup_creator = function()
 					iup.vbox {
 						alignment = "ACENTER",
 						iup.label {
-							title = "Neoloader Setup",
+							title = gts("title", "Neoloader Setup"),
 						},
 						iup.stationsubframe {
 							iup.hbox {
 								iup.vbox {
 									alignment = "ALEFT",
 									iup.stationbutton {
-										--to keep alignment
+										--to keep vertical alignment
 										title = "secret",
 										visible = "NO",
 									},
@@ -286,7 +290,7 @@ local setup_creator = function()
 								iup.vbox {
 									alignment = "ARIGHT",
 									iup.stationbutton {
-										title = "Show advanced options",
+										title = gts("show_adv", "Show advanced options"),
 										action = function()
 											ctl_adv.visible = "YES"
 											ctl_adv:update()
@@ -300,9 +304,12 @@ local setup_creator = function()
 							size = Font.Default,
 						},
 						iup.stationbutton {
-							title = "Apply settings and reload Vendetta Online",
+							title = gts("finalize", "Apply settings and reload Vendetta Online"),
 							action = function(self)
+								cp("Selected default load state " .. config.defaultLoadState)
 								gkws("Neoloader", "rDefaultLoadState", config.defaultLoadState)
+								
+								cp("Selected run command " .. config.run_command)
 								gkws("Neoloader", "run_command", config.run_command)
 								
 								if config.if_option == "replace" then
