@@ -1577,10 +1577,10 @@ local open_button_creator = function()
 		neo.open()
 	end
 	
-	local angular_check = gkini.ReadString("Vendetta", "usenewui", "n")
+	local angular_check = gkini.ReadString("Vendetta", "usenewui", "?")
 	
 	if config.qa_buttons == "YES" then
-		if angular_check == "1" and Platform == "Windows" then
+		if ((angular_check == "1") or (angular_check == "?")) and Platform == "Windows" then
 			local odbutton = OptionsDialog[1][1][15]
 			
 			local x_pos = tonumber(odbutton.cx)
@@ -1602,7 +1602,7 @@ local open_button_creator = function()
 			
 			iup.Append(OptionsDialog[1][1], neobutton)
 		else
-			local neobutton = stationbutton {
+			local neobutton = iup.stationbutton {
 				title = bstr(61, "Open Mod Manager"),
 				expand = "HORIZONTAL",
 				action = neo.open,
