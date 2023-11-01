@@ -1,4 +1,5 @@
 print = console_print
+local cp = console_print
 
 Font = {
 	Default = (gkinterface.GetYResolution()/1080) * 24,
@@ -125,6 +126,110 @@ end
 	recovery is a lightweight system meant to recover from catastrophic NON-CTD errors during LME or plugin load time. By displaying a dialog that will close when the game finishes loading, it can provide an interactive environment that can hopefully help the user get the game working again.
 ]]--
 
+local disable_LME_plugins = function(remove_entry)
+	while true do
+		local ini_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+		if ini_file ~= "" then
+			local id = gkini.ReadString2("modreg", "id", "null", ini_file)
+			local version = gkini.ReadString2("modreg", "version", "null", ini_file)
+			if id ~= "null" then
+				cp("disabling LME plugin " .. id .. " v" .. version)
+				gkini.WriteString("Neo-pluginstate", id .. "." .. version, "NO")
+			end
+			
+			if remove_entry then
+				gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
+				cp("removing entry " .. tostring(counter) .. " >> " .. ini_file)
+			end	
+			
+			counter = counter + 1
+		else
+			break
+		end
+	end
+end
+
+local uninstall_neoloader = function()
+	disable_LME_plugins(true)
+	
+	gkini.WriteString("Vendetta", "if", "")
+	gkini.WriteString("Neoloader", "first_time", "recovery")
+	
+	local setting_list = {
+		--list of Neoloader config options to clear
+		"Init",
+		"if",
+		"mgr",
+		"uninstalled", --depreciated, pre 3.9.x
+		"rAllowDelayedLoad",
+		"rAllowBadAPIVersion",
+		"rEchoLogging",
+		"rInitLoopTimeout",
+		"rDefaultLoadState",
+		"rDoErrPopup",
+		"rPresortedList",
+		"rPortectResolveFile",
+		"iDbgIgnoreLevel",
+		"rClearCOmmands",
+		"rDbgFormatting",
+		"rOverrideDisabledState",
+		"current_notif",
+		"run_command",
+		"STOP",
+	}
+	for i, v in ipairs(setting_list) do
+		gkini.WriteString("Neoloader", v, "")
+	end
+end
+
+local reset_config_options = function()
+	local setting_list = {
+		--list of game settings to clear
+		"if",
+		"skin",
+		"usenewui",
+		"usefontscaling",
+		"fontscale",
+		"AudioDriver",
+		"VideoDriver",
+		"xres",
+		"yres",
+		"font",
+		"enablevoicechat",
+		"enabledeviceselection",
+		"playbackmode",
+		"playbackdevice",
+		"capturemode",
+		"capturedevice",
+	}
+	
+	for k, v in ipairs(setting_list) do
+		gkini.WriteString("Vendetta", v, "")
+	end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 local create_recovery_diag = function()
 	local ctl = ctl_create()
 	
@@ -147,12 +252,13 @@ local create_recovery_diag = function()
 			action = "Disable all LME plugins",
 			descrip = "Disable: If one of your plugins loaded by your LME provider is triggering this issue, then disabling that plugin will prevent the buggy code from running.",
 			lua = function()
-				print("not yet implemented")
+				disable_LME_plugins(false)
+				ReloadInterface()
 			end,
 		},
 		{
 			action = "Disable ALL plugins",
-			descrip = "Disable All: Turns off the game's ability to load plugins and closes the game; when you launch the game again, it will be the vanilla experience. In order to re-enable plugins, you'll need to re-enable them from your options menu. Neoloader will also be disconnected, but its settings won't be touched.",
+			descrip = "Disable All: Turns off the game's ability to load plugins and closes the game; when you launch the game again, it will be the vanilla experience. In order to re-enable plugins, you'll need to re-enable them from your options menu. Your LME will also be disconnected, preventing it from running, but its settings and plugin's load states won't be touched.",
 			lua = function()
 				gkini.WriteString("Vendetta", "plugins", "0")
 				gkini.WriteString("Vendetta", "if", "")
@@ -161,10 +267,21 @@ local create_recovery_diag = function()
 			end,
 		},
 		{
+			action = "Uninstall Neoloader (Clean)",
+			descrip = "If your LME environment is misbehaving, this option will remove the settings and prevent Neoloader from executing until installed again. You should also use this option if you want to upgrade Neoloader and the standard uninstaller doesn't work.",
+			lua = function()
+				uninstall_neoloader()
+				Game.Quit()
+			end,
+		},
+		{
 			action = "Nuclear",
 			descrip = "Removes as much LME data as possible from your config.ini, disables all plugins, and even reverts some game options to known safe settings. If this doesn't fix your game, then you need help that an automated system cannot provide.",
 			lua = function()
-				
+				uninstall_neoloader()
+				reset_config_options()
+				gkini.WriteString("Vendetta", "plugins", "0")
+				Game.Quit()
 			end,
 		},
 		{
@@ -184,9 +301,9 @@ local create_recovery_diag = function()
 					ProcessEvent("START")
 				else
 					if PlayerInStation() then
-						ShowDialog(StationPDADialog)
+						ProcessEvent("SHOW_STATION")
 					else
-						ShowDialog(HUD)
+						ProcessEvent("HUD_SHOW")
 					end
 				end
 			end,
@@ -277,4 +394,3 @@ local create_recovery_diag = function()
 end
 
 create_recovery_diag()
-RegisterUserCommand("recovery", create_recovery_diag)
