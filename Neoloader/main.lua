@@ -117,14 +117,20 @@ end
 
 if first_time == "YES" then
 	request_setup(true)
-elseif first_time == "Removed" then
+elseif first_time == "removed" then
 	print(tprint("reins_notice", "Neoloader was recently removed; use /neo to reinstall"))
 elseif first_time == "MUTE" then
 	print(tprint("mute_remind", "Use /neo to start the installation process!"))
 elseif first_time == "SKIP" then
 	cp("Neoloader was supposed to be launched by an external tool.")
 elseif first_time == "recovery" then
-	print(tprint("recovery_msg", "Neoloader was removed by the recovery tool! Use /neo to reinitialize Neoloader")
+	print(tprint("recovery_msg", "Neoloader was removed by the recovery tool! Use /neo to reinitialize Neoloader"))
 end
+
+RegisterUserCommand("recovery", function()
+	gkini.WriteString("Neoloader", "STOP", "recovery")
+	gkini.WriteString("Vendetta", "if", "plugins/Neoloader/init.lua")
+	ReloadInterface()
+end)
 
 RegisterUserCommand("neo", request_setup)
