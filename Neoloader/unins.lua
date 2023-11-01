@@ -7,6 +7,11 @@ if type(lib) ~= "table" or lib[0] ~= "LME" then
 end
 
 
+--get_translate_string()
+local locale = gkini.ReadString("Vendetta", "locale", "en")
+local gts = function(key, val)
+	return gkini.ReadString2(locale, key, val, "plugins/Neoloader/lang/unins.ini")
+end
 
 local uninstall_process = function(auth_key)
 	
@@ -73,10 +78,10 @@ local uninstall_process = function(auth_key)
 					iup.vbox {
 						alignment = "ACENTER",
 						iup.label {
-							title = "Uninstall complete!",
+							title = gts("msg1", "Uninstall complete!"),
 						},
 						iup.label {
-							title = "Click to close Vendetta Online",
+							title = gts("msg2", "Click to close Vendetta Online"),
 						},
 						iup.fill {
 							size = Font.Default,
