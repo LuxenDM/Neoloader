@@ -27,27 +27,28 @@ end
 
 local lang_code = gkini.ReadString("Vendetta", "locale", "en")
 local tprint = function(inikey, default)
-	return tprint(inikey, default, "plugins/Neoloader/lang/main.ini")
+	return gkini.ReadString2(lang_code, inikey, default, "plugins/Neoloader/lang/main.ini")
 end
 
-local action_button = iup.stationbutton {
-	title = "Install Neoloader",
-	select_val = 1,
-	action = function(self)
-		if self.select_val == 1 then
-			dofile("plugins/Neoloader/setup.lua")
-		elseif self.select_val == 2 then
-			print(tprint("delay", "Neoloader setup has been delayed; you can use /neo to open this dialog again"))
-		elseif self.select_val == 3 then
-			gkini.WriteString("Neoloader", "first_time", "MUTE")
-			print(tprint("muted", "Dialog will no longer auto-appear"))
-		end
-		
-		HideDialog(iup.GetDialog(self))
-	end,
-}
-
 local request_setup = function(delay_once)
+	local action_button = iup.stationbutton {
+		title = "Install Neoloader",
+		select_val = 1,
+		action = function(self)
+			local val = tonumber(self.select_val)
+			if val == 1 then
+				dofile("plugins/Neoloader/setup.lua")
+			elseif val == 2 then
+				print(tprint("delay", "Neoloader setup has been delayed; you can use /neo to open this dialog again"))
+			elseif val == 3 then
+				gkini.WriteString("Neoloader", "first_time", "MUTE")
+				print(tprint("muted", "Dialog will no longer auto-appear"))
+			end
+			
+			HideDialog(iup.GetDialog(self))
+		end,
+	}
+
 	local diag = iup.dialog {
 		topmost = "YES",
 		fullscreen = "YES",
@@ -56,7 +57,7 @@ local request_setup = function(delay_once)
 			iup.fill { },
 			iup.hbox {
 				iup.fill { },
-				iup.stationsubframe {
+				iup.stationbuttonframe {
 					iup.vbox {
 						alignment = "ACENTER",
 						iup.fill {
@@ -91,6 +92,9 @@ local request_setup = function(delay_once)
 							iup.fill {
 								size = Font.Default,
 							},
+						},
+						iup.fill {
+							size = Font.Default,
 						},
 					},
 				},
