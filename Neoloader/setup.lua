@@ -1,4 +1,4 @@
-if type(lib) == "table" and lib[0] == "LME" then
+if isdeclared("lib") and type(lib) == "table" and lib[0] == "LME" then
 	lib.log_error("Neoloader setup should not run while Neoloader is running", 4)
 	
 	return
@@ -27,6 +27,7 @@ local cp	= console_print
 
 gkwi("Neoloader", "Init", 3)
 gkws("Neoloader", "mgr", "neomgr")
+gkws("Neoloader", "current_notif", "neonotif")
 gkws("Neoloader", "uninstalled", "NO")
 
 local counter = 1
@@ -39,7 +40,7 @@ while true do
 	end
 end
 for i=counter, 1, -1 do
-	gkini.gkws("Neo-registry", "reg" .. tostring(i), "")
+	gkws("Neo-registry", "reg" .. tostring(i), "")
 end
 
 local plugin_counter = 0
@@ -52,6 +53,7 @@ local register_plugin = function(id, version, ini, state)
 end
 
 register_plugin("neomgr", "2.0.0", "plugins/Neoloader/neomgr.ini", "YES")
+register_plugin("neonotif", "1.0.0", "plugins/Neoloader/neo_notif.ini", "YES")
 
 
 
@@ -146,7 +148,7 @@ end
 
 local config = {
 	defaultLoadState = "NO",
-	first_run = "",
+	run_command = "neo",
 	
 	if_option = "replace",
 	--[[
@@ -160,7 +162,7 @@ local config = {
 local setup_creator = function()
 	local ctl_basic = ctl_create()
 	ctl_basic.expand = "NO"
-	ctl_basic.size = "%30x%30"
+	ctl_basic.size = "%60x%30"
 	
 	--rDefaultLoadState
 	ctl_basic:add_item(iup.stationsubframe {
@@ -211,7 +213,7 @@ local setup_creator = function()
 					action = function(self, t, i, cv)
 						if cv == 1 then
 							t = t == "YES" and "neo" or ""
-							config.first_run = t
+							config.run_command = t
 						end
 					end,
 					"YES",
@@ -225,13 +227,8 @@ local setup_creator = function()
 		},
 	})
 	
-	local ctl_adv = ctl_create()
-	ctl_adv.expand = "NO"
-	ctl_adv.size = "%30x%30"
-	ctl_adv.visible = "NO"
-	
-	--IF replacement style
-	ctl_adv:add_item( iup.stationsubframe {
+	--IF replacement style, not added by default
+	local adv_if_option = iup.stationsubframe {
 		iup.vbox {
 			iup.hbox {
 				alignment = "AMIDDLE",
@@ -260,7 +257,7 @@ local setup_creator = function()
 				title = gts("if_warning", "DO NOT CHANGE unless you know what you're doing") .. "!",
 			},
 		},
-	})
+	}
 	
 	local setup_diag = iup.dialog {
 		topmost = "YES",
@@ -277,27 +274,16 @@ local setup_creator = function()
 							title = gts("title", "Neoloader Setup"),
 						},
 						iup.stationsubframe {
-							iup.hbox {
-								iup.vbox {
-									alignment = "ALEFT",
-									iup.stationbutton {
-										--to keep vertical alignment
-										title = "secret",
-										visible = "NO",
-									},
-									ctl_basic,
+							iup.vbox {
+								alignment = "ARIGHT",
+								iup.stationbutton {
+									title = gts("show_adv", "Show advanced options"),
+									action = function()
+										ctl_basic:add_item(adv_if_option)
+										ctl_basic:update()
+									end,
 								},
-								iup.vbox {
-									alignment = "ARIGHT",
-									iup.stationbutton {
-										title = gts("show_adv", "Show advanced options"),
-										action = function()
-											ctl_adv.visible = "YES"
-											ctl_adv:update()
-										end,
-									},
-									ctl_adv,
-								},
+								ctl_basic,
 							},
 						},
 						iup.fill {
@@ -322,6 +308,8 @@ local setup_creator = function()
 									cp("IF option was KEPT; value is " .. gkrs("Vendetta", "if", "vo-if"))
 								end
 								
+								gkws("Neoloader", "first_run", "")
+								
 								gkwi("Neoloader", "Init", 3)
 								
 								ReloadInterface()
@@ -338,7 +326,6 @@ local setup_creator = function()
 	
 	setup_diag:map()
 	ctl_basic:update()
-	ctl_adv:update()
 	
 	ShowDialog(setup_diag)
 end
