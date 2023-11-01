@@ -11,7 +11,7 @@ cp = function() end --console_print
 local api_check = lib.get_gstate()
 for k, v in ipairs {
 	api_check.major == 3,
-	api_check.minor >= 7,
+	api_check.minor >= 10,
 } do
 	assert(v, "This version of neomgr is not compatible with the version of Neoloader installed! Please use the version bundled with your latest installation of Neoloader!")
 end
@@ -1050,7 +1050,7 @@ local diag_constructor = function()
 			allowBadAPIVersion = {
 				--if type is not defined, default toggle
 				display = bstr(32, "Load plugins expecting a different LME API version than") .. " " .. lib.get_API(),
-				default = "NO",
+				default = "YES",
 			},
 			echoLogging = {
 				display = bstr(33, "Print LME logs to game console"),
