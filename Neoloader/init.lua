@@ -659,10 +659,11 @@ function lib.register(iniFilePointer)
 		neo.number_plugins_registered = neo.number_plugins_registered + 1
 		
 		local data = copy_table(iniTable)
+		data.new_entry = true
 		data.dependencies_met = false
 		data.complete = false
 		data.dependent_freeze = 0
-		data.load = false
+		data.load = gkreadstr("Neo-pluginstate", data.plugin_id .. "." .. data.plugin_version, neo.defaultLoadState)
 		data.index = #neo.plugin_container
 		data.load_position = neo.number_plugins_registered
 		data.errors = {}
@@ -915,6 +916,8 @@ function lib.get_state(name, version)
 			plugin_frozen = ref.dependent_freeze > 0 and "YES" or "NO",
 			
 			plugin_dependencies = ref.plugin_dependencies,
+			
+			plugin_is_new = ref.new_entry,
 		}
 	end
 	

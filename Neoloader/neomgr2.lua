@@ -671,12 +671,16 @@ local diag_constructor = function()
 			local data = pluginlist[index]
 			
 			local load_status = {
-				[-1] = "?", --prevent adjustment, dunno what's going on
+				[-1] = bstr(63, "Will not load"), --newly registered
 				[0] = bstr(9, "Not loaded"),
 				[1] = bstr(18, "Cannot load"),--missing dep
 				[2] = bstr(18, "Cannot load"),--failed/error
 				[3] = bstr(10, "Loaded"),
 			}
+			
+			if lib.lme_get_config("defaultLoadState") == "YES" then
+				load_status[-1] = "Will load"
+			end
 			
 			load_toggle.title = load_status[data.current_state] or "???"
 			load_toggle.state = data.next_state or data.current_state or -1
@@ -735,6 +739,8 @@ local diag_constructor = function()
 		local ctl = control_list_creator()
 		
 		local states = {
+			[-1] = bstr(63, "NEW"),
+			['-1'] = "255 0 255",
 			[0] = bstr(19, "NOT LOADED"),
 			['0'] = "255 200 100",
 			[1] = bstr(20, "MISSING DEPENDENCY"),
@@ -760,6 +766,10 @@ local diag_constructor = function()
 						cur_state = 2
 					end
 				end
+			end
+			
+			if item.plugin_is_new then
+				cur_state = -1
 			end
 			
 			item.current_state = cur_state
