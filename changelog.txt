@@ -347,3 +347,59 @@ Neoloader July 2023 Public Beta
 		The old brute-force sorting algorithm used by Neoloader has been removed, improving Neoloader's execution time. This also fixed minor issues that were cropping up with the old loader; plugins with multiple dependencies are more likely to not stumble due to incorrect sorting, and all code for handling dependencies is more unified.
 		
 	All of these features have been dedicated to ensuring that porting plugins to be Neoloader compatible is even more seamless and easy, while protecting the end user even more.
+	
+	
+	
+Neoloader 2023 November Release
+	
+	Neoloader Changes
+		major:	6
+		minor:	0
+		patch:	0
+		
+		NEW		Compliance with game plugins being disabled
+		NEW		neo_notif, a bundled notification handling solution
+		NEW		Hardcoded translation support
+		NEW		Recovery environment to rescue from LME errors/catastrophic failures
+		FIXED	plugin load position reporting
+		CHANGED	neomgr. All of it.
+		CHANGED	Notifications are sent to the registered notification handler
+		REMOVED	Automatic installation for new users
+		
+	neonotif
+		major:	1
+		minor:	0
+		patch:	0
+		
+	neomgr changes
+		major:	2
+		minor:	0
+		patch:	0
+		
+		NEW		CCD1 support
+		NEW		Interface control scaling
+		NEW		Babel library support
+		CHANGED	Improved integration with Options menu
+		
+	API Changes
+		API:	3
+		minor:	10
+		patch:	0
+		
+		NEW		lib.pass_ini_identifier
+		NEW		lib.lme_get_config
+		FIXED	lib.lme_configure
+		CHANGED	All functions that accept id/version pairs
+		CHANGED lib.uninstall() no longer expects an auth key
+		
+	The above notes don't begin to cover all the tweaks and improvements made throughout all of Neoloader. A good amount of crust from the first PBR has finally been removed, and the usability of every interface element has been reworked. neomgr isn't just a temporary stand-in for managing Neoloader anymore, and neonotif supports extensible notification handling much closer to the original intention of a notification system.
+	
+	Also incredibly important is the implementation of a recovery system; This will assist in recommending actions the user can take to make the game playable after a catastrophic error occurs, from simply triggering a reload all the way to a nuclear reset of configuration options and the LME installation. This recovery system replaces the old "preload" utility that Neoloader used to support, which was intended for a similar yet more minimal approach.
+	
+	The setup and uninstallation systems have also been reworked to better handle the latest edition of Neoloader, and the interface for the setup process will support forward changes. Advanced options are also hidden until selected, instead of being context-based. Neoloader is much less finicky about being installed, too; it will no longer enter a cyclical reload/install/reset loop due to being installed while not being the active IF.
+	
+	Except for the recovery system (which will be implemented next), everything now either supports the Babel translation library (neomgr, neonotif), or has hardcoded language support of its own. The hardcoded languages are only EN/ES/FR/PT, and can't support extensibility like Babel does; instead, as more language options are requested they will simply have to be baked into the release itself, or a new system will be looked into.
+	
+	Also new in this release is an implementation of "CCD1" in neomgr. This stands for "Common Content Descriptor 1", and is a potential standard for the public class of an installed plugin. When a plugin is enabled and supports CCD1, the user will be capable of seeing extended info about the plugin, and even managing settings directly in the manager itself.
+	
+	All together, this is the most useable state Neoloader has ever been, and will be a massive leap in its potential appeal to new users. 
