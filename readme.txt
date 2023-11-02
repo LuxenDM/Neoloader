@@ -31,7 +31,9 @@ Uninstallation:
 ======================================================================================
 If you can launch the game client without bugs, use the game command /neo to open the library management interface (provided by neomgr unless otherwise replaced). Go to settings; at the bottom, click on the button labeled "Uninstall Neoloader". Click the ok button to close the game, and then remove the plugin by deleting the Neoloader folder in your plugin directory or by using your preferred plugin manager.
 
-If you are unable to remove the files after using this uninstallation method, Neoloader will detect that it was recently set to not load, and will not re-initialize the startup environment unless you re-enable it with the /neosetup command.
+Another option is to use the recovery menu to uninstall Neoloader. This will work better if Neoloader is misbehaving and you are struggling to uninstall it after a game update, but the game is still launching successfully.
+
+Once uninstalled, the initializer will remind you that you can reinstall Neoloader through /neo, but otherwise executes no functionality.
 
 
 
@@ -47,8 +49,7 @@ Compatibility:
 ======================================================================================
 Neoloader is not compatible with any custom interface; However, plugins can register themselves as a custom interface through Neoloader instead.
 
-Neoloader should be compatible with every platform the game *actively* supports and can be pluginded. This includes Windows, Mac, Linux, Android, ChromeOS, iOS.
-Unsure: Vendetta Online VR platforms (probably works just fine, as long as you can add the files)
+Neoloader should be compatible with every platform the game *actively* supports and can be pluginded. This includes Windows, Mac, Linux, Android, ChromeOS, iOS. Neoloader has also been lightly tested on the Quest 2 specifically; other VR platforms may have different results.
 Not supported: ???, VendettaMark benchmarking utility
 
 
@@ -65,6 +66,8 @@ What is the performance hit to game launch for using Neoloader?
 	
 	For me, Neoloader took ~550ms to "set up", and ~480ms to load with no other Neoloader-compatible plugins installed.
 	Almost all of this time is actually taken by the standard game interface launching, however; when using a patched version of barebones_if and MultiUI, it only took ~70ms for the game to launch.
+	
+	Additionally, in a system where there are >100 plugins, the game's loading time only increased up by about three seconds. Again, almost all of that time is from those external plugins; Neoloader itself requires a very small amount of time to set up its environment.
 	
 What is the performance hit in-game for using Neoloader?
 	
@@ -90,6 +93,10 @@ I have a bug and I can't play Vendetta Online!
 	If you can, please send "Luxen De'Mark" your config.ini file, your errors.log, along with a screenshot of the bug.
 	If the problem is with a plugin outside of Neoloader, however, you should take it up with that plugin's author as well.
 	
+I have a bug and something called a recovery system appears
+	
+	When either Neoloader or any other plugin has a really catastrophic error that isn't caught, this should appear and offer options to automate fixing the bug. Give each of the options a shot. Do note that this recovery system is only meant to be a kind of band-aid in case you aren't able to manage your files or investigate the bug further, and it is very likely it won't be able to solve your issue.
+	
 I have a bug that causes Vendetta Online to close!
 	
 	Super cool! But actually not! This is called a CTD (Crash to Desktop) in most other games. In Vendetta Online, they can be very minor lua errors (if a plugin crashes before the game's loading screen goes away, the game closes, but the error is easily traceable), or be related to the interface or networking side of the game (this is capable of generating an extensive log of your system resources and processes, none of which is helpful to us mod developers!)
@@ -104,7 +111,7 @@ Something called an error reporter showed up when my game crashed!
 	
 How do I contact Luxen?
 	
-	discord: Luxen#0309 (preferred)
+	discord: .luxen / Luxen#0309 (preferred)
 	email: Luxen@gmx.com (make sure your subject line starts with "neoloader" and/or "Vendetta Online"!)
 	
 	Make sure to attach your config.ini, errors.log, and a screenshot of the in-game error reporter! Otherwise, it can be difficult or impossible to determine the issue. Also, I might be at work or otherwise busy; if I don't get in touch with you, don't worry about it. If your issue prevents you from playing the game, uninstall Neoloader. I'm willing to offer some help, so be courteous in return, and understand there are some issues I just can't help with.
@@ -117,9 +124,11 @@ Is it safe to send people my config.ini or errors.log?
 		Your errors.log will include some details about your computer and plugins, but the most sensitive data it'll contain will be your game chat from the session you played in. If you are trying to report a bug, try to replicate it on a new character (if logging in is needed in the first place), or you might leak private chat accidentally.
 
 
+
 Credits and special thanks:
 ======================================================================================
 Luxen De'Mark (Main programmer and concept designer of Neoloader)
+Ezra Nightwalker (Code fixes and cleanup)
 Haxmeister (special thanks for consulting)
 Draugath (special thanks for consulting and code improvements)
 tjgaming (testing on a known-to-be-unusual mobile device)
