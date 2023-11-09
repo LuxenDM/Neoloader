@@ -278,7 +278,9 @@ local setup_creator = function()
 								alignment = "ARIGHT",
 								iup.stationbutton {
 									title = gts("show_adv", "Show advanced options"),
-									action = function()
+									action = function(self)
+										self.visible = "NO"
+										self.active = "NO"
 										ctl_basic:add_item(adv_if_option)
 										ctl_basic:update()
 									end,
