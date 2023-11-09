@@ -681,7 +681,7 @@ function lib.register(iniFilePointer)
 		table.insert(neo.plugin_registry[id], data.plugin_version)
 		
 		lib.log_error("Added NEW " .. id .. " v" .. (data.plugin_version or "0") .. " to Neoloader's plugin registry and to config.ini at position " .. tostring(neo.number_plugins_registered))
-		lib.notify("NEW_REGISTRY", id, data.plugin_version or "0")
+		lib.notify("NEW_REGISTRY", {plugin_id = id, version = data.plugin_version or "0"})
 		--write the registration to config.ini
 		gkini.WriteString("Neo-pluginstate", (data.plugin_id .. "." .. (data.plugin_version or "0")), "NO")
 		gkini.WriteString("Neo-registry", "reg" .. tostring(neo.number_plugins_registered), iniFilePointer)
@@ -816,7 +816,7 @@ function lib.activate_plugin(id, version, verify_key)
 		if not status then
 			lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
 			lib.log_error("		error message: " .. tostring(err), 3, id, version)
-			lib.notify("PLUGIN_FAILURE", id, version)
+			lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = version, error_string = tostring(err)})
 			return false, "failed to activate, " .. err or "?"
 		end
 
@@ -1719,6 +1719,7 @@ do --init process
 		lib.log_error("No 'root' level plugins or libraries are loaded; skipping further checks...", 4)
 		neo.error_flag = true
 		lib.notify("ROOT_FAILURE")
+			--lol, nothing can ever recieve a "root failure" notification...
 	else
 		for k, v in ipairs(plugin_table) do
 			local err_flag, err_detail = lib.activate_plugin(v[1], v[2], mgr_key)
