@@ -64,6 +64,8 @@ local config = {
 	
 	enable_dependents = gkrs("neomgr", "enable_dependents", "YES"),
 		--if a mod requires other disabled mods when its turned on, they'll also be enabled
+		
+	show_debuginfo = gkrs("neomgr", "show_debuginfo", "NO"),
 }
 
 local neo = {}
@@ -94,8 +96,14 @@ function update_class()
 				display = bstr(4, "Auto-enable mods required by a mod you select to load"),
 				[1] = config.enable_dependents,
 			},
+			show_debuginfo = {
+				type = "toggle",
+				display = bstr(64, "Show debugging info"),
+				[1] = config.show_debuginfo,
+			},
 			"auto_open",
 			"enable_dependents",
+			"show_debuginfo",
 			"qa_buttons",
 		},
 		description = bstr(5, "neomgr is the bundled management interace for Neoloader. It provides a lightweight interface for configuring Neoloader and managing plugins."),
@@ -797,12 +805,15 @@ local diag_constructor = function()
 					iup.hbox {
 						iup.label {
 							title = "#" .. tostring(item.load_position),
+							fgcolor = "150 150 150",
 							font = Font.H6,
+							visible = config.show_debuginfo,
 						},
-						iup.fill { },
 						iup.label {
 							title = item.plugin_id .. " v" .. item.plugin_version,
 							fgcolor = "150 150 150",
+							expand = "HORIZONTAL",
+							alignment = "ARIGHT",
 							font = Font.H6,
 						},
 						iup.fill {
@@ -811,9 +822,10 @@ local diag_constructor = function()
 						iup.label {
 							title = bstr(23, "Authored by") .. " " .. item.plugin_author,
 							fgcolor = "150 150 150",
+							expand = "HORIZONTAL",
+							alignment = "ALEFT",
 							font = Font.H6,
 						},
-						iup.fill { },
 						iup.label {
 							title = "#" .. tostring(item.load_position),
 							font = Font.H6,
