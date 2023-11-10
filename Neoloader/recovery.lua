@@ -58,6 +58,7 @@ local ctl_create = function()
 		bgcolor = "0 0 0",
 		control = "YES",
 		expand = "YES",
+		border = "NO",
 		scrollbarwidth = button_scalar(),
 	}
 	
@@ -341,6 +342,9 @@ local create_recovery_diag = function()
 		topmost = "YES",
 		fullscreen = "YES",
 		bgcolor = "0 0 0",
+		focus_cb = function()
+			iup.SetFocus(ctl)
+		end,
 		iup.hbox {
 			iup.fill {
 				size = "%6",
@@ -391,6 +395,8 @@ local create_recovery_diag = function()
 		end,
 		"PLUGINS_LOADED"
 	)
+	
+	iup.SetFocus(ctl)
 end
 
 create_recovery_diag()
