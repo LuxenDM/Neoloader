@@ -813,23 +813,22 @@ local diag_constructor = function()
 							title = item.plugin_id .. " v" .. item.plugin_version,
 							fgcolor = "150 150 150",
 							expand = "HORIZONTAL",
-							alignment = "ARIGHT",
-							font = Font.H6,
-						},
-						iup.fill {
-							size = "%2",
-						},
-						iup.label {
-							title = bstr(23, "Authored by") .. " " .. item.plugin_author,
-							fgcolor = "150 150 150",
-							expand = "HORIZONTAL",
-							alignment = "ALEFT",
+							alignment = "ACENTER",
 							font = Font.H6,
 						},
 						iup.label {
 							title = "#" .. tostring(item.load_position),
 							font = Font.H6,
 							visible = "NO",
+						},
+					},
+					iup.hbox {
+						iup.label {
+							title = bstr(23, "Authored by") .. " " .. item.plugin_author,
+							fgcolor = "150 150 150",
+							expand = "HORIZONTAL",
+							alignment = "ACENTER",
+							font = Font.H6,
 						},
 					},
 				},
