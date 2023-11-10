@@ -832,16 +832,18 @@ function lib.activate_plugin(id, version, verify_key)
 		modreg.complete = true
 		lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)", 1)
 		
-		local freeze_key = lib.plugin_read_str(id, version, "modreg", "freeze_key")
+		local freeze_key = lib.plugin_read_str(id, version, "modreg", "")
 		
-		freeze_key = freeze_key == "" and id or freeze_key
-		lib.set_waiting(id, version, "YES", freeze_key)
+		if freeze_key ~= "" then
+			lib.log_error("	Plugin has a freeze key declared", 1, id, version)
+			lib.set_waiting(id, version, "YES", freeze_key)
 		
-		RegisterEvent(function()
-			lib.set_waiting(id, version, "NO", freeze_key)
-		end, "PLUGINS_LOADED")
-		
-		--don't check queue; mod was frozen.
+			RegisterEvent(function()
+				lib.set_waiting(id, version, "NO", freeze_key)
+			end, "PLUGINS_LOADED")
+			
+			--don't check queue; mod was frozen.
+		end
 	end
 	if modreg.flag == "AUTH" then
 		lib.execute(id, version, "mgr_key", mgr_key)
