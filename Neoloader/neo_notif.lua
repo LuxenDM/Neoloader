@@ -22,6 +22,7 @@ end
 
 local config = {
 	echo_notif = gkini.ReadString("neomgr", "echo_notif", "YES"),
+	img_scale = gkini.ReadString("neomgr", "img_scale", "48"),
 }
 
 update_class = function()
@@ -40,7 +41,15 @@ update_class = function()
 				display = bstr(2, "Print LME notifications in chat"),
 				[1] = config.echo_notif,
 			},
+			img_scale = {
+				type = "slider",
+				display = bstr(13, "Notification image size"),
+				min = 8,
+				max = 256,
+				default = tonumber(config.img_scale),
+			},
 			"echo_notif",
+			"img_scale",
 		},
 		description = bstr(3, "neo_notif is the bundled notification handler for Neoloader. It provides a simple system for event handling meant for informing the user about system events."),
 		commands = {
@@ -90,6 +99,11 @@ local unreg_listener = function(id)
 	notif_listener[id] = nil
 end
 
+local get_scale = function()
+	local val = tonumber(config.img_scale) or "48"
+	return tostring((Font.Default / 24) * val) .. "x" .. tostring((Font.Default / 24) * val)
+end
+
 local new_generator = function(notif_to_handle, echo_func, data_func)
 	notif_to_handle = tostring(notif_to_handle)
 	
@@ -108,7 +122,7 @@ local new_generator = function(notif_to_handle, echo_func, data_func)
 						iup.label {
 							title = "",
 							image = data.img or "plugins/Neoloader/img/notif_placeholder.png",
-							size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+							size = get_scale(),
 						},
 					},
 					iup.vbox {
@@ -224,7 +238,7 @@ new_generator("SUCCESS",
 					iup.label {
 						title = "",
 						image = "plugins/Neoloader/img/thumb.png",
-						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+						size = get_scale(),
 					},
 				},
 				iup.vbox {
@@ -249,7 +263,7 @@ new_generator("NEW_REGISTRY",
 					iup.label {
 						title = "",
 						image = "plugins/Neoloader/img/thumb.png",
-						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+						size = get_scale(),
 					},
 				},
 				iup.vbox {
@@ -278,7 +292,7 @@ new_generator("PLUGIN_FAILURE",
 					iup.label {
 						title = "",
 						image = "plugins/Neoloader/img/thumb.png",
-						size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+						size = get_scale(),
 					},
 				},
 				iup.vbox {
@@ -315,8 +329,9 @@ neo.unregister_listener = unreg_listener
 neo.clear_all = clear_all
 neo.get_thumb_image = function() return {
 	image = "plugins/Neoloader/img/notif_placeholder.png",
-	size = tostring((Font.Default / 24) * 48) .. "x" .. tostring((Font.Default / 24) * 48),
+	size = get_scale(),
 } end
+neo.get_scale = get_scale
 neo.notif_handler = true
 
 update_class()
