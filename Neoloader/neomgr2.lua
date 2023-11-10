@@ -344,6 +344,11 @@ local diag_constructor = function()
 		end
 		
 		local mk_slider = function(ref, data)
+			local apply_timer = Timer()
+			local handle_func = function(a, b)
+				ctable.cb(a, b)
+			end
+			
 			local slider = iup.canvas {
 				size = "200x" .. button_scalar(),
 				border = "NO",
@@ -352,8 +357,9 @@ local diag_constructor = function()
 				posx = tonumber(data.default) or 50,
 				dx = (tonumber(data.max) - tonumber(data.min))/10,
 				expand = "NO",
+				scrollbar = "HORIZONTAL",
 				scroll_cb = function(self)
-					ctable.cb(ref, self.posx)
+					apply_timer:SetTimeout(1, function() ctable.cb(ref, self.posx) end)
 				end,
 			}
 			
@@ -544,7 +550,7 @@ local diag_constructor = function()
 		--
 		
 		local apply_changes = iup.stationbutton {
-			title = bstr(8, "Apply pending changes") .. " >>>",
+			title = bstr(8, "Apply all pending changes") .. " >>>",
 			visible = "NO",
 			action = function(self)
 				if #apply_actions < 1 then
@@ -724,7 +730,6 @@ local diag_constructor = function()
 				iup.hbox {
 					load_toggle,
 					iup.fill { },
-					apply_changes,
 				},
 				iup.hbox {
 					alignment = "ABOTTOM",
@@ -976,6 +981,8 @@ local diag_constructor = function()
 					},
 					sort_select,
 					sort_dir_select,
+					iup.fill { },
+					apply_changes,
 				},
 				ctl,
 			},
@@ -1513,10 +1520,20 @@ local diag_constructor = function()
 		},
 	}
 	
+	local close_button = iup.stationbutton {
+		title = bstr(7, "Close"),
+		size = "x" .. button_scalar(),
+		action = function(self)
+			notif_panel.unreg()
+			HideDialog(iup.GetDialog(self))
+		end,
+	}
+	
 	local root_diag = iup.dialog {
 		topmost = "YES",
 		fullscreen = "YES",
 		bgcolor = "0 0 0",
+		defaultesc = close_button,
 		iup.vbox {
 			iup.hbox {
 				iup.fill { },
@@ -1540,14 +1557,7 @@ local diag_constructor = function()
 				iup.fill {
 					size = "%1",
 				},
-				iup.stationbutton {
-					title = bstr(7, "Close"),
-					size = "x" .. button_scalar(),
-					action = function(self)
-						notif_panel.unreg()
-						HideDialog(iup.GetDialog(self))
-					end,
-				},
+				close_button,
 			},
 			tabs_view,
 			panel_view,
