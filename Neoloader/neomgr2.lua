@@ -130,7 +130,7 @@ function update_class()
 	lib.set_class("neomgr", "2.0.0", neo)
 end
 
-function neo.mgr_key(new_key)
+function neo.auth_key_receiver(new_key)
 	if not auth_key then
 		auth_key = new_key
 	end
