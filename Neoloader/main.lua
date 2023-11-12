@@ -14,8 +14,10 @@ if type(lib) == "table" and lib[0] == "LME" then
 	local run_command = gkini.ReadString("Neoloader", "run_command", "")
 	gkini.WriteString("Neoloader", "run_command", "")
 	if run_command ~= "" then
-		lib.log_error("Executing startup run command: " .. run_command)
-		gkinterface.GKProcessCommand(run_command)
+		RegisterEvent(function()
+			lib.log_error("Executing startup run command: " .. run_command)
+			gkinterface.GKProcessCommand(run_command)
+		end, "PLUGINS_LOADED")
 	end
 	
 	return
