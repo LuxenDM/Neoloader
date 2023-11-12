@@ -529,6 +529,9 @@ local diag_constructor = function()
 		ShowDialog(CCD1_manager)
 	end
 	
+	local apply_flag = false
+	local apply_actions = {}
+	
 	local create_plugin_display = function()
 		
 		local pluginlist = {}
@@ -542,8 +545,6 @@ local diag_constructor = function()
 			return cur_selection[1] .. cur_selection[2]
 		end
 		
-		local apply_actions = {}
-		local apply_flag = false
 		
 		--
 		
@@ -587,7 +588,6 @@ local diag_constructor = function()
 			title = bstr(9, "Not loaded"),
 			value = "OFF",
 			action = function(self)
-				apply_flag = true
 				
 				if apply_actions[cur_sel_str()] then
 					--Cancel load state toggle
@@ -595,11 +595,11 @@ local diag_constructor = function()
 						--index to be cleared
 					table.remove(apply_actions, index)
 						--remove application details
-					apply_actions[cur_select()] = nil
+					apply_actions[cur_sel_str()] = nil
 						--remove pointer index in table
 					local data = pluginlist[pluginlist[cur_sel_str()]]
 					
-					self.title = data.load == "YES" and bstr(10, "Loaded"), or bstr(9, "Not Loaded")
+					self.title = data.load == "YES" and bstr(10, "Loaded") or bstr(9, "Not Loaded")
 					iup.Refresh(self)
 				else
 					--queue load state toggle
@@ -617,11 +617,13 @@ local diag_constructor = function()
 					apply_actions[cur_sel_str()] = #apply_actions
 					cp("apply: " .. data.plugin_id .. " v" .. data.plugin_version .. " >> " .. (data.load == "NO" and "YES" or "NO"))
 						--index pointer to data
-					apply_changes.visible = "YES"
 					
 					self.title = data.load == "YES" and bstr(12, "Will not load") or bstr(11, "Will load")
 					iup.Refresh(self)
 				end
+				
+				apply_flag = #apply_actions > 0
+				apply_changes.visible = apply_flag and "YES" or "NO"
 			end,	
 		}
 		
@@ -1548,8 +1550,59 @@ local diag_constructor = function()
 		title = bstr(7, "Close"),
 		size = "x" .. button_scalar(),
 		action = function(self)
-			notif_panel.unreg()
-			HideDialog(iup.GetDialog(self))
+			local close_action = function()
+				notif_panel.unreg()
+				HideDialog(iup.GetDialog(self))
+			end
+			
+			if apply_flag and #apply_actions > 0 then
+				--there are pending applications
+				local apply_alert = iup.dialog {
+					fullscreen = "YES",
+					topmost = "YES",
+					bgcolor = "0 0 0 150 *",
+					iup.vbox {
+						iup.fill { },
+						iup.hbox {
+							iup.fill { },
+							iup.stationnameframe {
+								iup.vbox {
+									alignment = "ACENTER",
+									iup.label {
+										title = bstr(65, "Cancel pending changes") .. "?",
+										font = Font.H2
+									},
+									iup.fill {
+										size = Font.Default,
+									},
+									iup.hbox {
+										iup.stationbutton {
+											title = bstr(66, "YES"),
+											action = function(alert_self)
+												HideDialog(iup.GetDialog(alert_self))
+												close_action()
+											end,
+										},
+										iup.stationbutton {
+											title = bstr(67, "NO"),
+											action = function(alert_self)
+												HideDialog(iup.GetDialog(alert_self))
+											end,
+										},
+									},
+								},
+							},
+							iup.fill { },
+						},
+						iup.fill { },
+					},
+				}
+				
+				apply_alert:map()
+				ShowDialog(apply_alert)
+			else
+				close_action()
+			end
 		end,
 	}
 	
