@@ -70,11 +70,11 @@ end
 --This will be local when released
 neo = {
 	version = {
-		strver = "6.0.0 -beta",
+		strver = "6.0.1",
 		[1] = 6,
 		[2] = 0,
-		[3] = 0,
-		[4] = "Beta",
+		[3] = 1,
+		[4] = "",
 	},
 	--notifications = {} <- no longer tracked (nor did it ever get implemented) by Neoloader
 	log = {},
@@ -851,8 +851,8 @@ function lib.activate_plugin(id, version, verify_key)
 			--don't check queue; mod was frozen.
 		end
 	end
-	if modreg.flag == "AUTH" then
-		lib.execute(id, version, "mgr_key", mgr_key)
+	if modreg.flag == "AUTH" or id == neo.current_mgr then
+		lib.execute(id, version, "auth_key_receiver", mgr_key)
 	end
 	
 	neo.plugin_registry[plugin_id] = modreg
@@ -1769,7 +1769,7 @@ if lib.is_ready(neo.current_mgr) == true then
 	
 	RegisterUserCommand("neo", function() lib.execute(neo.current_mgr, cur_version, "open") end)
 	
-	lib.execute(neo.current_mgr, cur_version, "mgr_key", mgr_key)
+	--lib.execute(neo.current_mgr, cur_version, "auth_key_receiver", mgr_key) --depreciated; auth_key_receiver now called during lib.activate
 end
 
 RegisterEvent(function()
