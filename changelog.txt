@@ -350,7 +350,7 @@ Neoloader July 2023 Public Beta
 	
 	
 	
-Neoloader 2023 November Release
+Neoloader 2023 November Release 6.0.0
 	
 	Neoloader Changes
 		major:	6
@@ -403,3 +403,40 @@ Neoloader 2023 November Release
 	Also new in this release is an implementation of "CCD1" in neomgr. This stands for "Common Content Descriptor 1", and is a potential standard for the public class of an installed plugin. When a plugin is enabled and supports CCD1, the user will be capable of seeing extended info about the plugin, and even managing settings directly in the manager itself.
 	
 	All together, this is the most useable state Neoloader has ever been, and will be a massive leap in its potential appeal to new users. 
+	
+	
+	
+Neoloader 2023 November Release 6.0.1
+	
+	Neoloader Changes
+		major:	6
+		minor:	0
+		patch:	1
+		
+		CHANGED	default state of "Compatibility" plugins no longer frozen unless specifically declared so in their INI
+		CHANGED	Authentication key is now passed during lib.activate to the current manager, instead of post-loading
+		CHANGED config_override.ini is better commented
+		CHANGED command scrubbing updated based on VO 1.8.668 command set
+		FIXED	setup segfault when "Show advanced" clicked more than once
+		FIXED	New registry and Plugin failure notifications
+		FIXED	Recovery system no longer blocks keybinds
+		FIXED	startup command running too early after setup, showing only partial new registrations
+		DEPREC	num_dependents no longer neccessary in INI files
+		
+	neomgr changes
+		
+		NEW 	"debug" setting in neomgr's SCM
+		NEW 	inactive tabs are darkened
+		CHANGED New plugins are better represented and state correctly labeled
+		CHANGED	loadstate toggle is now a toggle element, not a button
+		CHANGED	Apply pending changes button has been moved, and hides if all pending actions are canceled
+		CHANGED	alignment and sizing of plugin manager
+		CHANGED	load positions hidden by default
+		FIXED	CCD1 slider element wasn't created correctly
+		
+	neo_notif changes
+		
+		NEW 	image scale setting for notifications
+		NEW 	class.get_scale() returns current size
+		
+	Almost all of these changes were suggested by Draugath, or were related to things he pointed out. 
