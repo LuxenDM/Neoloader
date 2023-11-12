@@ -583,31 +583,26 @@ local diag_constructor = function()
 			end,
 		}
 		
-		local load_toggle = iup.stationbutton {
+		local load_toggle = iup.stationtoggle {
 			title = bstr(9, "Not loaded"),
+			value = "OFF",
 			action = function(self)
 				apply_flag = true
-					--[[
-					apply_actions[cur_sel_str()] = index of apply_actions
-					apply_actions[index] = {
-						id,
-						ver
-						state
-					}
-					]]--
+				
 				if apply_actions[cur_sel_str()] then
-					cp("removing " .. cur_sel_str())
+					--Cancel load state toggle
 					local index = apply_actions[cur_sel_str()]
-						--index to clear
+						--index to be cleared
 					table.remove(apply_actions, index)
 						--remove application details
-					apply_actions[cur_sel_str()] = nil
+					apply_actions[cur_select()] = nil
 						--remove pointer index in table
 					local data = pluginlist[pluginlist[cur_sel_str()]]
 					
-					self.title = data.load == "YES" and bstr(10, "Loaded") or bstr(9, "Not Loaded")
+					self.title = data.load == "YES" and bstr(10, "Loaded"), or bstr(9, "Not Loaded")
 					iup.Refresh(self)
 				else
+					--queue load state toggle
 					local index = pluginlist[cur_sel_str()]
 						--index to grab
 					local data = pluginlist[index]
@@ -627,7 +622,7 @@ local diag_constructor = function()
 					self.title = data.load == "YES" and bstr(12, "Will not load") or bstr(11, "Will load")
 					iup.Refresh(self)
 				end
-			end,
+			end,	
 		}
 		
 		local name_view = iup.label {
@@ -697,11 +692,13 @@ local diag_constructor = function()
 			end
 			
 			load_toggle.title = load_status[data.current_state] or "???"
+			load_toggle.value = data.current_state > 2 and "ON" or "OFF"
 			load_toggle.state = data.next_state or data.current_state or -1
 				--what was this again?
 			
 			if apply_actions[cur_sel_str()] then
 				load_toggle.title = data.load == "YES" and bstr(12, "Will not load") or bstr(11, "Will load")
+				load_toggle.value = data.load == "YES" and "OFF" or "NO"
 			end
 			
 			name_view.title = data.plugin_name
@@ -1488,37 +1485,64 @@ local diag_constructor = function()
 		config_panel,
 		value = modlist_panel,
 	}
-	local tabs_view = iup.hbox {
+	local tabs_reset_color
+	local tabs_container = {
 		iup.stationbutton {
 			title = bstr(57, "Manage installed mods"),
+			bgcolor = "255 255 255",
 			expand = "HORIZONTAL",
-			action = function()
+			size = "x" .. button_scalar(),
+			action = function(self)
+				tabs_reset_color()
 				panel_view.value = modlist_panel
+				self.bgcolor = "255 255 255"
 			end,
 		},
 		iup.stationbutton {
 			title = bstr(55, "View notifications"),
+			bgcolor = "150 150 150",
 			expand = "HORIZONTAL",
-			action = function()
+			size = "x" .. button_scalar(),
+			action = function(self)
+				tabs_reset_color()
 				notif_panel:ctl_update()
 				panel_view.value = notif_panel
+				self.bgcolor = "255 255 255"
 			end,
 		},
 		iup.stationbutton {
 			title = bstr(58, "View log"),
+			bgcolor = "150 150 150",
 			expand = "HORIZONTAL",
-			action = function()
+			size = "x" .. button_scalar(),
+			action = function(self)
+				tabs_reset_color()
 				panel_view.value = logview_panel
+				self.bgcolor = "255 255 255"
 			end,
 		},
 		iup.stationbutton {
 			title = bstr(47, "Configure Neoloader"),
+			bgcolor = "150 150 150",
 			expand = "HORIZONTAL",
-			action = function()
+			size = "x" .. button_scalar(),
+			action = function(self)
+				tabs_reset_color()
 				panel_view.value = config_panel
+				self.bgcolor = "255 255 255"
 			end,
 		},
 	}
+	tabs_reset_color = function()
+		for i, v in ipairs(tabs_container) do
+			v.bgcolor = "150 150 150"
+		end
+	end
+	
+	local tabs_view = iup.hbox {}
+	for i, v in ipairs(tabs_container) do
+		tabs_view:append(v)
+	end
 	
 	local close_button = iup.stationbutton {
 		title = bstr(7, "Close"),
