@@ -462,6 +462,7 @@ function lib.build_ini(iniFilePointer)
 		return false, "ini file path not a string"
 	end
 	local ifp = iniFilePointer --less typing
+	lib.log_error("Building INI " .. ifp, 0)
 	local getstr = gkini.ReadString2
 	local getint = gkini.ReadInt2
 	
@@ -496,14 +497,19 @@ function lib.build_ini(iniFilePointer)
 		local pluginpath = getstr("modreg", "path", "", ifp)
 		local pluginfolderpath = string.sub(iniFilePointer, 1, string.find(iniFilePointer, "/[^/]*$"))
 		
-		local dependents = {}
-		if getint("dependency", "num_dependents", 0, ifp) > 0 then
-			for i=1, getint("dependency", "num_dependents", 0, ifp) do
-				table.insert(dependents, {
-					name = getstr("dependency", "depid" .. tostring(i), "null", ifp),
-					version = getstr("dependency", "depvs" .. tostring(i), "0", ifp),
-					ver_max = getstr("dependency", "depmx" .. tostring(i), "~", ifp),
-				})
+		local plugin_dependencies = {}
+		local counter = 0
+		while true do
+			counter = counter + 1
+			local next_dep = {
+				name = getstr("dependency", "depid" .. tostring(counter), "null", ifp),
+				version = getstr("dependency", "depvs" .. tostring(counter), "0", ifp),
+				ver_max = getstr("dependency", "depmx" .. tostring(counter), "~", ifp),
+			}
+			if next_dep.name == "null" then
+				break
+			else
+				table.insert(plugin_dependencies, next_dep)
 			end
 		end
 		
@@ -516,7 +522,7 @@ function lib.build_ini(iniFilePointer)
 			plugin_link = website,
 			plugin_path = pluginpath,
 			plugin_folder = pluginfolderpath,
-			plugin_dependencies = dependents,
+			plugin_dependencies = plugin_dependencies,
 			plugin_regpath = iniFilePointer,
 		}
 		return converted_dep_tables[iniFilePointer]
