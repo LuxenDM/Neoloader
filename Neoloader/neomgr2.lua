@@ -600,6 +600,11 @@ local diag_constructor = function()
 					local data = pluginlist[pluginlist[cur_sel_str()]]
 					
 					self.title = data.load == "YES" and bstr(10, "Loaded") or bstr(9, "Not Loaded")
+					
+					if data.current_state == -1 then
+						self.title = data.load == "YES" and bstr(11, "Will load") or bstr(12, "Will Not load")
+					end
+					
 					iup.Refresh(self)
 				else
 					--queue load state toggle
@@ -619,6 +624,11 @@ local diag_constructor = function()
 						--index pointer to data
 					
 					self.title = data.load == "YES" and bstr(12, "Will not load") or bstr(11, "Will load")
+					
+					if data.current_state == -1 then
+						self.title = data.load == "YES" and bstr(12, "Will Not load") or bstr(11, "Will load")
+					end
+					
 					iup.Refresh(self)
 				end
 				
@@ -682,7 +692,7 @@ local diag_constructor = function()
 			local data = pluginlist[index]
 			
 			local load_status = {
-				[-1] = bstr(63, "Will not load"), --newly registered
+				[-1] = bstr(12, "Will Not Load"), --newly registered
 				[0] = bstr(9, "Not loaded"),
 				[1] = bstr(18, "Cannot load"),--missing dep
 				[2] = bstr(18, "Cannot load"),--failed/error
@@ -690,13 +700,17 @@ local diag_constructor = function()
 			}
 			
 			if lib.lme_get_config("defaultLoadState") == "YES" then
-				load_status[-1] = "Will load"
+				load_status[-1] = bstr(11, "Will load")
 			end
 			
 			load_toggle.title = load_status[data.current_state] or "???"
 			load_toggle.value = data.current_state > 2 and "ON" or "OFF"
 			load_toggle.state = data.next_state or data.current_state or -1
 				--what was this again?
+			
+			if (load_status[-1] == bstr(11, "Will load")) and (data.current_state == -1) then
+				load_toggle.value = "ON"
+			end
 			
 			if apply_actions[cur_sel_str()] then
 				load_toggle.title = data.load == "YES" and bstr(12, "Will not load") or bstr(11, "Will load")
