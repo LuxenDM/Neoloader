@@ -413,6 +413,8 @@ Neoloader 2023 November Release 6.0.1
 		minor:	0
 		patch:	1
 		
+		NEW 	option to enable neomgr if it is disabled and no manager is loaded using the /neo command
+		NEW 	Recovery option to enable neomgr if it is set as "not loaded"
 		CHANGED	default state of "Compatibility" plugins no longer frozen unless specifically declared so in their INI
 		CHANGED	Authentication key is now passed during lib.activate to the current manager, instead of post-loading
 		CHANGED config_override.ini is better commented
@@ -440,3 +442,9 @@ Neoloader 2023 November Release 6.0.1
 		NEW 	class.get_scale() returns current size
 		
 	Almost all of these changes were suggested by Draugath, or were related to things he pointed out. 
+	
+	Also discovered is that there's a very unusual "Ghosting" of plugins occuring; if you disable a plugin but it had a command registered, in certain circumstances the old "sandbox" and plugin(s) were still accessible via that command. This became a HUGE issue with neomgr; if you disabled it, Neoloader would not overwrite the /neo command, and so this ghost of neomgr would still launch, unable to affect anything in the current sandbox at all. 
+	
+	At this time, I have >NO< idea why this is a thing, and can only try to catch it by killing commands that don't get overwritten during reloads. Neoloader now does several things to try an recover neomgr when no management interface is loaded, specifically to prevent this. Investigations are ongoing!
+	
+	It should be noted that this is exactly what the "Command Clearing" option was created for, and then deprecated since it appeared to be fixed. The "zcom" file, which holds what appears to be every game command, has been updated to include things shown by /showcommands. At some point, this will be further revisited to limit what commands get cleared. However, while this will remain an option, even after the update it will not be enabled by default, as it can be more destructive than ghosted plugins.
