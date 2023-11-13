@@ -1483,7 +1483,9 @@ do
 		"init.lua",
 		"init.lua.version",
 		"main.lua",
+		"recovery.lua",
 		"setup.lua",
+		"unins.lua",
 		"zcom.lua",
 	} do
 		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
@@ -1496,6 +1498,8 @@ do
 		"config_override.ini",
 		"neomgr.ini",
 		"neomgr2.lua",
+		"neo_notif.ini",
+		"neo_notif.lua",
 	} do
 		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
 			lib.log_error("Optional file missing from Neoloader: " .. filepath, 2)
@@ -1535,9 +1539,8 @@ if neo.init ~= neo.API then
 	lib.log_error("If Neoloader becomes unstable, use the recovery environment to uninstall, then reinstall!")
 end
 
-RegisterUserCommand("neodelete", function()
-	gkini.WriteString("Neoloader", "STOP", "recovery")
-	ReloadInterface()
+RegisterUserCommand("neo", function()
+	print("\127FFFFFF" .. tprint("neoerrinit_1", "Neoloader failed to initialize a management interface and failed to handle the error too. You can use") .. " \127FFFF00/recovery\127FFFFFF " .. tprint("neoerrinit_2", "to open the LME recovery environment"))
 end)
 
 
@@ -1753,17 +1756,25 @@ if lib.is_ready(neo.current_mgr) == false then
 	--if the manager isn't found, try the bundled version
 	if lib.is_ready("neomgr") == true then
 		lib.log_error("The last management interface for Neoloader was not found; the bundled manager was loaded instead.", 3)
-		neo.current_mgr = "neomgr"
-	else
-		lib.log_error("The last management interface for Neoloader was not found, and bundled manager is not available for use.", 4)
-		print("Neoloader failed to find an installed and enabled management interface; use /neomgr to force the bundled interface tool to load")
-		RegisterUserCommand("neomgr", function()
-			UnregisterUserCommand("neomgr")
+		lib.lme_configure("current_mgr", "neomgr", mgr_key)
+	elseif lib.is_exist("neomgr") then
+		lib.log_error("The last management interface for Neoloader was not found, and bundled manager is currently disabled!", 4)
+		print(tprint("neoerr_rec1", "Neoloader failed to find an installed and enabled management interface; use /neo to force the bundled interface tool to load"))
+		RegisterUserCommand("neo", function()
 			lib.set_load(mgr_key, "neomgr", "0", "YES")
+			lib.lme_configure("current_mgr", "neomgr", mgr_key)
+			lib.reload()
+		end)
+	else
+		lib.log_error("The last management interface for Neoloader was not found, and -nothing- was not found!", 4)
+		print(tprint("neoerr_recsolve", "Neoloader failed to find a management interface; use /neo to open the recovery environment"))
+		RegisterUserCommand("neo", function()
+			gkini.WriteString("Neoloader", "STOP", "recovery")
 			lib.reload()
 		end)
 	end
 end
+
 if lib.is_ready(neo.current_mgr) == true then
 	local cur_version = lib.get_latest(neo.current_mgr)
 	
