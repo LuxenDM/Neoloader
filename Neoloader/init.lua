@@ -462,7 +462,7 @@ function lib.build_ini(iniFilePointer)
 		return false, "ini file path not a string"
 	end
 	local ifp = iniFilePointer --less typing
-	lib.log_error("Building INI " .. ifp, 0)
+	lib.log_error("	Building INI " .. ifp, 1)
 	local getstr = gkini.ReadString2
 	local getint = gkini.ReadInt2
 	
@@ -1569,6 +1569,7 @@ do --init process
 	timestat_step = gk_get_microsecond()
 	--Init Stage 1: Loop through config.ini and find all registered plugins
 	local counter = 0
+	lib.log_error("Now searching config.ini for registered plugins...", 2)
 	while true do
 		--this loop repeats until an invalid file entry is recieved from Neo-registry in config.ini
 		counter = counter + 1
@@ -1585,8 +1586,8 @@ do --init process
 		local valid = gkini.ReadString2("modreg", "id", "null", file)
 		if valid == "null" then
 			--this file doesn't exist, or isn't meant to be a plugin package descriptor; we'll skip this entry.
-			lib.log_error("The plugin at position " .. tostring(counter) .. " appears broken or missing, and will not load!", 1)
-			lib.log_error("the file being accessed is " .. file, 1)
+			lib.log_error("	The plugin at position " .. tostring(counter) .. " appears broken or missing, and will not load!", 1)
+			lib.log_error("	the file being accessed is " .. file, 1)
 			--we need to increment the "number_plugins_registered" value here because otherwise new registrations will overwrite EXISTING entries in config.ini!!!
 			neo.number_plugins_registered = neo.number_plugins_registered + 1
 		else
@@ -1603,10 +1604,11 @@ do --init process
 		local id, version = silent_register(v)
 		if id == false then
 			--this plugin failed for some reason
-			lib.log_error("failed to create registry entry for " .. v, 3)
+			lib.log_error("	failed to create registry entry for " .. v, 3)
 		else
 			--the plugin's INI built and was added; now we see if it needs to be loaded
 			local loadstate = gkreadstr("Neo-pluginstate", id .. "." .. version, "NO")
+			lib.log_error("	load state for " .. id .. " v" .. version .. ": " .. loadstate, 1)
 			if valid_states[loadstate] == true then
 				table.insert(validqueue, {id, version})
 				if loadstate ~= "YES" then
@@ -1672,7 +1674,7 @@ do --init process
 	else
 		--the if-manager set to load doesn't exist; we need to launch the default interface
 		if neo.current_if == "vo-if" then
-			lib.log_error("Now loading the default interface for Vendetta Online...")
+			lib.log_error("Now loading the default interface for Vendetta Online...", 2)
 			dofile("vo/if.lua")
 		else
 			lib.log_error("Your interface does not exist or is not set to load; DefaultUI will be launched", 2)
@@ -1681,7 +1683,7 @@ do --init process
 	end
 	
 	if neo.listPresorted == "YES" then
-		lib.log_error("WARNING! Config.ini claims to be presorted by an external application; dependency load ordering has been skipped!", 3)
+		lib.log_error("Config.ini claims to be presorted by an external application; dependency load ordering has been skipped!", 3)
 	end
 	
 	for k, v in ipairs(valid_copy) do
