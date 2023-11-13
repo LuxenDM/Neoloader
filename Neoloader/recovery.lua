@@ -311,6 +311,20 @@ local create_recovery_diag = function()
 		},
 	}
 	
+	if gkini.ReadString("Neo-pluginstate", "neomgr.2.0.0", "YES") == "NO" then
+		cp("neomgr not enabled")
+		table.insert(recovery_options, 3, {
+			action = "Re-enable neomgr",
+			descrip = "neomgr is a lightweight interface for managing Neoloader, but it appears to be disabled currently! Click here to enable it",
+			lua = function()
+				gkini.WriteString("Neo-pluginstate", "neomgr.2.0.0", "YES")
+				ReloadInterface()
+			end,
+		})
+	else
+		cp("neomgr active")
+	end
+	
 	for k, v in ipairs(recovery_options) do
 		local option_button = iup.frame {
 			iup.hbox {
