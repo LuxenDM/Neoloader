@@ -147,9 +147,20 @@ end
 
 
 
-
+local ghost_check = false
 
 local diag_constructor = function()
+	
+	if ghost_check then
+		print("WOAH THATS A GHOST!")
+		--[[
+			For some reason, if the user disables neomgr and reloads, a ghost of it will remain and can be accessed with bound commands. The garbage collector is failing to clean up ANYTHING when this occurs. Why is this happening? Not a clue!
+		]]--
+		gkini.WriteString("Neoloader", "STOP", "recovery")
+		auth_key = nil
+		lib.reload()
+		return
+	end
 	
 	local function create_subdlg(ctrl)
 		
@@ -574,6 +585,7 @@ local diag_constructor = function()
 							cp("dependencies resolved")
 						end
 					end
+					ghost_check = true
 					lib.reload()
 				end
 				if auth_key then
@@ -585,7 +597,7 @@ local diag_constructor = function()
 		}
 		
 		local load_toggle = iup.stationtoggle {
-			title = bstr(9, "Not loaded"),
+			title = bstr(68, "Enabled"),
 			value = "OFF",
 			action = function(self)
 				
@@ -598,8 +610,6 @@ local diag_constructor = function()
 					apply_actions[cur_sel_str()] = nil
 						--remove pointer index in table
 					local data = pluginlist[pluginlist[cur_sel_str()]]
-					
-					self.title = data.load == "YES" and bstr(10, "Loaded") or bstr(9, "Not Loaded")
 					
 					if data.current_state == -1 then
 						self.title = data.load == "YES" and bstr(11, "Will load") or bstr(12, "Will Not load")
@@ -622,12 +632,6 @@ local diag_constructor = function()
 					apply_actions[cur_sel_str()] = #apply_actions
 					cp("apply: " .. data.plugin_id .. " v" .. data.plugin_version .. " >> " .. (data.load == "NO" and "YES" or "NO"))
 						--index pointer to data
-					
-					self.title = data.load == "YES" and bstr(12, "Will not load") or bstr(11, "Will load")
-					
-					if data.current_state == -1 then
-						self.title = data.load == "YES" and bstr(12, "Will Not load") or bstr(11, "Will load")
-					end
 					
 					iup.Refresh(self)
 				end
@@ -693,7 +697,7 @@ local diag_constructor = function()
 			
 			local load_status = {
 				[-1] = bstr(12, "Will Not Load"), --newly registered
-				[0] = bstr(9, "Not loaded"),
+				[0] = bstr(9, "Disabled"),
 				[1] = bstr(18, "Cannot load"),--missing dep
 				[2] = bstr(18, "Cannot load"),--failed/error
 				[3] = bstr(10, "Loaded"),
@@ -703,18 +707,22 @@ local diag_constructor = function()
 				load_status[-1] = bstr(11, "Will load")
 			end
 			
-			load_toggle.title = load_status[data.current_state] or "???"
-			load_toggle.value = data.current_state > 2 and "ON" or "OFF"
+			load_toggle.value = data.load == "YES" and "ON" or "OFF"
 			load_toggle.state = data.next_state or data.current_state or -1
 				--what was this again?
 			
-			if (load_status[-1] == bstr(11, "Will load")) and (data.current_state == -1) then
-				load_toggle.value = "ON"
+			if apply_actions[cur_sel_str()] then
+				--there is a pending action for this plugin, so inverse
+				load_toggle.value = data.load == "YES" and "OFF" or "NO"
 			end
 			
-			if apply_actions[cur_sel_str()] then
-				load_toggle.title = data.load == "YES" and bstr(12, "Will not load") or bstr(11, "Will load")
-				load_toggle.value = data.load == "YES" and "OFF" or "NO"
+			if (load_status[-1] == bstr(11, "Will load")) and (data.current_state == -1) then
+				--this is a "NEW" plugin and auto-enable is set
+				load_toggle.value = "ON"
+				if apply_actions[cur_sel_str()] then
+					--but there's an action, so disable
+					load_toggle.value = "OFF"
+				end
 			end
 			
 			name_view.title = data.plugin_name
@@ -732,6 +740,46 @@ local diag_constructor = function()
 				general_config.visible = type(class.config) == "function" and "YES" or "NO"
 				desc_readout.value = type(class.description) == "string" and class.description or ""
 				desc_readout.caret = 0
+			end
+			
+			if desc_readout.value == "" then
+				--no plugin description, so fill in with working details
+				if data.current_state == 3 then
+					--loaded
+					desc_readout.value = bstr(70, "This plugin has loaded successfully")
+				elseif data.current_state == 2 then
+					--cannot load, failure/error
+					local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
+					local log_display = bstr(71, "This plugin failed to load") .. "!" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table)
+					desc_readout.value = log_display
+				elseif data.current_state == 1 then
+					--cannot load, missing dependency
+					local dep_table = lib.get_state(data.plugin_id, data.plugin_version).plugin_dependencies
+					local log_display = bstr(72, "This plugin has unfulfilled dependencies") .. ": "
+					for k, v in ipairs(dep_table) do
+						log_display = log_display .. "\n	" .. (v.name or "???") .. " " .. ((v.version == "0" and bstr(73, "any version")) or "v" .. (v.version or "???")) .. " >> "
+						if lib.is_exist(v.name, v.version) then
+							if lib.get_state(v.name, v.version).load == "YES" then
+								if lib.get_state(v.name, v.version).complete then
+									log_display = log_display .. bstr(70, "This plugin is enabled and loaded successfully")
+								else
+									log_display = log_display .. bstr(74, "This plugin is enabled but never finished loading; check for errors") .. "!"
+								end
+							else
+								log_display = log_display .. bstr(75, "This plugin is present but disabled")
+							end
+						else
+							log_display = log_display .. bstr(76, "This plugin has not been detected by Neoloader")
+						end
+					end
+					desc_readout.value = log_display
+				elseif data.current_state == 0 then
+					--disabled
+					desc_readout.value = bstr(77, "This plugin is disabled; enable it with the toggle in the top-left")
+				elseif data.current_state == -1 then
+					--new
+					desc_readout.value = bstr(78, "This plugin was just registered! If enabled, it will launch when the game is reloaded.")
+				end
 			end
 			
 			iup.Refresh(iup.GetParent(name_view))
@@ -767,7 +815,7 @@ local diag_constructor = function()
 		local states = {
 			[-1] = bstr(63, "NEW"),
 			['-1'] = "255 0 255",
-			[0] = bstr(19, "NOT LOADED"),
+			[0] = bstr(19, "DISABLED"),
 			['0'] = "255 200 100",
 			[1] = bstr(20, "MISSING DEPENDENCY"),
 			['2'] = "255 0 0",
@@ -1567,6 +1615,7 @@ local diag_constructor = function()
 			local close_action = function()
 				notif_panel.unreg()
 				HideDialog(iup.GetDialog(self))
+				iup.Destroy(iup.GetDialog(self))
 			end
 			
 			if apply_flag and #apply_actions > 0 then
@@ -1642,6 +1691,8 @@ local diag_constructor = function()
 					title = bstr(60, "Reload"),
 					size = "x" .. button_scalar(),
 					action = function(self)
+						HideDialog(iup.GetDialog(self))
+						iup.Destroy(iup.GetDialog(self))
 						lib.reload()
 					end,
 				},
