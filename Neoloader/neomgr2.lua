@@ -152,7 +152,7 @@ local ghost_check = false
 local diag_constructor = function()
 	
 	if ghost_check then
-		print("WOAH THATS A GHOST!")
+		lib.log_error("[CRITICAL ERROR] neomgr detected itself as a ghost! Launching recovery environment; ghosts can't be killed from the sandbox.")
 		--[[
 			For some reason, if the user disables neomgr and reloads, a ghost of it will remain and can be accessed with bound commands. The garbage collector is failing to clean up ANYTHING when this occurs. Why is this happening? Not a clue!
 		]]--
@@ -388,7 +388,7 @@ local diag_constructor = function()
 					size = "200x",
 					value = tostring(data.default),
 					action = function(self)
-						ctable.cb(ref, data)
+						ctable.cb(ref, self.value)
 					end,
 				},
 			}
@@ -747,10 +747,13 @@ local diag_constructor = function()
 				if data.current_state == 3 then
 					--loaded
 					desc_readout.value = bstr(70, "This plugin has loaded successfully")
+					if data.compat_flag == "YES" then
+						desc_readout.value = bstr(79, "This is a 'compatibility' plugin; Neoloader has limited control and insight in the management of this plugin.")
+					end
 				elseif data.current_state == 2 then
 					--cannot load, failure/error
 					local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
-					local log_display = bstr(71, "This plugin failed to load") .. "!" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table)
+					local log_display = bstr(71, "This plugin failed to load") .. "!\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table)
 					desc_readout.value = log_display
 				elseif data.current_state == 1 then
 					--cannot load, missing dependency
@@ -781,6 +784,7 @@ local diag_constructor = function()
 					desc_readout.value = bstr(78, "This plugin was just registered! If enabled, it will launch when the game is reloaded.")
 				end
 			end
+			desc_readout.caret = 0
 			
 			iup.Refresh(iup.GetParent(name_view))
 			
@@ -890,11 +894,22 @@ local diag_constructor = function()
 					},
 					iup.hbox {
 						iup.label {
+							title = "Click to see more information",
+							font = Font.H6,
+							visible = (cur_state > 0 and cur_state < 3) and "YES" or "NO",
+						},
+						iup.label {
 							title = bstr(23, "Authored by") .. " " .. item.plugin_author,
 							fgcolor = "150 150 150",
 							expand = "HORIZONTAL",
 							alignment = "ACENTER",
 							font = Font.H6,
+						},
+						iup.label {
+							--balancing center point of author label
+							title = "Click to see more information",
+							font = Font.H6,
+							visible = "NO",
 						},
 					},
 				},

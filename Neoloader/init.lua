@@ -608,6 +608,7 @@ local function silent_register(iniFilePointer)
 		data.index = #neo.plugin_container
 		data.load_position = load_position_tracker[data.plugin_regpath]
 		data.errors = {}
+		data.complete = false
 		if lib.resolve_dep_table(data.plugin_dependencies) then
 			data.dependencies_met = true
 			--reminder: we do not run plugins on registry; they must be user-activated or during the loading process only.
@@ -836,6 +837,7 @@ function lib.activate_plugin(id, version, verify_key)
 		end
 	else
 		modreg.complete = true
+		modreg.compat = true
 		lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)", 1)
 		
 		local freeze_key = lib.plugin_read_str(id, version, "modreg", "")
@@ -926,6 +928,7 @@ function lib.get_state(name, version)
 			plugin_dependencies = ref.plugin_dependencies,
 			
 			plugin_is_new = ref.new_entry,
+			compat_flag = ref.compat and "YES" or "NO"
 		}
 	end
 	
@@ -1278,7 +1281,7 @@ function lib.request_auth(name, callback)
 end
 
 function lib.get_whole_ver(semverstr)
-    if err_han(type(semverstr) ~= "string", "lib.get_whole_ver() expects a string input!") then
+	if err_han(type(semverstr) ~= "string", "lib.get_whole_ver() expects a string input!") then
 		return false
 	end
 
@@ -1450,6 +1453,53 @@ function lib.pass_ini_identifier(id, ver)
 	else
 		return id, ver
 	end
+end
+
+function lib.update_state(id, ver, state_data)
+	id, ver = lib.pass_ini_identifier(id, ver)
+	ver = tostring(ver or 0)
+	if ver == "0" then
+		ver = lib.get_latest(id)
+	end
+	if not lib.is_exist(id, ver) then
+		return false
+	end
+	
+	if err_han(type(state_data) ~= "table", "lib.update_state() expects a table input!") then
+		return false, "invalid input"
+	end
+	
+	local ref = neo.plugin_registry[id .. "." .. ver]
+	
+	lib.log_error("State update for " .. id .. " v" .. ver)
+	for k, v in pairs {
+		complete = "complete",
+		name = "plugin_name",
+		link = "plugin_link",
+		plugin_name = "plugin_name",
+		plugin_link = "plugin_link",
+		--made as a table for future possible "state" updates
+	} do
+		if k == "complete" and ref[k] == false then
+			lib.log_error("	state 'complete' >> Cannot be changed from false!", 1)
+		else
+			if state_data[k] ~= nil then
+				if type(state_data[k]) == type(ref[k]) then
+					lib.log_error("	state '" .. tostring(k) .. "' >> " .. tostring(state_data[k]))
+					ref[k] = state_data[k]
+					if k == "complete" then
+						lib.log_error("Plugin encountered an error and triggered its own failure state.", 3, id, ver)
+						lib.log_error("	stated error: " .. tostring(state_data.err_details or "no passed message"), 3, id, ver)
+					end
+				else
+					lib.log_error("	state '" .. tostring(k) .. "' failed to change to >> " .. tostring(state_data[k]) .. " type of " .. type(state_data[k]))
+					lib.log_error("	state was " .. tostring(ref[k]))
+				end
+			end
+		end
+	end
+	
+	neo.plugin_registry[id .. "." .. ver] = ref
 end
 
 
