@@ -821,10 +821,10 @@ local diag_constructor = function()
 			['-1'] = "255 0 255",
 			[0] = bstr(19, "NOT ENABLED"),
 			['0'] = "255 200 100",
-			[1] = bstr(20, "ERROR DURING LOADING"), --missing dep
+			[1] = bstr(21, "ERROR DURING LOADING"), --load failure
+			['1'] = "255 0 0",
+			[2] = bstr(20, "ERROR DURING LOADING"), --missing dep
 			['2'] = "255 0 0",
-			[2] = bstr(21, "ERROR DURING LOADING"), --load failure
-			['3'] = "255 0 0",
 			[3] = bstr(22, "LOADED"),
 			['3'] = "100 255 100",
 		}
