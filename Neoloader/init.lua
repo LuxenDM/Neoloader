@@ -105,7 +105,7 @@ neo = {
 	allowBadAPIVersion = gkreadstr("Neoloader", "rAllowBadAPIVersion", "YES"),
 	--initLoopTimeout = gkreadint("Neoloader", "iInitLoopTimeout", 0),
 	echoLogging = gkreadstr("Neoloader", "rEchoLogging", "YES"),
-	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "NO"),
+	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "YES"),
 	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "NO"),
 	protectResolveFile = gkreadstr("Neoloader", "rProtectResolveFile", "YES"),
 	listPresorted = gkini.ReadString("Neoloader", "rPresortedList", "NO"),
@@ -309,7 +309,7 @@ function lib.log_error(msg, alert, id, version)
 			status = i == alert and v or status
 		end
 		
-		val = "[" .. os.date() .. "." .. tostring(gk_get_microsecond()) .. "] [" .. status .. "] " .. val .. "\127FFFFFF"
+		val = "[" .. os.date() .. "." .. tostring(gk_get_microsecond() % 10000) .. "] [" .. status .. "] " .. val .. "\127FFFFFF"
 	end
 	if neo.echoLogging == "YES" then
 		console_print(filter_colorcodes(val))
@@ -447,7 +447,16 @@ function lib.resolve_file(file, ...)
 	
 	if file_loaded then
 		if neo.protectResolveFile == "YES" then
-			return pcall(file_loaded)
+			local status, err = pcall(file_loaded)
+			
+			if not status then
+				lib.log_error("unable to resolve file: pcall caught an error during execution!", 3)
+				lib.log_error("	" .. tostring(err), 3)
+				lib.log_error(debug.traceback("	trace up to lib.resolve_file():", 1))
+				lib.log_error("		!If you are debugging a plugin, make sure to turn off execution protection!", 1)
+			end
+			
+			return status, err
 		else
 			return true, file_loaded()
 		end
@@ -1490,6 +1499,7 @@ function lib.update_state(id, ver, state_data)
 					if k == "complete" then
 						lib.log_error("Plugin encountered an error and triggered its own failure state.", 3, id, ver)
 						lib.log_error("	stated error: " .. tostring(state_data.err_details or "no passed message"), 3, id, ver)
+						lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = ver, error_string = tostring(state_data.err_details or "self triggered error with no passed error message")})
 					end
 				else
 					lib.log_error("	state '" .. tostring(k) .. "' failed to change to >> " .. tostring(state_data[k]) .. " type of " .. type(state_data[k]))
