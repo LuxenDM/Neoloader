@@ -452,8 +452,8 @@ function lib.resolve_file(file, ...)
 			if not status then
 				lib.log_error("unable to resolve file: pcall caught an error during execution!", 3)
 				lib.log_error("	" .. tostring(err), 3)
-				lib.log_error(debug.traceback("	trace up to lib.resolve_file():", 1))
-				lib.log_error("		!If you are debugging a plugin, make sure to turn off execution protection!", 1)
+				lib.log_error(debug.traceback("	trace up to lib.resolve_file():"), 1)
+				lib.log_error("		If you are a plugin developer, try turning off execution protection!", 1)
 			end
 			
 			return status, err
@@ -523,6 +523,7 @@ function lib.build_ini(iniFilePointer)
 		end
 		
 		converted_dep_tables[iniFilePointer] = {
+			compat = pluginpath == "" and "YES" or "NO",
 			plugin_id = id,
 			plugin_type = plugintype,
 			plugin_name = name,
@@ -817,51 +818,44 @@ function lib.activate_plugin(id, version, verify_key)
 	end
 
 	local modreg = neo.plugin_registry[plugin_id]
+	
+	if not valid_load_states[lib.get_state(id, version).load] then
+		lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!", 1)
+		return false, "load state is NO"
+	end
+	
+	if modreg.compat == "YES" then
+		modreg.complete = true
+		lib.log_error(plugin_id .. " is a compatibility plugin; empty container created successfully! The default loader will launch it soon.", 1)
+		neo.plugin_registry[plugin_id] = modreg
+		ProcessEvent("COMPAT_PLUGIN_ACTIVATED")
+		return
+	end
+	
 	if not (lib.resolve_dep_table(modreg.plugin_dependencies) or modreg.flag == "FORCE") then
 		lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
 		return false, "unmatched dependencies"
 	end
 
-	if not valid_load_states[lib.get_state(id, version).load] then
-		lib.log_error("Attempted to activate " .. plugin_id .. " but it's load state is 'NO'!", 1)
-		return false, "load state is NO"
+	
+	
+	local status, err = lib.resolve_file(modreg.plugin_path, nil, modreg.plugin_folder)
+	if not status then
+		lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
+		lib.log_error("		error message: " .. tostring(err), 3, id, version)
+		lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = version, error_string = tostring(err)})
+		return false, "failed to activate, " .. err or "?"
 	end
 
-	if modreg.plugin_path ~= "" then
-		local status, err = lib.resolve_file(modreg.plugin_path, nil, modreg.plugin_folder)
-		if not status then
-			lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3)
-			lib.log_error("		error message: " .. tostring(err), 3, id, version)
-			lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = version, error_string = tostring(err)})
-			return false, "failed to activate, " .. err or "?"
-		end
-
-		modreg.complete = true
-		lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!", 2)
-		lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1, id, version)
-		if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
-			if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
-				lib.check_queue()
-			end
-		end
-	else
-		modreg.complete = true
-		modreg.compat = true
-		lib.log_error("Plugin " .. plugin_id .. " has no file to activate (compatibility plugin?)", 1)
-		
-		local freeze_key = lib.plugin_read_str(id, version, "modreg", "")
-		
-		if freeze_key ~= "" then
-			lib.log_error("	Plugin has a freeze key declared", 1, id, version)
-			lib.set_waiting(id, version, "YES", freeze_key)
-		
-			RegisterEvent(function()
-				lib.set_waiting(id, version, "NO", freeze_key)
-			end, "PLUGINS_LOADED")
-			
-			--don't check queue; mod was frozen.
+	modreg.complete = true
+	lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader!", 2)
+	lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1, id, version)
+	if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
+		if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
+			lib.check_queue()
 		end
 	end
+	
 	if modreg.flag == "AUTH" or id == neo.current_mgr then
 		lib.execute(id, version, "auth_key_receiver", mgr_key)
 	end
@@ -937,7 +931,7 @@ function lib.get_state(name, version)
 			plugin_dependencies = ref.plugin_dependencies,
 			
 			plugin_is_new = ref.new_entry,
-			compat_flag = ref.compat and "YES" or "NO"
+			compat_flag = ref.compat
 		}
 	end
 	
