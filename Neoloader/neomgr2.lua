@@ -653,7 +653,7 @@ local diag_constructor = function()
 		local desc_readout = iup.multiline {
 			readonly = "YES",
 			value = "",
-			size = "x%10",
+			size = "x%15",
 			expand = "HORIZONTAL",
 		}
 		
@@ -792,7 +792,18 @@ local diag_constructor = function()
 							log_display = log_display .. bstr(75, "This plugin is present but not enabled")
 						end
 					else
-						log_display = log_display .. bstr(76, "This plugin has not been detected by Neoloader")
+						if lib.is_exist(v.name) then
+							local ver_table = lib.get_state(v.name, "0").versions
+							log_display = log_display .. bstr(84, "This specific version is not available")
+							if type(ver_table) == "table" then
+								log_display = log_display .. "\n		" .. bstr(85, "The versions available are") .. " v" .. table.concat(ver_table, ", v")
+							else
+								log_display = log_display .. "\n		" .. "version table error"
+								lib.log_error("neomgr couldn't obtain the total versions table!", 4)
+							end
+						else
+							log_display = log_display .. bstr(76, "This plugin has not been detected by Neoloader")
+						end
 					end
 				end
 			end
@@ -800,7 +811,7 @@ local diag_constructor = function()
 			
 			local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
 			if #log_table > 0 then
-				log_display = log_display .. "\n\n" .. bstr(84, "Plugin log") .. ":\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table) .. "\127FFFFFF"
+				log_display = log_display .. "\n\n" .. bstr(86, "Plugin log") .. ":\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table) .. "\127FFFFFF"
 			end
 			
 			
