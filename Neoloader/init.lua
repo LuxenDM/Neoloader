@@ -1664,8 +1664,15 @@ do --init process
 			lib.log_error("	failed to create registry entry for " .. v, 3)
 		else
 			--the plugin's INI built and was added; now we see if it needs to be loaded
-			local loadstate = gkreadstr("Neo-pluginstate", id .. "." .. version, "NO")
-			lib.log_error("	load state for " .. id .. " v" .. version .. ": " .. loadstate, 1, id, version)
+			local loadstate = gkreadstr("Neo-pluginstate", id .. "." .. version, "NEW")
+			if loadstate == "NEW" then
+				lib.log_error("	" .. id .. " v" .. version .. " is new; using default load state " .. neo.defaultLoadState)
+				loadstate = neo.defaultLoadState
+				gkini.WriteString("Neo-pluginstate", id .. "." .. version, neo.defaultLoadState)
+				lib.set_load(mgr_key, id, version, neo.defaultLoadState)
+			else
+				lib.log_error("	load state for " .. id .. " v" .. version .. ": " .. loadstate, 1, id, version)
+			end
 			if valid_states[loadstate] == true then
 				table.insert(validqueue, {id, version})
 				if loadstate ~= "YES" then
@@ -1745,8 +1752,8 @@ do --init process
 	
 	for k, v in ipairs(valid_copy) do
 		local obj = neo.plugin_registry[v[1] .. "." .. v[2]]
-		if (obj.plugin_dependencies == nil) or (#obj.plugin_dependencies == 0) then --no dependencies; this is a root object
-			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to load queue", 2, obj.plugin_id, obj.plugin_version)
+		if obj.compat == "YES" then
+			lib.log_error(obj.plugin_id .. " v" .. obj.plugin_version .. " is a compatibility plugin!", 2, obj.plugin_id, obj.plugin_version)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
@@ -1760,8 +1767,8 @@ do --init process
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
-		elseif obj.compat == "YES" then
-			lib.log_error(obj.plugin_id .. " v" .. obj.plugin_version .. " is a compatibility plugin!", 2, obj.plugin_id, obj.plugin_version)
+		elseif (obj.plugin_dependencies == nil) or (#obj.plugin_dependencies == 0) then --no dependencies; this is a root object
+			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to load queue", 2, obj.plugin_id, obj.plugin_version)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
