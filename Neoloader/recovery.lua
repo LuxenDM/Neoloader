@@ -381,7 +381,7 @@ local create_recovery_diag = function()
 		readonly = "YES",
 		value = "If you see this, then a catastrophic failure occured while your LME or one of its plugins were loading! The options below might help fix your game; it is recommended to try each option top-to-bottom, unless you know what you're doing.",
 		border = "NO",
-	},
+	}
 	
 	RegisterEvent(function()
 		notice_textbox.value = "If you see this, then a catastrophic failure occured during the Default Loader! Your LME loaded successfully, but it cannot track errors during the Default Loader. The options below might help fix your game, but you may need to manage your plugins manually or outright disable them."
