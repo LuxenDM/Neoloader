@@ -6,6 +6,8 @@ Font = {
 	Default = (gkinterface.GetYResolution()/1080) * 24,
 }
 
+local lme_success_flag = false
+
 local dumptable
 local tab_amount = 0
 function dumptable(_t)
@@ -252,7 +254,7 @@ local create_recovery_diag = function()
 		},
 		{
 			action = "Safe LME Settings",
-			descrip = "Safe Settings: Turns off potentially problematic settings in your LME, specifically those intended for debugging LME development. Some LME plugins may be disabled as a result.",
+			descrip = "Safe Settings: Turns off potentially problematic settings in your LME, specifically those intended for debugging LME development. Some LME plugins may be disabled as a result. This won't work if your LME loaded successfully; use your LME interface to change settings instead.",
 			lua = function()
 				gkini.WriteString("Neoloader", "rAllowBadAPIVersion", "NO")
 				gkini.WriteString("Neoloader", "rAllowDelayedLoad", "NO")
@@ -356,16 +358,21 @@ local create_recovery_diag = function()
 		border = "NO",
 	}
 	
-	RegisterEvent(function()
-		notice_textbox.value = "If you see this, then a catastrophic failure occured during the Default Loader! Your LME loaded successfully, but it cannot track errors during the Default Loader. The options below might help fix your game, but you may need to manage your plugins manually or outright disable them."
-		table.remove(recovery_options, 3)
-		table.insert(recovery_options, 0, {
-			action = "Open LME Management Interface",
-			descrip = "Your LME loaded successfully, so you may be able to manage your plugins and settings directly. Select to open your LME's interface. Recovery will remain open in the background.",
-			lua = function()
+	table.insert(recovery_options, 3, {
+		action = "Open LME Management Interface",
+		descrip = "This option will only work if your LME loaded successfully.\nYou may be able to manage your plugins and settings directly. Select to open your LME's interface. Recovery will remain open in the background; LME reload is disabled, so use the reload option below.",
+		lua = function()
+			if lme_success_flag then
 				lib.open_config()
-			end,
-		}
+			else
+				error("Your LME failed to load; unable to open interface!")
+			end
+		end,
+	})
+	
+	RegisterEvent(function()
+		lme_success_flag = true
+		notice_textbox.value = "If you see this, then a catastrophic failure occured during the Default Loader! Your LME loaded successfully, but it cannot track errors during the Default Loader. The options below might help fix your game, but you may need to manage your plugins manually or outright disable them."
 	end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
 	
 	for k, v in ipairs(recovery_options) do
