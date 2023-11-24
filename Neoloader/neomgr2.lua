@@ -653,7 +653,7 @@ local diag_constructor = function()
 		local desc_readout = iup.multiline {
 			readonly = "YES",
 			value = "",
-			size = "x%15",
+			size = config.show_debuginfo == "YES" and "x%15" or "x%10",
 			expand = "HORIZONTAL",
 		}
 		
@@ -746,7 +746,7 @@ local diag_constructor = function()
 			--status messaging
 			if data.current_state == 3 then
 				--loaded
-				log_display = log_display ..  bstr(70, "This plugin has loaded successfully")
+				log_display = log_display .. "\n" .. bstr(70, "This plugin has loaded successfully")
 				if data.compat_flag == "YES" then
 					log_display = log_display .. "\n" .. bstr(79, "This is a 'compatibility' plugin; Neoloader has limited control and insight in the management of this plugin.")
 				end
@@ -767,7 +767,7 @@ local diag_constructor = function()
 			--extended info
 			local dep_table = lib.get_state(data.plugin_id, data.plugin_version).plugin_dependencies
 			
-			if #dep_table > 0 then
+			if (#dep_table > 0) and (config.show_debuginfo == "YES" or data.current_state == 1) then
 				log_display = log_display .. "\n\n" .. bstr(81, "This plugin depends on")
 				
 				for k, v in ipairs(dep_table) do
@@ -810,8 +810,17 @@ local diag_constructor = function()
 			
 			
 			local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
-			if #log_table > 0 then
+			if (#log_table > 0) and (config.show_debuginfo == "YES" or data.current_state == 2) then
 				log_display = log_display .. "\n\n" .. bstr(86, "Plugin log") .. ":\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table) .. "\127FFFFFF"
+			end
+			
+			if data.current_state > 2 and config.show_debuginfo == "YES" then
+				local class = lib.get_class(data.plugin_id, data.plugin_version)
+				local class_report = "\n\nPublic data:"
+				for k, v in pairs(class) do
+					class_report = class_report .. "\n	" .. tostring(k) .. " >> " .. type(v) .. ": " .. tostring(v)
+				end
+				log_display = log_display .. class_report
 			end
 			
 			
@@ -1197,10 +1206,6 @@ local diag_constructor = function()
 				display = bstr(34, "Auto-load newly registered plugins"),
 				default = "NO",
 			},
-			doErrPopup = {
-				display = bstr(35, "Popup standard errors for safely caught LME errors"),
-				default = "NO",
-			},
 			protectResolveFile = {
 				display = bstr(36, "Attempt to catch errors when loading plugins"),
 				default = "YES",
@@ -1224,6 +1229,13 @@ local diag_constructor = function()
 			"dbgIgnoreLevel",
 		}
 		
+		if config.show_debuginfo == "YES" then
+			valid_config.doErrPopup = {
+				display = bstr(35, "Popup standard errors for safely caught LME errors"),
+				default = "NO",
+			}
+		end
+		
 		local ctl = control_list_creator()
 		ctl.expand = "VERTICAL"
 		ctl.size = "%60x"
@@ -1234,11 +1246,7 @@ local diag_constructor = function()
 			local config_being_adjusted = setting_to_edit
 			local rules = valid_config[setting_to_edit]
 			if not rules then
-				return iup.vbox {
-					iup.label {
-						title = "???",
-					},
-				}
+				return iup.vbox {} --invalid or hidden item
 			end
 			
 			cp("rules: " .. spickle(rules))
