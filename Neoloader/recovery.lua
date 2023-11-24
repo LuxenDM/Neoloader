@@ -1,5 +1,6 @@
 print = console_print
 local cp = console_print
+RegisterUserCommand("reload", ReloadInterface)
 
 Font = {
 	Default = (gkinterface.GetYResolution()/1080) * 24,
@@ -250,10 +251,32 @@ local create_recovery_diag = function()
 			end,
 		},
 		{
+			action = "Safe LME Settings",
+			descrip = "Safe Settings: Turns off potentially problematic settings in your LME, specifically those intended for debugging LME development. Some LME plugins may be disabled as a result.",
+			lua = function()
+				gkini.WriteString("Neoloader", "rAllowBadAPIVersion", "NO")
+				gkini.WriteString("Neoloader", "rAllowDelayedLoad", "NO")
+				gkini.WriteString("Neoloader", "rDefaultLoadState", "NO")
+				gkini.WriteString("Neoloader", "rDoErrPopup", "NO")
+				gkini.WriteString("Neoloader", "rProtectResolveFile", "YES")
+				gkini.WriteString("Neoloader", "rPresortedList", "NO")
+				gkini.WriteString("Neoloader", "rClearCommands", "NO")
+				ReloadInterface()
+			end,
+		},
+		{
 			action = "Disable all LME plugins",
 			descrip = "Disable: If one of your plugins loaded by your LME provider is triggering this issue, then disabling that plugin will prevent the buggy code from running.",
 			lua = function()
 				disable_LME_plugins(false)
+				ReloadInterface()
+			end,
+		},
+		{
+			action = "Unregister all LME plugins",
+			descrip = "Unregister: Clears your config of all LME plugins. The same as disabling all, but removes their registration. These plugins may re-register afterwards. If disabling all LME plugins failed, skip this. However, this will clean your config.ini of old registrations that no longer exist.",
+			lua = function()
+				disable_LME_plugins(true)
 				ReloadInterface()
 			end,
 		},
@@ -352,6 +375,18 @@ local create_recovery_diag = function()
 		ctl:add_item(option_button)
 	end
 	
+	local notice_textbox = iup.multiline {
+		size = "x%10",
+		expand = "HORIZONTAL",
+		readonly = "YES",
+		value = "If you see this, then a catastrophic failure occured while your LME or one of its plugins were loading! The options below might help fix your game; it is recommended to try each option top-to-bottom, unless you know what you're doing.",
+		border = "NO",
+	},
+	
+	RegisterEvent(function()
+		notice_textbox.value = "If you see this, then a catastrophic failure occured during the Default Loader! Your LME loaded successfully, but it cannot track errors during the Default Loader. The options below might help fix your game, but you may need to manage your plugins manually or outright disable them."
+	end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
+	
 	local diag = iup.dialog {
 		topmost = "YES",
 		fullscreen = "YES",
@@ -374,13 +409,7 @@ local create_recovery_diag = function()
 				iup.fill {
 					size = Font.Default,
 				},
-				iup.multiline {
-					size = "x%10",
-					expand = "HORIZONTAL",
-					readonly = "YES",
-					value = "If you see this, then a catastrophic failure occured while your LME or one of your plugins were loading! The options below might help fix your game; it is recommended to try each option top-to-bottom, unless you know what you're doing.",
-					border = "NO",
-				},
+				notice_textbox,
 				iup.fill {
 					size = Font.Default,
 				},
