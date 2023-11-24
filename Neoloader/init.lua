@@ -1675,7 +1675,7 @@ do --init process
 				loadstate = neo.defaultLoadState
 				lib.set_load(mgr_key, id, version, neo.defaultLoadState)
 			else
-				lib.log_error("	load state for " .. id .. " v" .. version .. ": " .. loadstate, 1, id, version)
+				lib.log_error("	load state for " .. id .. " v" .. version .. ": " .. loadstate, 1)
 			end
 			if valid_states[loadstate] == true then
 				table.insert(validqueue, {id, version})
@@ -1757,27 +1757,27 @@ do --init process
 	for k, v in ipairs(valid_copy) do
 		local obj = neo.plugin_registry[v[1] .. "." .. v[2]]
 		if obj.compat == "YES" then
-			lib.log_error(obj.plugin_id .. " v" .. obj.plugin_version .. " is a compatibility plugin!", 2, obj.plugin_id, obj.plugin_version)
+			lib.log_error(obj.plugin_id .. " v" .. obj.plugin_version .. " is a compatibility plugin!", 2)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		elseif obj.flag == "FORCE" then
-			lib.log_error("Skipping dependencies for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; development FORCE-load encountered", 3, obj.plugin_id, obj.plugin_version)
+			lib.log_error("Skipping dependencies for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; development FORCE-load encountered", 3)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		elseif neo.listPresorted == "YES" then
-			lib.log_error("Skipped dependency check for " .. obj.plugin_id .. " v" .. obj.plugin_version, 3, obj.plugin_id, obj.plugin_version)
+			lib.log_error("Skipped dependency check for " .. obj.plugin_id .. " v" .. obj.plugin_version, 3)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		elseif (obj.plugin_dependencies == nil) or (#obj.plugin_dependencies == 0) then --no dependencies; this is a root object
-			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to load queue", 2, obj.plugin_id, obj.plugin_version)
+			lib.log_error("No dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version .. "; adding to load queue", 2)
 				table.insert(plugin_table, v)
 				these_are_loaded[v[1] .. "." .. v[2]] = true
 				table.insert(these_are_loaded[1], true)
 		else --There is a dependency
-			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version, 2, obj.plugin_id, obj.plugin_version)
+			lib.log_error("Dependencies found for " .. obj.plugin_id .. " v" .. obj.plugin_version, 2)
 			for k2, v2 in ipairs(obj.plugin_dependencies) do
 				if v2.ver_max == "~" then
 					lib.log_error("		requires " .. v2.name .. " v" .. v2.version, 2)
@@ -1785,7 +1785,7 @@ do --init process
 					lib.log_error("		requires " .. v2.name .. " from v" .. v2.version .. " to v" .. v2.ver_max, 2)
 				end
 			end
-			lib.log_error("Adding " .. obj.plugin_id .. " to the delayed queue", 1, obj.plugin_id, obj.plugin_version)
+			lib.log_error("Adding " .. obj.plugin_id .. " to the delayed queue", 1)
 			lib.require(obj.plugin_dependencies, function()
 				local err_flag, err_detail = lib.activate_plugin(obj.plugin_id, obj.plugin_version, mgr_key)
 				if err_flag == false then
