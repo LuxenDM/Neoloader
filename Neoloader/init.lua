@@ -70,13 +70,12 @@ end
 --This will be local when released
 neo = {
 	version = {
-		strver = "6.0.1",
+		strver = "6.1.0",
 		[1] = 6,
-		[2] = 0,
-		[3] = 1,
+		[2] = 1,
+		[3] = 0,
 		[4] = "",
 	},
-	--notifications = {} <- no longer tracked (nor did it ever get implemented) by Neoloader
 	log = {},
 	error_flag = false, 
 	plugin_registry = {}, --holds registered plugin details [id .. version]; [id].latest will provide version sstring of latest version for redirect
@@ -94,16 +93,15 @@ neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	minor = 10, --lib.pass_ini_identifier, lib.lme_get_config
+	minor = 11, --lib.catch_block() & lib.update_state()
 	patch = 0,
-	lmever = "3.10.0",
+	lmever = "3.11.0",
 	
 	pathlock = false,
 	statelock = false,
 	
 	allowDelayedLoad = gkreadstr("Neoloader", "rAllowDelayedLoad", "NO"),
 	allowBadAPIVersion = gkreadstr("Neoloader", "rAllowBadAPIVersion", "YES"),
-	--initLoopTimeout = gkreadint("Neoloader", "iInitLoopTimeout", 0),
 	echoLogging = gkreadstr("Neoloader", "rEchoLogging", "YES"),
 	defaultLoadState = gkreadstr("Neoloader", "rDefaultLoadState", "YES"),
 	doErrPopup = gkreadstr("Neoloader", "rDoErrPopup", "NO"),
