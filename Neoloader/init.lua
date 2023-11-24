@@ -1499,7 +1499,7 @@ function lib.update_state(id, ver, state_data)
 					lib.log_error("	state '" .. tostring(k) .. "' >> " .. tostring(state_data[k]), 1)
 					ref[k] = state_data[k]
 					if k == "complete" then
-						lib.log_error("Plugin encountered an error and triggered its own failure state.", 3, id, ver)
+						lib.log_error("\127FF0000" .. "Plugin encountered an error and triggered its own failure state.", 3, id, ver)
 						lib.log_error("	stated error: " .. tostring(state_data.err_details or "no passed message"), 3, id, ver)
 						lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = ver, error_string = tostring(state_data.err_details or "self triggered error with no passed error message")})
 					end

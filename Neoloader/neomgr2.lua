@@ -738,7 +738,7 @@ local diag_constructor = function()
 				CCD1_access.visible = class.CCD1 and "YES" or "NO"
 				general_open.visible = type(class.open) == "function" and "YES" or "NO"
 				general_config.visible = type(class.config) == "function" and "YES" or "NO"
-				desc_readout.value = type(class.description) == "string" and class.description or ""
+				desc_readout.value = (type(class.description) == "string" and class.description or "") .. "\n"
 				desc_readout.caret = 0
 			end
 			
@@ -746,7 +746,7 @@ local diag_constructor = function()
 			--status messaging
 			if data.current_state == 3 then
 				--loaded
-				log_display = log_display .. "\n" .. bstr(70, "This plugin has loaded successfully")
+				log_display = log_display .. bstr(70, "This plugin has loaded successfully")
 				if data.compat_flag == "YES" then
 					log_display = log_display .. "\n" .. bstr(79, "This is a 'compatibility' plugin; Neoloader has limited control and insight in the management of this plugin.")
 				end
