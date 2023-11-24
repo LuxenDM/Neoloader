@@ -738,7 +738,7 @@ local diag_constructor = function()
 				CCD1_access.visible = class.CCD1 and "YES" or "NO"
 				general_open.visible = type(class.open) == "function" and "YES" or "NO"
 				general_config.visible = type(class.config) == "function" and "YES" or "NO"
-				desc_readout.value = (type(class.description) == "string" and class.description or "") .. "\n"
+				desc_readout.value = (type(class.description) == "string" and class.description .. "\n") or ""
 				desc_readout.caret = 0
 			end
 			
@@ -765,9 +765,14 @@ local diag_constructor = function()
 			end
 			
 			--extended info
+			local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
+			if (#log_table > 0) and (config.show_debuginfo == "YES" or data.current_state == 2) then
+				log_display = log_display .. "\n\n" .. bstr(86, "Plugin log") .. ":\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table) .. "\127FFFFFF"
+			end
+			
 			local dep_table = lib.get_state(data.plugin_id, data.plugin_version).plugin_dependencies
 			
-			if (#dep_table > 0) and (config.show_debuginfo == "YES" or data.current_state == 1) then
+			if (#dep_table > 0) and (config.show_debuginfo == "YES" or data.current_state < 3) then
 				log_display = log_display .. "\n\n" .. bstr(81, "This plugin depends on")
 				
 				for k, v in ipairs(dep_table) do
@@ -794,24 +799,20 @@ local diag_constructor = function()
 					else
 						if lib.is_exist(v.name) then
 							local ver_table = lib.get_state(v.name, "0").versions
-							log_display = log_display .. bstr(84, "This specific version is not available")
+							log_display = log_display .. bstr(84, "This specific version is not enabled")
 							if type(ver_table) == "table" then
-								log_display = log_display .. "\n		" .. bstr(85, "The versions available are") .. " v" .. table.concat(ver_table, ", v")
-							else
-								log_display = log_display .. "\n		" .. "version table error"
-								lib.log_error("neomgr couldn't obtain the total versions table!", 4)
+								local ver_display = ""
+								for ver_index, ver_item in ipairs(ver_table) do
+									ver_display = ver_display .. (ver_index > 1 and ", v" or " v")
+									ver_display = ver_display .. ver_item .. (lib.is_ready(v.name, ver_item) and " (enabled)" or " (disabled)")
+								end
+								log_display = log_display .. "\n		" .. bstr(85, "The versions available are") .. ver_display
 							end
 						else
 							log_display = log_display .. bstr(76, "This plugin has not been detected by Neoloader")
 						end
 					end
 				end
-			end
-			
-			
-			local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
-			if (#log_table > 0) and (config.show_debuginfo == "YES" or data.current_state == 2) then
-				log_display = log_display .. "\n\n" .. bstr(86, "Plugin log") .. ":\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table) .. "\127FFFFFF"
 			end
 			
 			if data.current_state > 2 and config.show_debuginfo == "YES" then
