@@ -452,7 +452,7 @@ function lib.resolve_file(file, ...)
 			if not status then
 				lib.log_error("unable to resolve file: pcall caught an error during execution!", 3)
 				lib.log_error("	" .. tostring(err), 3)
-				lib.log_error(debug.traceback("	trace up to lib.resolve_file():"), 1)
+				lib.log_error(debug.traceback("	trace up to lib.resolve_file(): "), 1)
 				lib.log_error("		If you are a plugin developer, try turning off execution protection!", 1)
 			end
 			
@@ -1482,7 +1482,7 @@ function lib.update_state(id, ver, state_data)
 	
 	local ref = neo.plugin_registry[id .. "." .. ver]
 	
-	lib.log_error("State update for " .. id .. " v" .. ver, 1, id, ver)
+	lib.log_error("State update for " .. id .. " v" .. ver, 1)
 	for k, v in pairs {
 		complete = "complete",
 		name = "plugin_name",
@@ -1492,11 +1492,11 @@ function lib.update_state(id, ver, state_data)
 		--made as a table for future possible "state" updates
 	} do
 		if k == "complete" and ref[k] == false then
-			lib.log_error("	state 'complete' >> Cannot be changed from false!", 1, id, ver)
+			lib.log_error("	state 'complete' >> Cannot be changed from false!", 1)
 		else
 			if state_data[k] ~= nil then
 				if type(state_data[k]) == type(ref[k]) then
-					lib.log_error("	state '" .. tostring(k) .. "' >> " .. tostring(state_data[k]), 1, id, ver)
+					lib.log_error("	state '" .. tostring(k) .. "' >> " .. tostring(state_data[k]), 1)
 					ref[k] = state_data[k]
 					if k == "complete" then
 						lib.log_error("Plugin encountered an error and triggered its own failure state.", 3, id, ver)
@@ -1504,14 +1504,38 @@ function lib.update_state(id, ver, state_data)
 						lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = ver, error_string = tostring(state_data.err_details or "self triggered error with no passed error message")})
 					end
 				else
-					lib.log_error("	state '" .. tostring(k) .. "' failed to change to >> " .. tostring(state_data[k]) .. " type of " .. type(state_data[k]), 1, id, ver)
-					lib.log_error("	state was " .. tostring(ref[k]), 1, id, ver)
+					lib.log_error("	state '" .. tostring(k) .. "' failed to change to >> " .. tostring(state_data[k]) .. " type of " .. type(state_data[k]), 1)
+					lib.log_error("	state was " .. tostring(ref[k]), 1)
 				end
 			end
 		end
 	end
 	
 	neo.plugin_registry[id .. "." .. ver] = ref
+end
+
+function lib.block_trap(id, ver, func)
+	id, ver = lib.pass_ini_identifier(id, ver)
+	ver = tostring(ver or 0)
+	if ver == "0" then
+		ver = lib.get_latest(id)
+	end
+	if not lib.is_exist(id, ver) then
+		return false
+	end
+	
+	if err_han(type(func) ~= "function", "lib.block_trap() expects a function to trap, got " .. type(func)) then
+		return false, "invalid input"
+	end
+	
+	local status, err = pcall(func)
+	if not status then
+		lib.log_error("\127FF0000" .. "block_trap caught an error belonging to " .. id .. " v" .. ver, 4, id, ver)
+		lib.log_error("	" .. tostring(err), 4, id, ver)
+		lib.log_error(debug.traceback("	trace up to lib.block_trap(): "), 3, id, ver)
+		
+		lib.update_state(id, ver, {complete = false, err_details = err})
+	end
 end
 
 
