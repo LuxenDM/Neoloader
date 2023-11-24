@@ -336,7 +336,7 @@ local create_recovery_diag = function()
 	
 	if gkini.ReadString("Neo-pluginstate", "neomgr.2.0.0", "YES") == "NO" then
 		cp("neomgr not enabled")
-		table.insert(recovery_options, 3, {
+		table.insert(recovery_options, 4, {
 			action = "Re-enable neomgr",
 			descrip = "neomgr is a lightweight interface for managing Neoloader, but it appears to be disabled currently! Click here to enable it",
 			lua = function()
@@ -347,6 +347,26 @@ local create_recovery_diag = function()
 	else
 		cp("neomgr active")
 	end
+	
+	local notice_textbox = iup.multiline {
+		size = "x%10",
+		expand = "HORIZONTAL",
+		readonly = "YES",
+		value = "If you see this, then a catastrophic failure occured while your LME or one of its plugins were loading! The options below might help fix your game; it is recommended to try each option top-to-bottom, unless you know what you're doing.",
+		border = "NO",
+	}
+	
+	RegisterEvent(function()
+		notice_textbox.value = "If you see this, then a catastrophic failure occured during the Default Loader! Your LME loaded successfully, but it cannot track errors during the Default Loader. The options below might help fix your game, but you may need to manage your plugins manually or outright disable them."
+		table.remove(recovery_options, 3)
+		table.insert(recovery_options, 0, {
+			action = "Open LME Management Interface",
+			descrip = "Your LME loaded successfully, so you may be able to manage your plugins and settings directly. Select to open your LME's interface. Recovery will remain open in the background.",
+			lua = function()
+				lib.open_config()
+			end,
+		}
+	end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
 	
 	for k, v in ipairs(recovery_options) do
 		local option_button = iup.frame {
@@ -374,18 +394,6 @@ local create_recovery_diag = function()
 		
 		ctl:add_item(option_button)
 	end
-	
-	local notice_textbox = iup.multiline {
-		size = "x%10",
-		expand = "HORIZONTAL",
-		readonly = "YES",
-		value = "If you see this, then a catastrophic failure occured while your LME or one of its plugins were loading! The options below might help fix your game; it is recommended to try each option top-to-bottom, unless you know what you're doing.",
-		border = "NO",
-	}
-	
-	RegisterEvent(function()
-		notice_textbox.value = "If you see this, then a catastrophic failure occured during the Default Loader! Your LME loaded successfully, but it cannot track errors during the Default Loader. The options below might help fix your game, but you may need to manage your plugins manually or outright disable them."
-	end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
 	
 	local diag = iup.dialog {
 		topmost = "YES",
