@@ -283,7 +283,7 @@ new_generator("NEW_REGISTRY",
 )
 new_generator("PLUGIN_FAILURE",
 	function(data) --notification chat print
-		return lib[1] .. bstr(10, " encountered an error while loading a plugin") .. ": " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
+		return lib[1] .. " " .. bstr(10, "encountered an error while loading a plugin") .. ": " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
 	end,
 	function(data) --notification iup generator
 		return iup.iup.pdarootframe {
