@@ -550,7 +550,7 @@ function lib.resolve_dep_table(intable)
 		if err_han( type(v) ~= "table", "lib.resolve_dep_table was given an improperly formatted table; table values should be tables!" ) then
 			return false, "bad table format"
 		else
-			v.name = tostring(v.name or "null")
+			v.name = tostring(v.name or v.id or "null")
 			v.version = tostring(v.version or "0")
 			v.ver_max = tostring(v.ver_max or "~")
 			if not lib.is_exist(v.name) then
@@ -836,6 +836,7 @@ function lib.activate_plugin(id, version, verify_key)
 	
 	if not (lib.resolve_dep_table(modreg.plugin_dependencies) or modreg.flag == "FORCE") then
 		lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
+		lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = version, error_string = "Unfilled Dependencies!"})
 		return false, "unmatched dependencies"
 	end
 
@@ -1123,8 +1124,12 @@ function lib.notify(status, ...)
 		args = {args}
 	end
 	
-	if lib.is_ready(neo.current_mgr) then
-		lib.execute(neo.current_notif, lib.get_latest(neo.current_notif), "notif", status, ...)
+	if lib.is_ready(neo.current_notif) then
+		lib.execute(neo.current_notif, "0", "notif", status, ...)
+	else
+		lib.require({{id = neo.current_notif, version = "0"}}, function()
+			lib.notify(status, args)
+		end)
 	end
 end
 
@@ -1666,9 +1671,8 @@ do --init process
 			--the plugin's INI built and was added; now we see if it needs to be loaded
 			local loadstate = gkreadstr("Neo-pluginstate", id .. "." .. version, "NEW")
 			if loadstate == "NEW" then
-				lib.log_error("	" .. id .. " v" .. version .. " is new; using default load state " .. neo.defaultLoadState)
+				lib.log_error("	" .. id .. " v" .. version .. " is new; using default load state " .. neo.defaultLoadState, 1, id, version)
 				loadstate = neo.defaultLoadState
-				gkini.WriteString("Neo-pluginstate", id .. "." .. version, neo.defaultLoadState)
 				lib.set_load(mgr_key, id, version, neo.defaultLoadState)
 			else
 				lib.log_error("	load state for " .. id .. " v" .. version .. ": " .. loadstate, 1, id, version)
