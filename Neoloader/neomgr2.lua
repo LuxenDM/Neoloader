@@ -151,6 +151,10 @@ local ghost_check = false
 
 local diag_constructor = function()
 	
+	if not auth_key then
+		config.show_debuginfo = "NO"
+	end
+	
 	if ghost_check then
 		lib.log_error("[CRITICAL ERROR] neomgr detected itself as a ghost! Launching recovery environment; ghosts can't be killed from the sandbox.")
 		--[[
@@ -824,6 +828,10 @@ local diag_constructor = function()
 				log_display = log_display .. class_report
 			end
 			
+			if config.show_debuginfo == "YES" then
+				log_display = log_display .. "\n\nINI:\n	" .. data.plugin_ini_file
+			end
+			
 			
 			
 			desc_readout.value = log_display
@@ -1221,18 +1229,33 @@ local diag_constructor = function()
 				default = "2",
 			},
 			--order of options
+			"allowDelayedLoad",
 			"allowBadAPIVersion",
 			"echoLogging",
 			"protectResolveFile",
+			"clearCommands",
 			"defaultLoadState",
 			"doErrPopup",
 			"dbgFormatting",
 			"dbgIgnoreLevel",
+			"ignoreOverrideState",
 		}
 		
 		if config.show_debuginfo == "YES" then
 			valid_config.doErrPopup = {
 				display = bstr(35, "Popup standard errors for safely caught LME errors"),
+				default = "NO",
+			}
+			valid_config.ignoreOverrideState = {
+				display = bstr(-1, "Load Neoloader when default loader is disabled"),
+				default = "NO",
+			}
+			valid_config.allowDelayedLoad = {
+				display = bstr(-1, "Allow plugins to be activated after PLUGINS_LOADED event"),
+				default = "NO",
+			}
+			valid_config.clearCommands = {
+				display = bstr(-1, "Force-delete ghosted commands on game load"),
 				default = "NO",
 			}
 		end
