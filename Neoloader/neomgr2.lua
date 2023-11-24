@@ -742,48 +742,70 @@ local diag_constructor = function()
 				desc_readout.caret = 0
 			end
 			
-			if desc_readout.value == "" then
-				--no plugin description, so fill in with working details
-				if data.current_state == 3 then
-					--loaded
-					desc_readout.value = bstr(70, "This plugin has loaded successfully")
-					if data.compat_flag == "YES" then
-						desc_readout.value = bstr(79, "This is a 'compatibility' plugin; Neoloader has limited control and insight in the management of this plugin.")
+			local log_display = desc_readout.value
+			--status messaging
+			if data.current_state == 3 then
+				--loaded
+				log_display = log_display ..  bstr(70, "This plugin has loaded successfully")
+				if data.compat_flag == "YES" then
+					log_display = log_display .. "\n" .. bstr(79, "This is a 'compatibility' plugin; Neoloader has limited control and insight in the management of this plugin.")
+				end
+			elseif data.current_state == 2 then
+				--cannot load, failure/error
+				log_display = log_display ..  bstr(71, "This plugin failed to load") .. "; " .. bstr(83, "error details can be found below")
+			elseif data.current_state == 1 then
+				--cannot load, missing dependency
+				log_display = log_display .. bstr(72, "This plugin depends on a plugin that either failed to load or is not found")
+			elseif data.current_state == 0 then
+				--disabled
+				log_display = log_display .. bstr(77, "This plugin is disabled; enable it with the toggle in the top-left")
+			elseif data.current_state == -1 then
+				--new
+				log_display = log_display .. bstr(78, "This plugin was just registered! If enabled, it will launch when the game is reloaded.")
+			end
+			
+			--extended info
+			local dep_table = lib.get_state(data.plugin_id, data.plugin_version).plugin_dependencies
+			
+			if #dep_table > 0 then
+				log_display = log_display .. "\n\n" .. bstr(81, "This plugin depends on")
+				
+				for k, v in ipairs(dep_table) do
+					if v.ver_max ~= "~" then
+						log_display = log_display .. "\n	" .. (v.name or "???") .. " " .. ((v.version == "0" and bstr(73, "any version")) or "v" .. (v.version or "???")) .. " " .. bstr(82, "through") .. " " .. ((v.ver_max == "0" and bstr(73, "any version")) or "v" .. (v.ver_max or "???"))
+					else
+						log_display = log_display .. "\n	" .. (v.name or "???") .. " " .. ((v.version == "0" and bstr(73, "any version")) or "v" .. (v.version or "???"))
 					end
-				elseif data.current_state == 2 then
-					--cannot load, failure/error
-					local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
-					local log_display = bstr(71, "This plugin failed to load") .. "!\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table)
-					desc_readout.value = log_display
-				elseif data.current_state == 1 then
-					--cannot load, missing dependency
-					local dep_table = lib.get_state(data.plugin_id, data.plugin_version).plugin_dependencies
-					local log_display = bstr(72, "This plugin has unfulfilled dependencies") .. ": "
-					for k, v in ipairs(dep_table) do
-						log_display = log_display .. "\n	" .. (v.name or "???") .. " " .. ((v.version == "0" and bstr(73, "any version")) or "v" .. (v.version or "???")) .. " >> "
-						if lib.is_exist(v.name, v.version) then
-							if lib.get_state(v.name, v.version).load == "YES" then
-								if lib.get_state(v.name, v.version).complete then
-									log_display = log_display .. bstr(70, "This plugin is enabled and loaded successfully")
+					log_display = log_display .. " >> "
+					if lib.is_exist(v.name, v.version) then
+						if lib.get_state(v.name, v.version).load == "YES" then
+							if lib.get_state(v.name, v.version).complete then
+								log_display = log_display .. bstr(70, "This plugin is enabled and loaded")
+							else
+								if lib.get_state(v.name, v.version).plugin_is_new then
+									log_display = log_display .. bstr(80, "This plugin is new and hasn't loaded yet") .. "!"
 								else
 									log_display = log_display .. bstr(74, "This plugin is enabled but never finished loading; check for errors") .. "!"
 								end
-							else
-								log_display = log_display .. bstr(75, "This plugin is present but disabled")
 							end
 						else
-							log_display = log_display .. bstr(76, "This plugin has not been detected by Neoloader")
+							log_display = log_display .. bstr(75, "This plugin is present but not enabled")
 						end
+					else
+						log_display = log_display .. bstr(76, "This plugin has not been detected by Neoloader")
 					end
-					desc_readout.value = log_display
-				elseif data.current_state == 0 then
-					--disabled
-					desc_readout.value = bstr(77, "This plugin is disabled; enable it with the toggle in the top-left")
-				elseif data.current_state == -1 then
-					--new
-					desc_readout.value = bstr(78, "This plugin was just registered! If enabled, it will launch when the game is reloaded.")
 				end
 			end
+			
+			
+			local log_table = lib.get_state(data.plugin_id, data.plugin_version).errors
+			if #log_table > 0 then
+				log_display = log_display .. "\n\n" .. bstr(84, "Plugin log") .. ":\n	" .. table.concat(log_table, "\n\127FFFFFF	", 1, #log_table) .. "\127FFFFFF"
+			end
+			
+			
+			
+			desc_readout.value = log_display
 			desc_readout.caret = 0
 			
 			iup.Refresh(iup.GetParent(name_view))
