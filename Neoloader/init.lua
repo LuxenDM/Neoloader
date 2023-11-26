@@ -1064,13 +1064,16 @@ function lib.set_class(name, version, ftable)
 	if (neo.plugin_registry[name .. "." .. version].lock == nil) and (neo.plugin_registry[name .. "." .. version].load == "YES") then
 		local index = neo.plugin_registry[name .. "." .. version].index
 		neo.plugin_container[index] = ftable
-		if ftable.IF == true then
+		if ftable.IF == true and not neo.list_if[name] then
+			neo.list_if[name] = true
 			table.insert(neo.list_if, name)
 		end
-		if ftable.mgr == true then
+		if ftable.mgr == true and not neo.list_mgr[name] then
+			neo.list_mgr[name] = true
 			table.insert(neo.list_mgr, name)
 		end
-		if ftable.notif_handler == true then
+		if ftable.notif_handler == true and not neo.list_notif[name] then
+			neo.list_notif[name] = true
 			table.insert(neo.list_notif, name)
 		end
 	end
