@@ -467,3 +467,20 @@ Neoloader 2023 November Release 6.1.0
 	At this time, I have >NO< idea why this is a thing, and can only try to catch it by killing commands that don't get overwritten during reloads. Neoloader now does several things to try an recover neomgr when no management interface is loaded, specifically to prevent this. Investigations are ongoing!
 	
 	Ultimately, this update focuses on improving Neoloader's interopability with the default loader, and improving usability for less technical users.
+	
+Neoloader 2023 December Release 6.1.1
+	2023-1-1
+	
+	Neoloader Changes
+		major:	6
+		minor:	1
+		patch:	1
+		
+		FIXED	duplication of managers, interfaces, or notification handlers
+		FIXED	error message not passed on during file load stage of lib.resolve_file
+		
+	Just a minor maintanence patch on top of 6.1.0, as other important work goes on behind the scenes elsewhere. 
+	
+	The duplication of items in the manager/etc lists was a bit puzzling, but was actually brought about as a result of adding babel support to neomgr and other utilities. While lib.set_class() will overwrite a class table, it also adds objects to those lists if they have a flag - and don't check that the mod isn't already listed there. That has been fixed.
+	
+	If a plugin errored out due to a syntax bug during activation, lib.resolve_file would pass the unhelpful error message "unable to resolve file"; this message would be stored in the mod's direct log by lib.activate(), hence why it was discovered. The actual error passed by loadfile() will now be continually passed on to the calling function now.
