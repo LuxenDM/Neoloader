@@ -434,7 +434,7 @@ function lib.resolve_file(file, ...)
 			else
 				if not string.find(err, "No such file or directory") then
 					lib.log_error("Unable to resolve file: " .. tostring(err or "error?"), 2)
-					return false, "error resolving file"
+					return false, err
 				end
 			end
 		end
