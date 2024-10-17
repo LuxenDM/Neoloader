@@ -101,10 +101,17 @@ function update_class()
 				display = bstr(64, "Show debugging info"),
 				[1] = config.show_debuginfo,
 			},
+			update_check = {
+				type = "action",
+				display = "",
+				align = "right",
+				[1] = bstr(87, "Check for updates"),
+			},
 			"auto_open",
 			"enable_dependents",
 			"show_debuginfo",
 			"qa_buttons",
+			"update_check",
 		},
 		description = bstr(5, "neomgr is the bundled management interace for Neoloader. It provides a lightweight interface for configuring Neoloader and managing plugins."),
 		commands = {
