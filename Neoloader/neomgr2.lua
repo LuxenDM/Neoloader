@@ -76,6 +76,9 @@ function update_class()
 		smart_config = {
 			title = bstr(1, "Neoloader Lightweight Management Utility"),
 			cb = function(cfg, val)
+				if cfg == "update_check" then
+					Game.OpenWebBrowser("https://www.nexusmods.com/vendettaonline/mods/3")
+				end
 				if config[cfg] then
 					config[cfg] = val
 					gkini.WriteString("neomgr", cfg, val)
