@@ -291,7 +291,7 @@ local diag_constructor = function()
 	end
 	
 	
-	local create_CCD1_view = function(id, version)
+	neo.create_CCD1_view = function(id, version)
 		--rudimentary CCD1 support
 		
 		cp("creating CCD1 view for " .. tostring(id) .. " v" .. tostring(version))
@@ -522,7 +522,7 @@ local diag_constructor = function()
 								},
 							},
 							iup.label {
-								title = tostring(ctable.title or bstr(6, "CCD1 Untitled SCM")),
+								title = tostring(ctable.title or ("CCD1 " .. bstr(6, "Untitled Configuration"))),
 							},
 							iup.fill {
 								size = "%2",
