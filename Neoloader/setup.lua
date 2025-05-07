@@ -52,8 +52,8 @@ local register_plugin = function(id, version, ini, state)
 	cp("	plugin located in registry at position " .. tostring(plugin_counter))
 end
 
-register_plugin("neomgr", "2.0.0", "plugins/Neoloader/neomgr.ini", "YES")
-register_plugin("neonotif", "1.0.0", "plugins/Neoloader/neo_notif.ini", "YES")
+register_plugin("neomgr", "2.1.0", "plugins/Neoloader/neomgr.lua", "YES")
+register_plugin("neonotif", "1.1.0", "plugins/Neoloader/neo_notif.lua", "YES")
 
 
 
