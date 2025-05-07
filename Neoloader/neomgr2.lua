@@ -1,4 +1,13 @@
---bundled manager for Neoloader, version 2
+--[[
+[modreg]
+API=3
+id=neomgr
+name=Neoloader Lightweight Management Interface
+version=2.1.0
+author=Luxen
+website=https://github.com/LuxenDM/Neoloader
+path=neomgr2.lua
+]]--
 
 
 
@@ -16,7 +25,7 @@ for k, v in ipairs {
 	assert(v, "This version of neomgr is not compatible with the version of Neoloader installed! Please use the version bundled with your latest installation of Neoloader!")
 end
 
-
+local neo = {} --public table
 
 --babel support
 
@@ -32,6 +41,10 @@ local babel_support = function()
 	
 	bstr = function(id, def)
 		return babel.fetch(shelf_id, id, def)
+	end
+
+	neo.add_translation = function(path_to_file, file_lang_code)
+		return babel.add_new_lang(shelf_id, path_to_file, file_lang_code)
 	end
 	
 	update_class()
@@ -67,8 +80,6 @@ local config = {
 		
 	show_debuginfo = gkrs("neomgr", "show_debuginfo", "NO"),
 }
-
-local neo = {}
 
 function update_class()
 	local class = {
@@ -114,7 +125,6 @@ function update_class()
 		},
 		manifest = {
 			"plugins/Neoloader/neomgr2.lua",
-			"plugins/Neoloader/neomgr2.ini",
 			
 			"plugins/Neoloader/lang/en.ini",
 			"plugins/Neoloader/lang/es.ini",
@@ -291,7 +301,7 @@ local diag_constructor = function()
 	end
 	
 	
-	neo.create_CCD1_view = function(id, version)
+	local create_CCD1_view = function(id, version)
 		--rudimentary CCD1 support
 		
 		cp("creating CCD1 view for " .. tostring(id) .. " v" .. tostring(version))
@@ -522,7 +532,7 @@ local diag_constructor = function()
 								},
 							},
 							iup.label {
-								title = tostring(ctable.title or ("CCD1 " .. bstr(6, "Untitled Configuration"))),
+								title = tostring(ctable.title or bstr(6, "CCD1 Untitled SCM")),
 							},
 							iup.fill {
 								size = "%2",
