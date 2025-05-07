@@ -34,6 +34,8 @@ local bstr = function(id, def)
 	return def
 end
 
+neo.add_translation = function() end --stub until babel ready
+
 local babel_support = function()
 	babel = lib.get_class("babel", "0")
 	
