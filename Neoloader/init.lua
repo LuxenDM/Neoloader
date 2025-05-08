@@ -68,11 +68,11 @@ end
 
 
 --This will be local when released
-neo = {
+local neo = {
 	version = {
-		strver = "6.1.0",
+		strver = "6.2.0",
 		[1] = 6,
-		[2] = 1,
+		[2] = 2,
 		[3] = 0,
 		[4] = "",
 	},
