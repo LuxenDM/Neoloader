@@ -29,7 +29,7 @@ gkwi("Neoloader", "Init", 3)
 gkws("Neoloader", "mgr", "neomgr")
 gkws("Neoloader", "current_notif", "neonotif")
 gkws("Neoloader", "uninstalled", "NO")
-gkwi("Neoloader", "update_check", 1)
+gkwi("Neoloader", "iUpdateCheck", 1)
 
 local counter = 1
 while true do
