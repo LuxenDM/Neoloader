@@ -484,3 +484,43 @@ Neoloader 2023 December Release 6.1.1
 	The duplication of items in the manager/etc lists was a bit puzzling, but was actually brought about as a result of adding babel support to neomgr and other utilities. While lib.set_class() will overwrite a class table, it also adds objects to those lists if they have a flag - and don't check that the mod isn't already listed there. That has been fixed.
 	
 	If a plugin errored out due to a syntax bug during activation, lib.resolve_file would pass the unhelpful error message "unable to resolve file"; this message would be stored in the mod's direct log by lib.activate(), hence why it was discovered. The actual error passed by loadfile() will now be continually passed on to the calling function now.
+
+Neoloader 2025 May Release 6.2.0
+	
+	Neoloader Changes
+		major:	6
+		minor:	2
+		patch:	0
+		
+		NEW 	update check occurs to help update from v6.1.x to v6.2.0
+		CHANGED	Setup registers changed neomgr and neo_notif via inline declarations
+		CHANGED	'neo' table declared local
+		CHANGED config_override template updated to have all options
+		CHANGED optional file check no longer contains neomgr.ini and neo-notif.ini
+		FIXED	recovery uninstaller's capitalization typo for rClearCommands (was rClearCOmmands)
+		REMOVED neomgr.ini
+		REMOVED neo-notif.ini
+		
+	neomgr changes
+		major: 2
+		minor: 1
+		patch: 0
+		
+		NEW 	create_CCD1_view is now exposed in the public library
+		NEW 	Declaration described inline with file
+		NEW		add_translation exposed so external mods can add new languages
+		CHANGED Default text for untitled smart-config changed to "Untitled Configuration"
+		
+	neo_notif changes
+		major: 1
+		minor: 1
+		patch: 0
+		
+		NEW 	Declaration described inline with file
+		NEW		add_translation exposed so external mods can add new languages
+		
+	A relatively minor update. Most changes involved applying the new 'inline INI' trick and exposing functions that were intended to be exposed in the public class originally. Most additional tweaks were strictly for cleanup purposes.
+	
+	The only major thing to share is that plugins can now directly call the 'create_CCD1_view' function in neomgr. The CCD1, or 'Common Content Descriptor 1', was intended to be like a skyrim MCM; instead of creating your own configuration window, you can just provide a settings template in your mod's public class and let neomgr create it for you.
+	
+	An interesting note is that this is the first version of Neoloader where an update could break someone's game, due to a limitation of how plugins are registered for visibility. With inline declaration, the INI files of the neomgr and neo-notif addons were removed. To fix this, Neoloader now has an update-check procedure, and will automatically alter the old registrations to point to the core files properly.
