@@ -1651,7 +1651,7 @@ if neo.update_check < 1 then
 		end
 
 		neo.update_check = 1
-		gkini.WriteInt("Neoloader", "update_check", 1)
+		gkini.WriteInt("Neoloader", "iUpdateCheck", 1)
 	end
 end
 
