@@ -68,11 +68,11 @@ end
 
 
 --This will be local when released
-neo = {
+local neo = {
 	version = {
-		strver = "6.1.0",
+		strver = "6.2.0",
 		[1] = 6,
-		[2] = 1,
+		[2] = 2,
 		[3] = 0,
 		[4] = "",
 	},
@@ -118,13 +118,15 @@ neo = {
 	current_if = gkreadstr("Neoloader", "if", ""),
 	current_mgr = gkreadstr("Neoloader", "mgr", ""),
 	current_notif = gkreadstr("Neoloader", "current_notif", ""),
+
+	update_check = gkini.ReadInt("Neoloader", "iUpdateCheck", 0),
 }
 
 if neo.ignoreOverrideState == "NO" and gkini.ReadInt("Vendetta", "plugins", 1) == 0 then
 	console_print("Plugins are disabled, and Neoloader is not configured to override this setting! The default interface will load, and Neoloader will exit!")
 	dofile("vo/if.lua")
 	return
-end
+end		
 
 local configd = {
 	--config defines
@@ -1583,9 +1585,7 @@ do
 	
 	for i, filepath in ipairs {
 		"config_override.ini",
-		"neomgr.ini",
 		"neomgr2.lua",
-		"neo_notif.ini",
 		"neo_notif.lua",
 	} do
 		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
@@ -1624,6 +1624,35 @@ lib.log_error("[timestat] library extra environment setup: " .. tostring(timesta
 if neo.init ~= neo.API then
 	lib.log_error("Neoloader was updated! API was " .. tostring(neo.init), 3)
 	lib.log_error("If Neoloader becomes unstable, use the recovery environment to uninstall, then reinstall!")
+end
+
+--update check
+if neo.update_check < 1 then
+	if neo.update_check == 0 then --Update pre-existing config from Neoloader 6.1.x -> 6.2.0
+		lib.log_error("Neoloader was updated from v6.1.x or earlier - applying configuration fixes for v6.2.0", 3)
+		
+		local registry_fixes = {
+			["plugins/Neoloader/neomgr.ini"] = "plugins/Neoloader/neomgr2.lua",
+			["plugins/Neoloader/neo_notif.ini"] = "plugins/Neoloader/neo_notif.lua",
+		}
+
+		local counter = 0
+		while true do
+			counter = counter + 1
+			local reg = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+			if reg == "" then
+				break
+			end
+
+			if registry_fixes[reg] then
+				gkini.WriteString("Neo-registry", "reg" .. tostring(counter), registry_fixes[reg])
+				lib.log_error("patched registration entry for " .. reg .. " >> " .. registry_fixes[reg], 1)
+			end
+		end
+
+		neo.update_check = 1
+		gkini.WriteInt("Neoloader", "iUpdateCheck", 1)
+	end
 end
 
 RegisterUserCommand("neo", function()

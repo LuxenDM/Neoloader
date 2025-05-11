@@ -174,7 +174,7 @@ local uninstall_neoloader = function()
 		"rPresortedList",
 		"rPortectResolveFile",
 		"iDbgIgnoreLevel",
-		"rClearCOmmands",
+		"rClearCommands",
 		"rDbgFormatting",
 		"rOverrideDisabledState",
 		"current_notif",

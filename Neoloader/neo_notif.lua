@@ -1,4 +1,13 @@
---Neoloader Default Notification Handler
+--[[
+[modreg]
+API=3
+id=neonotif
+version=1.1.0
+name=Neoloader Notification Handler
+author=Luxen
+website=https://github.com/LuxenDM/Neoloader
+path=neo_notif.lua
+]]--
 
 local cp = function() end --console_print
 
@@ -8,6 +17,8 @@ local bstr = function(id, def)
 	return def
 end
 
+neo.add_translation = function() end --stub until babel is available
+
 local babel_support = function()
 	babel = lib.get_class("babel", "0")
 	
@@ -15,6 +26,10 @@ local babel_support = function()
 	
 	bstr = function(id, def)
 		return babel.fetch(shelf_id, id, def)
+	end
+
+	neo.add_translation = function(path_to_file, file_lang_code)
+		return babel.add_new_lang(shelf_id, path_to_file, file_lang_code)
 	end
 	
 	update_class()
@@ -68,7 +83,7 @@ update_class = function()
 		neo[k] = v
 	end
 	
-	lib.set_class("neonotif", "1.0.0", neo)
+	lib.set_class("neonotif", "1.1.0", neo)
 end
 
 local notif_history = {} --notification history

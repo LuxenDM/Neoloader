@@ -1,4 +1,13 @@
---bundled manager for Neoloader, version 2
+--[[
+[modreg]
+API=3
+id=neomgr
+name=Neoloader Lightweight Management Interface
+version=2.1.0
+author=Luxen
+website=https://github.com/LuxenDM/Neoloader
+path=neomgr2.lua
+]]--
 
 
 
@@ -16,7 +25,7 @@ for k, v in ipairs {
 	assert(v, "This version of neomgr is not compatible with the version of Neoloader installed! Please use the version bundled with your latest installation of Neoloader!")
 end
 
-
+local neo = {} --public table
 
 --babel support
 
@@ -25,6 +34,8 @@ local bstr = function(id, def)
 	return def
 end
 
+neo.add_translation = function() end --stub until babel ready
+
 local babel_support = function()
 	babel = lib.get_class("babel", "0")
 	
@@ -32,6 +43,10 @@ local babel_support = function()
 	
 	bstr = function(id, def)
 		return babel.fetch(shelf_id, id, def)
+	end
+
+	neo.add_translation = function(path_to_file, file_lang_code)
+		return babel.add_new_lang(shelf_id, path_to_file, file_lang_code)
 	end
 	
 	update_class()
@@ -67,8 +82,6 @@ local config = {
 		
 	show_debuginfo = gkrs("neomgr", "show_debuginfo", "NO"),
 }
-
-local neo = {}
 
 function update_class()
 	local class = {
@@ -114,7 +127,6 @@ function update_class()
 		},
 		manifest = {
 			"plugins/Neoloader/neomgr2.lua",
-			"plugins/Neoloader/neomgr2.ini",
 			
 			"plugins/Neoloader/lang/en.ini",
 			"plugins/Neoloader/lang/es.ini",
@@ -127,7 +139,7 @@ function update_class()
 		neo[k] = v
 	end
 	
-	lib.set_class("neomgr", "2.0.0", neo)
+	lib.set_class("neomgr", "2.1.0", neo)
 end
 
 function neo.auth_key_receiver(new_key)
