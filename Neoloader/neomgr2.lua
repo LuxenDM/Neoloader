@@ -556,6 +556,8 @@ local diag_constructor = function()
 		ShowDialog(CCD1_manager)
 	end
 	
+	neo.create_CCD1_view = create_CCD1_view
+	
 	local apply_flag = false
 	local apply_actions = {}
 	
