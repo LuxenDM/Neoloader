@@ -139,7 +139,7 @@ function update_class()
 		neo[k] = v
 	end
 	
-	lib.set_class("neomgr", "2.0.0", neo)
+	lib.set_class("neomgr", "2.1.0", neo)
 end
 
 function neo.auth_key_receiver(new_key)
