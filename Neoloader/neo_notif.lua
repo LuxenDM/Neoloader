@@ -83,7 +83,7 @@ update_class = function()
 		neo[k] = v
 	end
 	
-	lib.set_class("neonotif", "1.0.0", neo)
+	lib.set_class("neonotif", "1.1.0", neo)
 end
 
 local notif_history = {} --notification history
