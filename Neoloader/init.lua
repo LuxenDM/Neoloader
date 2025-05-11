@@ -1583,9 +1583,7 @@ do
 	
 	for i, filepath in ipairs {
 		"config_override.ini",
-		"neomgr.ini",
 		"neomgr2.lua",
-		"neo_notif.ini",
 		"neo_notif.lua",
 	} do
 		if not gksys.IsExist("plugins/Neoloader/" .. filepath) then
