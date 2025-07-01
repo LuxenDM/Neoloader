@@ -1,0 +1,526 @@
+Neoloader September 2022 Private Beta
+	Initial private beta
+	
+	API version 3
+	patch level 0
+
+
+
+Neoloader November 2022 Private Beta
+	
+	API changes:
+		API version 3
+		patch level 1
+		
+		NEW		lib.err_handle
+		NEW 	lib.get_path
+		NEW 	lib.open_config
+		NEW 	lib.open_if_config
+		CHANGED	lib.resolve_file
+		CHANGED lib.build_ini
+		CHANGED lib.get_state
+		FIXES	lib.register
+		FIXES	lib.set_class
+		FIXES	lib.lock_class
+		FIXES	lib.unlock_class
+		FIXES	lib.plugin_read_str
+	
+	New Error Capture System
+		Previous 'detected errors' (usually from faulty function input) returned false and an error string.
+		This still occurs, but now there is an optional logging and dialog system trhough the API "lib.err_handle()"
+		this affects ***__ALL__*** API functions
+	
+	new option: Do Error Popup
+		Controls whether errors are presented to the user or only logged through the error capture system
+	
+	changed file resolving
+		lib.resolve_file now accepts an optional second path argument
+		lib.resolve_file no longer errors if no '/' is provided
+	
+	changed how plugins are loaded
+		plugins distributed WITH other plugins may have variable folder structure; plugins now store their folder path during registry, and when activated, this path is attempted if all others fail (see changes to file resolving)
+	
+	changed how INI files are built into table objects
+		fixed how dependencies are collected (used a negative iterator on accident)
+		stores folder path of the INI file pointer provided
+	
+	fixed how plugins are registered
+		Registry should be more robust to plugins with no provided version
+			This is a bad practice to do, but won't crash Neoloader anymore
+	
+	changes to plugin activation
+		fixes versionless activation to attempt the latest available like other API functions do
+		activation now provides the plugin's INI folder path when resolving the plugin's file
+		now logs where the activation system fails
+	
+	changes to plugin state retrieval
+		Now includes the folder path
+	
+	changes to Neoloader global state retreival
+		ifmgr now returns "vo-if" only if the current general interface manager doesn't exist; fixes issues where the current IF manager may check for itself being the active manager (as opposed to loaded but not active)
+	
+	fixed how plugins set their class
+		Properly handles "version 0" as an attempt to set the latest version installed
+			This is a bad practice to do, but won't crash Neoloader anymore
+	
+	fixed how plugins lock their class
+		Properly handles "version 0" as an attempt to set the latest version installed
+			This is a bad practice to do, but won't crash Neoloader anymore
+		if a custom key isnt provided, now calls lib.generate_key (but doesn't store/return it, so consider that lock permanent!)
+	
+	fixed how plugins unlock their class
+		Properly handles "version 0" as an attempt to set the latest version installed
+			This is a bad practice to do, but won't crash Neoloader anymore
+	
+	fixed how plugins access their INIs
+		converts header or key arguments to string, in case the provided value wasn't.
+	
+	New shortcut functions
+		lib.get_path lets you retrieve a folder path without using lib.get_state and parsing the provided table
+		lib.open_config will launch the currently active plugin management engine
+		lib.open_if_config will launch the currently active interface management engine
+	
+	Overhauled the startup loader process
+		there was no functional difference between a library and a plugin, and if a library were erroneously dependent on a plugin then it would never get loaded. Everything is (again) sorted into a single table for activation, ignoring classification.
+		Added more logging
+		now uses lib.resolve_file to launch the current interface management engine, if it exists (previously used a pcall setup)
+		improved handling of plugins that don't have versioning information
+			This is a bad practice, but will less likely cause crashes
+		fixed a LOT of bugs related to forgetting which tables worked what way
+	
+	neomgr changes
+		A plugin's public name now has a maximum visible length (1/5th of a user's screen)
+		
+
+
+Neoloader April 2023 Private Beta
+	
+	API Changes:
+		API Version 3
+		minor level 4
+		patch level 0
+		
+		NEW		lib.reload
+		NEW		lib.request_auth
+		NEW		lib.get_whole_ver
+		NEW		lib.compare_sem_ver
+		FIXES	lib.activate_plugin
+		FIXES	lib.err_handle
+		CHANGED	lib.get_gstate
+		CHANGED	lib.log_error
+		
+	41 total commits
+	
+	More error reporting
+		lib.activate_plugin returns proper messaging, for instance, as well as making logs.
+		
+	Adjusted setup process
+		Pilots can now choose to make new plugins loaded by default
+		Option available in neoloader's setup phase, and in neomgr
+		
+	Fixed several minor issues with neomgr and reworked options
+		update button for the log now works; log can be exported to syslog5000
+		Neoloader access button in options dialog now moves appropriately for pilots not using AngularUI
+		neomgr Options panel can scroll and fits screen better
+		Fixed loss of flight control if neomgr was accessed in-flight
+			could still be improved (check for Show/Hide/HideAllDialog valid)
+		
+	New reload function
+		Due to certain "ghost" command issues, Neoloader was triggering errors when ReloadInterface() was triggered. While the issue may have been fixed on the game's end, this reload function was intended to safely catch these errors. It will remain implemented, and the /reload command will point to this function. It will also prevent reloads from being 'triggered' before the "START" event, where they would erroneously be ignored.
+		
+	Some functionality for managing plugins that don't expect Neoloader's presence
+		Neoloader now has a brother utility, NeoPatcher, which can make (hopefully) ANY plugin manageable with the in-game interface! Changes were made to allow this through minimal patching; the actual code of a plugin won't have to change, just get rerouted through a check. See more in the documentation.
+		
+	Further improvements to Init
+		calling plugins with version 0 should reroute to the latest installed version. In some places this wasn't handled appropriately, and should be fixed
+		Any time a file is going to be accessed or expected, we now use gksys.IsExist to verify its... actually there. Who'da thunk?
+			Neoloader can now complain if its missing files.
+		
+	plugins can now see the default load state in lib.get_gstate
+	
+	Implemented FORCE and added the AUTH load state
+		FORCE load state will make a plugin in Neoloader launch even if dependencies aren't met. This should be used by plugin developers, not by end users.
+		AUTH, on the other hand, is used for plugins that may want to use 'restricted' functions in Neoloader. Instead of using lib.request_auth every time the client launches, using this load state will give the auth key when the plugin is loaded.
+		
+	Implemented new auth request method
+		before, only the management engine for Neoloader could use lib.activate_plugin and lib.uninstall. Now, any plugin can *request* the auth token through this function.
+		
+	A 'preload' file can now be used before Neoloader starts
+		This is intended to be used for plugin developers who may need to trigger custom code for whatever project they're working on.
+		lib.log_error will now send its output to the function this code returns, in case you're using some kind of custom logging system
+		
+	Neoloader now handles advanced version data
+		Instead of directly comparing version numbers, we can use lib.get_whole_ver to break a version string into a table of version and metadata, and then use lib.compare_sem_ver to decide which between two are likely the greater version.
+		While intended for Semantic Versioning, lib.compare_sem_ver can theoretically take a large number of version types. The only character that is restricted is the hyphen, which denotes the start of "metadata"
+	
+
+
+Neoloader April 2023 Public Beta
+	
+	Neoloader Changes:
+		major: 5
+		minor: 1
+		patch: 2
+		
+		CHANGED	Init
+		CHANGED	internal plugin registry
+		NEW		config.ini [Neoloader] rPresortedList = "NO"
+	
+	API Changes:
+		API Version 3
+		minor level 5
+		patch level 0
+		
+		NEW		lib.get_minor
+		CHANGED	lib.get_gstate
+		CHANGED	lib.get_state
+		CHANGED	lib.get_latest
+		CHANGED lib.register
+		FIXED	lib.is_exist
+	
+	fixed LME versioning to use Semantic
+		Neoloader itself uses semantic versioning now; lib.get_minor replaces the old lib.get_patch, while lib.get_patch returns actual 'patch' value. lib.get_gstate will now return API/minor/patch levels
+	
+	Allow skipping of dependency sorting system
+		This is disabled by default and will be disabled when a new plugin is registered, but if the user has externally sorted their config.ini's registration order, they can disabled the sorting process to speed up launch times. This will only provide benefit to users with heavy plugin dependency trees.
+		
+		This CANNOT be turned on through the config override file
+		
+	lib.get_state now returns table of all versions
+		some of the fixes to lib.is_exist neccesitated storage of all registered versions in an easy to access location; this is now available in get_state as well.
+		
+	fix of lib.is_exist
+		last update introduced an error with lib.is_exist if no version was *loaded*; this has been fixed and is_exist will now return true instead of false in this instance again. lib.get_latest will also return the last registered version if no version has ever been loaded.
+		
+	Removed several debugging console_print functions that were no longer needed
+	
+	+++Clarification on lib.get_gstate's "version" table:
+		This is not representative of the API for "Library Management Engines", but rather is a version specific to Neoloader, which implements the LME api. In effect, this value should be seen as inconsequential to any plugins designed for use of the LME structure. Hence why it is not synced with lib.get_API/minor/patch functions, and is a seperate value in lib.get_gstate.
+
+
+
+Neoloader May 2023 Public Beta
+	
+	Neoloader Changes:
+		major: 5
+		minor: 2
+		patch: 0
+		
+		CHANGED	pre-interface ENVironment variables (env.lua)
+		CHANGED	modloader (main.lua)
+		CHANGED	setup
+		
+	API Changes:
+		API Version 3
+		minor level 6
+		patch level 1
+		
+		CHANGED	lib.notify***
+		FIXED	lib.register
+		FIXED	lib.log_error
+		
+	Changes to Neoloader's environment to allow for more advanced preloading
+		loading advanced tools for debugging required changes to how Neoloader launched and identified a few failure points. These have all been fixed; ENV variables are now only created if they do not already exist, the modloader will save the pre-existing if= option, and Neoloader setup can restore this value. If this is done, the utility being loaded MUST call on neoloader directly to load it, or main.lua will get confused and get stuck load-cycling.
+		
+	lib.register wasn't creating a certain data point that resulted in cascading failures in other API functions, resulting in the tame bug where first-time registered plugins would not appear in neomgr correctly (github issue #1). This has been fixed.
+	
+	lib.log_error would trigger a severe error when passed nil due to how table.insert() works (github issue #2). This has been fixed.
+	
+	lib.notify() now accepts >1 argument, to be passed to whatever management interface is registered to handle them. The data that gets passed will be forced into a table format if it isnt already. This is in preparation of alternate interfaces that can provide much better notification handling, which was introduced in only a minor capacity early in Neoloader's development.
+	
+
+
+Neoloader June 2023 Public Beta
+	
+	Neoloader Changes:
+		major:	5
+		minor:	3
+		patch:	0
+		
+		CHANGED	default lib.error_handle setting
+		CHANGED command cleaning
+		CHANGED neomgr options
+		NEW		Neoloader load-state enforcement
+		
+	API Changes:
+		API Version	3
+		minor level 7
+		patch level 0
+		
+		NEW		lib.set_load
+		NEW		lib.find_file
+		CHANGED	lib.resolve_file
+		CHANGED lib.unlock_class
+		
+	QoL changes to Neoloader itself
+		The devs mostly fixed the issue that neccesitated command cleaning, so it is now an optional feature instead of a required step. The default setting is to have this feature disabled.
+		
+		the default setting for lib.error_handle was to error() out - the opposite is now true, as normal pilots want to reduce *visible* errors. This is a mod developer-intended setting, as the intention is to REDUCE error popups for pilots, especially during initial game load.
+		
+		neomgr is now CCD1-compliant. it is NOT a CCD1 provider, though. Implementation is minimal, as usual. The utility now has buttons that will open the user's web browser to check for updates on VOUPR and NexusMods
+		
+	lib.unlock_class accepts the Neoloader auth_key now
+		Any authorized-by-the-user plugins can now forcefully unlock a class by providing their authorization key. If a class successfully unlocks, the key that was used to lock it is returned (to reduce destructively unlocking things)
+		
+	lib.set_load provides an official method to set a mod's load state
+		load states are restricted to valid ones, and an authorization key must be provided. future LME implementations may obscure load states in the config.ini (and Neoloader MIGHT do that in the future too), and this function allows compliant and authorized plugins to change states as neccessary.
+		
+	lib.find_file looks for if a file exists and returns a valid path
+		This improves on the old locator used in lib.resolve_file (which now uses lib.find_file instead); any number of paths may be provided as arguments. All valid locations are returned in a table. This will allow plugin developers to handle their own file loading (for instance, using loadfile() and passing arguments to the result), or finding non-lua files.
+		
+	lib.resolve_file now accepts any number of path arguments
+		it just passes them off to lib.find_file, though it does still check the resulting table. Do note that the first valid result is used, so don't pass multiple folders that may contain the same file name.
+		
+	Neoloader now overwrites load-states when a reload is triggered
+		plugins *can* change load-states by just writing to the config.ini, but they should instead use the LME implementation agnostic lib.set_load function instead. To this end, Neoloader will now save known load states when the interface unloads.
+	
+
+
+June 2023 Public Beta Hotfix
+	
+	Neoloader Changes:
+		major:	5
+		minor:	3
+		patch:	1
+		
+		FIXED	neomgr
+		FIXED	load state enforcement
+		FIXED	setup and removal
+		FIXED	management rescue
+		
+	The june update introduced lib.set_load() and began enforcing load states during the unload process. neomgr, setup, uninstall, and management rescue processes were overlooked in updating to handle these changes, as it still used the old config.ini manual write method. This has been resolved.
+	
+	Also, load state enforcement was being routed to a debugging section, so it didn't work anyways. This has also been resolved.
+
+
+
+Neoloader July 2023 Public Beta
+	
+	Neoloader Changes:
+		major:	5
+		minor:	4
+		patch:	0
+		
+		CHANGED	mod registration file dependency declaration options
+		CHANGED launch handling of plugins with dependencies
+		CHANGED	log formatting options
+		CHANGED	logging information during initialization
+		
+	API Changes:
+		API Version	3
+		minor level 8
+		patch level 0
+		
+		CHANGED	lib.resolve_file
+		CHANGED	lib.log_error
+		CHANGED	lib.get_latest
+		CHANGED	lib.resolve_dep_table
+		CHANGED	lib.get_state
+		CHANGED	lib.get_gstate
+		NEW		lib.set_waiting
+		NEW		lib.lme_configure
+		
+	Mods can now delay execution of their dependents
+		using the new lib.set_waiting, it is possible for mods to delay their dependents. This is intended for use by mods made in a more classical manner but patched/altered to ALSO support Neoloader, such as DroidButtons. A mod can set up its bare essentials through Neoloader, then "freeze" until its main body is executed at default loader time.
+		
+	Configuring Neoloader must now be done through lib.lme_configure
+		As certain LME configuration options directly control how plugins are loaded through Neoloader, allowing these options to be managed directly through the config.ini made little sense. Just as load states were enforced in the previous update, configuration of the LME provider is now done through a control function. Certain options can be changed freely, while others will require an auth key.
+		
+	lib.log_error now formats its input based on LME configuration
+		message formatting mirrors usual logs found in other games; every message posts the time of execution, and can be filtered between one of four potential error states: "debug", "info", "warning", and "error".
+		
+	lib.log_error can now store the provided message in a calling plugin's error table.
+		use arguments 3 and 4 of lib.log_error to push a log towards a plugin in particular. Plugins can now independently store and list their own errors; the error table can be retrieved with lib.get_state like always.
+		
+	lib.get_state and lib.get_gstate now retrieve the new relevant options
+		lib.get_state will now list if a plugin is "frozen" or not, which determines if a plugin's dependents are executed or not. lib.get_gstate now list log formatting options, and will deliver a string representing the LME's/Neoloader's versions, relevant for use with lib.compare_sem_ver.
+		
+	Mods can finally declare a range of versions as valid for dependencies!
+		Plugins can now rely on a primary range of versions instead of only a single version. In a mod's declaration file, if a dependency index includes a "modmx" entry, then the prior modid entry is treated as a minimum value and the mx (or maximum) is treated as the maximum value of a version range. lib.require, lib.resolve_dep_table, and lib.get_latest all have been modified to support this feature.
+		
+		in a lib.require soft dependency table, use the ver_max key to signify a range along with the previously standard id/version keys.
+	
+	lib.resolve_file will now pcall any files it resolves, assuming the option is set in the LME configuration.
+		This provides further safety-netting to any code being launched by Neoloader than the previous mere loadfile method.
+		
+	The initialization process now just uses lib.require.
+		The old brute-force sorting algorithm used by Neoloader has been removed, improving Neoloader's execution time. This also fixed minor issues that were cropping up with the old loader; plugins with multiple dependencies are more likely to not stumble due to incorrect sorting, and all code for handling dependencies is more unified.
+		
+	All of these features have been dedicated to ensuring that porting plugins to be Neoloader compatible is even more seamless and easy, while protecting the end user even more.
+	
+	
+	
+Neoloader 2023 November Release 6.0.0
+	
+	Neoloader Changes
+		major:	6
+		minor:	0
+		patch:	0
+		
+		NEW		Compliance with game plugins being disabled
+		NEW		neo_notif, a bundled notification handling solution
+		NEW		Hardcoded translation support
+		NEW		Recovery environment to rescue from LME errors/catastrophic failures
+		FIXED	plugin load position reporting
+		CHANGED	neomgr. All of it.
+		CHANGED	Notifications are sent to the registered notification handler
+		REMOVED	Automatic installation for new users
+		
+	neonotif
+		major:	1
+		minor:	0
+		patch:	0
+		
+	neomgr changes
+		major:	2
+		minor:	0
+		patch:	0
+		
+		NEW		CCD1 support
+		NEW		Interface control scaling
+		NEW		Babel library support
+		CHANGED	Improved integration with Options menu
+		
+	API Changes
+		API:	3
+		minor:	10
+		patch:	0
+		
+		NEW		lib.pass_ini_identifier
+		NEW		lib.lme_get_config
+		FIXED	lib.lme_configure
+		CHANGED	All functions that accept id/version pairs
+		CHANGED lib.uninstall() no longer expects an auth key
+		
+	The above notes don't begin to cover all the tweaks and improvements made throughout all of Neoloader. A good amount of crust from the first PBR has finally been removed, and the usability of every interface element has been reworked. neomgr isn't just a temporary stand-in for managing Neoloader anymore, and neonotif supports extensible notification handling much closer to the original intention of a notification system.
+	
+	Also incredibly important is the implementation of a recovery system; This will assist in recommending actions the user can take to make the game playable after a catastrophic error occurs, from simply triggering a reload all the way to a nuclear reset of configuration options and the LME installation. This recovery system replaces the old "preload" utility that Neoloader used to support, which was intended for a similar yet more minimal approach.
+	
+	The setup and uninstallation systems have also been reworked to better handle the latest edition of Neoloader, and the interface for the setup process will support forward changes. Advanced options are also hidden until selected, instead of being context-based. Neoloader is much less finicky about being installed, too; it will no longer enter a cyclical reload/install/reset loop due to being installed while not being the active IF.
+	
+	Except for the recovery system (which will be implemented next), everything now either supports the Babel translation library (neomgr, neonotif), or has hardcoded language support of its own. The hardcoded languages are only EN/ES/FR/PT, and can't support extensibility like Babel does; instead, as more language options are requested they will simply have to be baked into the release itself, or a new system will be looked into.
+	
+	Also new in this release is an implementation of "CCD1" in neomgr. This stands for "Common Content Descriptor 1", and is a potential standard for the public class of an installed plugin. When a plugin is enabled and supports CCD1, the user will be capable of seeing extended info about the plugin, and even managing settings directly in the manager itself.
+	
+	All together, this is the most useable state Neoloader has ever been, and will be a massive leap in its potential appeal to new users. 
+	
+	
+	
+Neoloader 2023 November Release 6.1.0
+	
+	Neoloader Changes
+		major:	6
+		minor:	1
+		patch:	0
+		
+		NEW 	option to enable neomgr if it is disabled and no manager is loaded using the /neo command
+		NEW 	Recovery option to enable neomgr if it is set as "not loaded"
+		CHANGED	default state of "Compatibility" plugins no longer frozen unless specifically declared so in their INI
+		CHANGED	Authentication key is now passed during lib.activate to the current manager, instead of post-loading
+		CHANGED config_override.ini is better commented
+		CHANGED command scrubbing updated based on VO 1.8.668 command set
+		CHANGED	message logging now includes only the last few numbers of milliseconds, as the rest are useless to track.
+		FIXED	setup segfault when "Show advanced" clicked more than once
+		FIXED	New registry and Plugin failure notifications
+		FIXED	Recovery system no longer blocks keybinds
+		FIXED	startup command running too early after setup, showing only partial new registrations
+		DEPREC	num_dependents no longer neccessary in INI files
+		
+	neomgr changes
+		
+		NEW 	"debug" setting in neomgr's SCM
+		NEW 	inactive tabs are darkened
+		NEW		plugin logs and dependencies are displayed on error
+		CHANGED New plugins are better represented and state correctly labeled
+		CHANGED	loadstate toggle is now a toggle element, not a button
+		CHANGED	Apply pending changes button has been moved, and hides if all pending actions are canceled
+		CHANGED	alignment and sizing of plugin manager
+		CHANGED	load positions hidden by default
+		FIXED	CCD1 slider element wasn't created correctly
+		
+	neo_notif changes
+		
+		NEW 	image scale setting for notifications
+		NEW 	class.get_scale() returns current size
+		
+	API Changes
+		API:	3
+		minor:	11
+		patch:	0
+		
+		NEW		lib.update_state()
+		NEW		lib.catch_block()
+		CHANGED	lib.notify()
+		CHANGED	lib.build_ini()
+		CHANGED	Compatibility plugin handling
+		CHANGED	lib.resolve_dep_table()
+		FIXED	plugin updates when default load state was "YES"
+		
+	Almost all of these changes were suggested by Draugath, or were related to things he pointed out. One of the biggest is that compatibility plugins, those that can be turned on and off in Neoloader but are handled by the default loader, will no longer have their dependencies checked. These plugins should be handling dependency checking on their own due to the nature of being "compatible". They will have to inform Neoloader if they error out using either the new lib.update_state() or lib.catch_block() functions.
+	
+	lib.notify() will now queue its notifications with lib.require if the notification handling system hasn't loaded yet. This fixes notifications being lost due to load sequencing.
+	
+	neomgr had some theme and usability changes, again courtesy of Draugath's pointers. The interface should be much more useful in determining why a plugin is not working for less technical pilots. Also added is a new option for plugin authors; the "show debugging info" listed in neomgr's SCM will make all dependencies and logs revealed, and will show extra LME options in the settings.
+	
+	Also discovered is that there's a very unusual "Ghosting" of plugins occuring; if you disable a plugin but it had a command registered, in certain circumstances the old "sandbox" and plugin(s) were still accessible via that command. This became a HUGE issue with neomgr; if you disabled it, Neoloader would not overwrite the /neo command, and so this ghost of neomgr would still launch, unable to affect anything in the current sandbox at all. 
+	
+	At this time, I have >NO< idea why this is a thing, and can only try to catch it by killing commands that don't get overwritten during reloads. Neoloader now does several things to try an recover neomgr when no management interface is loaded, specifically to prevent this. Investigations are ongoing!
+	
+	Ultimately, this update focuses on improving Neoloader's interopability with the default loader, and improving usability for less technical users.
+	
+Neoloader 2023 December Release 6.1.1
+	2023-1-1
+	
+	Neoloader Changes
+		major:	6
+		minor:	1
+		patch:	1
+		
+		FIXED	duplication of managers, interfaces, or notification handlers
+		FIXED	error message not passed on during file load stage of lib.resolve_file
+		
+	Just a minor maintanence patch on top of 6.1.0, as other important work goes on behind the scenes elsewhere. 
+	
+	The duplication of items in the manager/etc lists was a bit puzzling, but was actually brought about as a result of adding babel support to neomgr and other utilities. While lib.set_class() will overwrite a class table, it also adds objects to those lists if they have a flag - and don't check that the mod isn't already listed there. That has been fixed.
+	
+	If a plugin errored out due to a syntax bug during activation, lib.resolve_file would pass the unhelpful error message "unable to resolve file"; this message would be stored in the mod's direct log by lib.activate(), hence why it was discovered. The actual error passed by loadfile() will now be continually passed on to the calling function now.
+
+Neoloader 2025 May Release 6.2.0
+	
+	Neoloader Changes
+		major:	6
+		minor:	2
+		patch:	0
+		
+		NEW 	update check occurs to help update from v6.1.x to v6.2.0
+		CHANGED	Setup registers changed neomgr and neo_notif via inline declarations
+		CHANGED	'neo' table declared local
+		CHANGED config_override template updated to have all options
+		CHANGED optional file check no longer contains neomgr.ini and neo-notif.ini
+		FIXED	recovery uninstaller's capitalization typo for rClearCommands (was rClearCOmmands)
+		REMOVED neomgr.ini
+		REMOVED neo-notif.ini
+		
+	neomgr changes
+		major: 2
+		minor: 1
+		patch: 0
+		
+		NEW 	create_CCD1_view is now exposed in the public library
+		NEW 	Declaration described inline with file
+		NEW		add_translation exposed so external mods can add new languages
+		CHANGED Default text for untitled smart-config changed to "Untitled Configuration"
+		
+	neo_notif changes
+		major: 1
+		minor: 1
+		patch: 0
+		
+		NEW 	Declaration described inline with file
+		NEW		add_translation exposed so external mods can add new languages
+		
+	A relatively minor update. Most changes involved applying the new 'inline INI' trick and exposing functions that were intended to be exposed in the public class originally. Most additional tweaks were strictly for cleanup purposes.
+	
+	The only major thing to share is that plugins can now directly call the 'create_CCD1_view' function in neomgr. The CCD1, or 'Common Content Descriptor 1', was intended to be like a skyrim MCM; instead of creating your own configuration window, you can just provide a settings template in your mod's public class and let neomgr create it for you.
+	
+	An interesting note is that this is the first version of Neoloader where an update could break someone's game, due to a limitation of how plugins are registered for visibility. With inline declaration, the INI files of the neomgr and neo-notif addons were removed. To fix this, Neoloader now has an update-check procedure, and will automatically alter the old registrations to point to the core files properly.
