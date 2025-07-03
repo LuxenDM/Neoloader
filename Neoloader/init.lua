@@ -4,6 +4,7 @@ description=This is the core of Neoloader.
 ]]--
 
 console_print("\n\n\nVendetta Online has loaded\nNeoloader is Initializing...")
+--note to self: can we do a custom loading screen via popup, or does the 'deprecated' popup system prevent the game from loading?
 
 local timestat_start = gkmisc.GetGameTime()
 local memstat_start = math.ceil(collectgarbage("count"))
@@ -97,6 +98,8 @@ neo = { --neoloader private table
 	version = version,
 	path = local_path,
 	
+	lme_ver = "3.12.0",
+	
 	config = config,
 	registry = {},
 	container = {},
@@ -113,24 +116,74 @@ neo = { --neoloader private table
 		--consistant internal showstopping error handler
 	end,
 	
-	load_module = function(file_path)
+	load_module = function(file_path, optional)
 		local valid_file_path = local_path .. "/" .. file_path
 		if not gksys.IsExist(valid_file_path) then
-			error("Neoloader failed to find a required module: " .. file_path)
+			if not optional then
+				error("Neoloader failed to find a required module: " .. file_path)
+			end
+			lib.log_error("Neoloader failed to find an optional module: " .. file_path)
+			return false
 		end
 		lib.log_error("loading module " .. file_path, 1)
 		
 		local file_f, err = loadfile(valid_file_path)
 		
 		if not file_f then
-			error("Neoloader failed to load a required module: " .. file_path .. ";\nError defined is " .. tostring(err))
+			if not optional then
+				error("Neoloader failed to load a required module: " .. file_path .. ";\nError defined is " .. tostring(err))
+			end
+			lib.log_error("Neoloader failed to load an optional module: " .. file_path .. ";\nError defined is " .. tostring(err))
 		else
 			file_f(neo)
 		end
 	end,
-	
-	load_optional = function(file_path)
-		--pcall load_module and ignore error if file isn't available
-	end,
 }
 
+local load_module = neo.load_module
+
+lib.log_error("Loading initial core modules")
+--initial modules for core operation
+load_module("locale.lua")
+load_module("log.lua")
+load_module("config.lua")
+load_module("tree.lua")
+load_module("stats.lua")
+
+neo.stats.checkpoint("Preparing environment for operation")
+--prepare Neoloader environment
+load_module("update patcher.lua")
+load_module("registry.lua")
+load_module("class container.lua")
+load_module("auth.lua")
+load_module("alert.lua")
+load_module("ifgen.lua")
+load_module("uninstaller.lua")
+
+neo.stats.checkpoint("Generating LME API v" .. neo.lme_ver)
+load_module("api.lua")
+
+neo.stats.checkpoint("Preparing mod loading system")
+load_module("env.lua")
+load_module("dependency_handler.lua")
+load_module("ini cache.lua")
+load_module("loader_process.lua")
+
+if not lib.is_exist("neomgr", "0") then
+	lib.register(local_path .. "/modules/neomgr/neomgr.lua")
+end
+
+if not lib.is_exist("neonotif", "0") then
+	lib.register(local_path .. "/modules/neonotif/neonotif.lua")
+end
+
+--check for current manager, make sure it loaded okay. if not, try neomgr (force-launch if needed). if failure, notify user with option to launch recovery
+
+--register the 'neo' command with the active manager if it is available
+
+--log unfilled dependencies for objects still in the dependency queue
+
+--reset handler -> its own code (bind to reload and quit events)
+
+neo.stats.checkpoint("Neoloader has finished initial execution! The standard plugin loader will now take over.\n\n")
+ProcessEvent("LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
