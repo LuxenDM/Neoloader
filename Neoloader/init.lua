@@ -8,6 +8,7 @@ console_print("\n\n\nVendetta Online has loaded\nNeoloader is Initializing...")
 
 local timestat_start = gkmisc.GetGameTime()
 local memstat_start = math.ceil(collectgarbage("count"))
+local recovery_system = {}
 
 local version = {
 	strver = "7.0.0",
@@ -40,7 +41,7 @@ if not gksys.IsExist(local_path .. "/init.lua") then
 	if not gksys.IsExist(local_path .. "/init.lua") then
 		--We have NO idea where this file is executing from, and that is a PROBLEM! launch the default interface and inform the user that Neoloader is being run in a very unusual manner. We cannot launch the recovery interface if we cannot guarantee its location
 		
-		gkini.WriteString("Neoloader", "STOP", "home_dir_failure")
+		--gkini.WriteString("Neoloader", "STOP", "home_dir_failure")
 		dofile("vo/if.lua")
 		ProcessEvent("START")
 		console_print("\n\n###Neoloader has encountered a critical error!###")
@@ -53,10 +54,53 @@ if not gksys.IsExist(local_path .. "/init.lua") then
 end
 
 console_print("Neoloader has identified its home directory as " .. local_path)
+console_print("Verifying required files...")
 
-if gksys.IsExist(local_path .. "/recovery.lua") then
-	dofile(local_path .. "/recovery.lua")
+do
+	local missing = {}
+	for index, file in ipairs {
+		--init.lua, --already verified as above
+		--root directory files
+		"/recovery.lua",
+		"/main.lua",
+		
+		--modules directory files (subdirectories are handled within one of these files 
+		"/modules/alert.lua",
+		"/modules/api.lua",
+		"/modules/auth.lua",
+		"/modules/class container.lua",
+		"/modules/config.lua",
+		"/modules/dependency handler.lua",
+		"/modules/env.lua",
+		"/modules/ifgen.lua",
+		"/modules/ini cache.lua",
+		"/modules/loader process.lua",
+		"/modules/locale.lua"
+		"/modules/log.lua",
+		"/modules/registry.lua",
+		"/modules/stats.lua",
+		"/modules/tree.lua",
+		"/modules/update patcher.lua",
+	} do
+		if not gksys.IsExist(local_path .. file) then
+			table.insert(missing, local_path .. file)
+			console_print("File missing: " .. local_path .. file)
+		end
+	end
+	
+	if missing[1] ~= "/recovery.lua" then
+		recovery_system = dofile(local_path .. "/recovery.lua")
+	end
+	
+	if #missing > 0 then
+		recovery_system.error = "Neoloader ran into a critical error and cannot start! \n Required files for Neoloader's operation were not found. \n files missing:\n	" .. table.concat(missing, ",\n	")
+		error("Neoloader critical error")
+	end
 end
+
+recovery_system.file_check_success()
+
+
 
 if (gkini.ReadString("Neoloader", "override_disabled_state", "NO") == "NO") and (gkini.ReadInt("Vendetta", "plugins", 1) == 0) then
 	console_print("Plugins are disabled, and Neoloader is not configured to override this setting! The default interface will load, and Neoloader will exit!")
@@ -64,10 +108,7 @@ if (gkini.ReadString("Neoloader", "override_disabled_state", "NO") == "NO") and 
 	return
 end
 
-local config = {
-	current_if = gkini.ReadString("Neoloader", "current_if", "vo/if.lua"),
-}
-
+local config = {}
 local log = {}
 
 print = function(msg)
@@ -112,15 +153,13 @@ neo = { --neoloader private table
 		memstat_start = memstat_start,
 	},
 	
-	error = function()
-		--consistant internal showstopping error handler
-	end,
-	
 	load_module = function(file_path, optional)
-		local valid_file_path = local_path .. "/" .. file_path
+		local valid_file_path = local_path .. "/modules/" .. file_path
 		if not gksys.IsExist(valid_file_path) then
 			if not optional then
-				error("Neoloader failed to find a required module: " .. file_path)
+				recovery_system.error = "Neoloader failed to find a required module: " .. file_path
+				recovery_system.critical = true
+				recovery_system.push_error()
 			end
 			lib.log_error("Neoloader failed to find an optional module: " .. file_path)
 			return false
@@ -165,9 +204,9 @@ load_module("api.lua")
 
 neo.stats.checkpoint("Preparing mod loading system")
 load_module("env.lua")
-load_module("dependency_handler.lua")
+load_module("dependency handler.lua")
 load_module("ini cache.lua")
-load_module("loader_process.lua")
+load_module("loader process.lua")
 
 if not lib.is_exist("neomgr", "0") then
 	lib.register(local_path .. "/modules/neomgr/neomgr.lua")
