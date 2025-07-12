@@ -41,15 +41,10 @@ if not gksys.IsExist(local_path .. "/init.lua") then
 	if not gksys.IsExist(local_path .. "/init.lua") then
 		--We have NO idea where this file is executing from, and that is a PROBLEM! launch the default interface and inform the user that Neoloader is being run in a very unusual manner. We cannot launch the recovery interface if we cannot guarantee its location
 		
-		--gkini.WriteString("Neoloader", "STOP", "home_dir_failure")
+		gkini.WriteString("Neoloader", "STOP", "init_failure: local_dir_find_failure")
+		gkini.WriteString("Vendetta", "if", "")
 		dofile("vo/if.lua")
-		ProcessEvent("START")
-		console_print("\n\n###Neoloader has encountered a critical error!###")
-		console_print("	error: Neoloader was unable to determine its home directory")
-		--gkini.WriteString("Vendetta", "plugins", "0") --prevent even normal plugins from loading in this state
-		error("Neoloader critical error, unable to determine home directory!")
-		
-		--todo: dialog to help user locate correct directory and apply as an override to this outcome
+		return
 	end
 end
 
@@ -100,9 +95,10 @@ do
 			recovery_system.critical = true
 			recovery_system.push_error()
 		else
-			gkini.WriteString("Neoloader", "error", "init_failure: missing_recovery")
+			gkini.WriteString("Neoloader", "STOP", "init_failure: missing_recovery")
 			gkini.WriteString("Vendetta", "if", "")
-			ReloadInterface() --maybe strictly trigger a Game.Quit()
+			dofile("vo/if.lua")
+			return
 		end
 	end
 end
@@ -137,6 +133,7 @@ lib.log_error = function(msg, lvl) --temporary
 		"ERROR",
 	} do
 		status = (i == lvl and v) or status
+		break
 	end
 	
 	local timestamp = os.date() .. tostring(gkmisc.GetGameTime() % 10000)
