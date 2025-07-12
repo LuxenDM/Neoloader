@@ -81,20 +81,29 @@ do
 		"/modules/stats.lua",
 		"/modules/tree.lua",
 		"/modules/update patcher.lua",
+
+		--further verification is handled by load_module()
 	} do
 		if not gksys.IsExist(local_path .. file) then
 			table.insert(missing, local_path .. file)
 			console_print("File missing: " .. local_path .. file)
 		end
 	end
-	
+
 	if missing[1] ~= "/recovery.lua" then
 		recovery_system = dofile(local_path .. "/recovery.lua")
 	end
 	
 	if #missing > 0 then
-		recovery_system.error = "Neoloader ran into a critical error and cannot start! \n Required files for Neoloader's operation were not found. \n files missing:\n	" .. table.concat(missing, ",\n	")
-		error("Neoloader critical error")
+		if recovery_system.ready then
+			recovery_system.error = "Neoloader ran into a critical error and cannot start!\nRequired files for Neoloader's operation were not found.\nFiles missing:\n\t" .. table.concat(missing, ",\n\t")
+			recovery_system.critical = true
+			recovery_system.push_error()
+		else
+			gkini.WriteString("Neoloader", "error", "init_failure: missing_recovery")
+			gkini.WriteString("Vendetta", "if", "")
+			ReloadInterface() --maybe strictly trigger a Game.Quit()
+		end
 	end
 end
 
@@ -206,13 +215,13 @@ neo.stats.checkpoint("Preparing mod loading system")
 load_module("env.lua")
 load_module("dependency handler.lua")
 load_module("ini cache.lua")
-load_module("loader process.lua")
+load_module("loader process.lua")  --< triggers loading system; registered interface or VO-IF is handled first here
 
-if not lib.is_exist("neomgr", "0") then
+if not lib.is_exist("neomgr", "0") then --verify file exists
 	lib.register(local_path .. "/modules/neomgr/neomgr.lua")
 end
 
-if not lib.is_exist("neonotif", "0") then
+if not lib.is_exist("neonotif", "0") then --verify file exists
 	lib.register(local_path .. "/modules/neonotif/neonotif.lua")
 end
 
