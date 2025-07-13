@@ -287,38 +287,48 @@ local waiting_for_dependencies = {} --storage for functions with unfulfilled dep
 local converted_dep_tables = {} --storage for build results of compiled ini files
 
 function lib.log_error(msg, alert, id, version)
-	id, version = lib.pass_ini_identifier(id, version)
 	alert = tonumber(alert or 2) or 2
-	if alert < neo.dbgIgnoreLevel then
-		return
+	if alert < neo.dbgIgnoreLevel then return end
+
+	local val = tostring(msg)
+	local use_plugin = id ~= nil or version ~= nil
+
+	if use_plugin then
+		id, version = lib.pass_ini_identifier(id, version)
+		id = tostring(id or "null")
+		version = tostring(version)
+		if version == "0" and id ~= "null" then
+			version = lib.get_latest(id)
+		end
 	end
-	val = tostring(msg) or ""
-	id = tostring(id) or "null"
-	version = tostring(version)
-	if version == "0" then
-		version = lib.get_latest(id)
-	end
+
 	if neo.dbgFormatting == "YES" then
-		local status = "ALERT"
-		for i, v in ipairs {
+		local level_labels = {
 			[1] = "DEBUG",
 			[2] = "INFO",
 			[3] = "WARNING",
 			[4] = "ERROR",
-		} do
-			status = i == alert and v or status
-		end
-		
-		val = "[" .. os.date() .. "." .. tostring(gk_get_microsecond() % 10000) .. "] [" .. status .. "] " .. val .. "\127FFFFFF"
+		}
+		local status = level_labels[alert] or "ALERT"
+		val = string.format("[%s.%04d] [%s] %s\127FFFFFF",
+			os.date(),
+			gk_get_microsecond() % 10000,
+			status,
+			val
+		)
 	end
+
 	if neo.echoLogging == "YES" then
 		console_print(filter_colorcodes(val))
 	end
-	if lib.is_exist(id, version) then
+
+	if use_plugin and lib.is_exist(id, version) then
 		table.insert(neo.plugin_registry[id .. "." .. version].errors, val)
 	end
+
 	table.insert(neo.log, val)
 end
+
 
 RegisterEvent(function() neo.pathlock = true end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
 --when the default loader is working, dofile() has the 'current working directory' appended in front of any path given. This is reset when all plugins are fully loaded.
