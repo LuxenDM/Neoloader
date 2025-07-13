@@ -9,6 +9,7 @@ console_print("\n\n\nVendetta Online has loaded\nNeoloader is Initializing...")
 local timestat_start = gkmisc.GetGameTime()
 local memstat_start = math.ceil(collectgarbage("count"))
 local recovery_system = {}
+local auth_key = SHA1(tostring(gk_get_microsecond() + math.random()))
 
 local version = {
 	strver = "7.0.0",
@@ -103,7 +104,7 @@ do
 	end
 end
 
-recovery_system.file_check_success()
+recovery_system.file_check_success(auth_key)
 
 
 
@@ -148,6 +149,7 @@ neo = { --neoloader private table
 	lme_ver = "3.12.0",
 	
 	config = config,
+	auth_key = auth_key,
 	registry = {},
 	container = {},
 	log = log,
@@ -176,7 +178,9 @@ neo = { --neoloader private table
 		
 		if not file_f then
 			if not optional then
-				error("Neoloader failed to load a required module: " .. file_path .. ";\nError defined is " .. tostring(err))
+				recovery_system.error = "Neoloader failed to load a required module: " .. file_path .. "\n\t" .. err
+				recovery_system.critical = true
+				recovery_system.push_error()
 			end
 			lib.log_error("Neoloader failed to load an optional module: " .. file_path .. ";\nError defined is " .. tostring(err))
 		else
