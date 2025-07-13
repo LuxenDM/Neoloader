@@ -1492,27 +1492,29 @@ function lib.update_state(id, ver, state_data)
 		link = "plugin_link",
 		plugin_name = "plugin_name",
 		plugin_link = "plugin_link",
-		--made as a table for future possible "state" updates
 	} do
-		if k == "complete" and ref[k] == false then
+		if k == "complete" and state_data[k] ~= nil and ref[v] == false then
 			lib.log_error("	state 'complete' >> Cannot be changed from false!", 1)
-		else
-			if state_data[k] ~= nil then
-				if type(state_data[k]) == type(ref[k]) then
-					lib.log_error("	state '" .. tostring(k) .. "' >> " .. tostring(state_data[k]), 1)
-					ref[k] = state_data[k]
-					if k == "complete" then
-						lib.log_error("\127FF0000" .. "Plugin encountered an error and triggered its own failure state.", 3, id, ver)
-						lib.log_error("	stated error: " .. tostring(state_data.err_details or "no passed message"), 3, id, ver)
-						lib.notify("PLUGIN_FAILURE", {plugin_id = id, version = ver, error_string = tostring(state_data.err_details or "self triggered error with no passed error message")})
-					end
-				else
-					lib.log_error("	state '" .. tostring(k) .. "' failed to change to >> " .. tostring(state_data[k]) .. " type of " .. type(state_data[k]), 1)
-					lib.log_error("	state was " .. tostring(ref[k]), 1)
+		elseif state_data[k] ~= nil then
+			if type(state_data[k]) == type(ref[v]) then
+				lib.log_error("	state '" .. tostring(k) .. "' >> " .. tostring(state_data[k]), 1)
+				ref[v] = state_data[k]
+				if k == "complete" then
+					lib.log_error("\127FF0000" .. "Plugin encountered an error and triggered its own failure state.", 3, id, ver)
+					lib.log_error("	stated error: " .. tostring(state_data.err_details or "no passed message"), 3, id, ver)
+					lib.notify("PLUGIN_FAILURE", {
+						plugin_id = id,
+						version = ver,
+						error_string = tostring(state_data.err_details or "self triggered error with no passed error message")
+					})
 				end
+			else
+				lib.log_error("	state '" .. tostring(k) .. "' failed to change to >> " .. tostring(state_data[k]) .. " type of " .. type(state_data[k]), 1)
+				lib.log_error("	state was " .. tostring(ref[v]), 1)
 			end
 		end
 	end
+
 	
 	neo.plugin_registry[id .. "." .. ver] = ref
 end
