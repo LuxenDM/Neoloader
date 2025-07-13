@@ -76,6 +76,7 @@ local neo = {
 		[3] = 0,
 		[4] = "",
 	},
+	path = "plugins/Neoloader/" --static value here. upcoming v7.x.x can be variable!
 	log = {},
 	error_flag = false, 
 	plugin_registry = {}, --holds registered plugin details [id .. version]; [id].latest will provide version sstring of latest version for redirect
@@ -1173,18 +1174,49 @@ function lib.plugin_read_str(name, version, header, key)
 end
 
 function lib.get_path(plugin_id, version)
-	plugin_id, ver = lib.pass_ini_identifier(plugin_id, ver)
-	if err_han( type(plugin_id) ~= "string", "lib.get_path expected a string for its first argument, got " .. type(plugin_id) ) then
-		return false, "plugin ID not a string"
-	end
-	--if libraries rely on multiple files but are also meant to be distributed with every plugin that requires them, this function will retrieve the stored "path" registered to the working library
-	version = tostring(version or 0)
-	if version == "0" then
-		version = lib.get_latest(plugin_id)
-	end
-	
-	if lib.is_exist(plugin_id, version) then
-		return neo.plugin_registry[plugin_id .. "." .. version].plugin_folder
+	if type(plugin_id) == "string" then
+		--original behavior, caller is looking for a plugin's path
+		plugin_id, version = lib.pass_ini_identifier(plugin_id, version)
+		version = tostring(version or 0)
+		if version == "0" then
+			version = lib.get_latest(plugin_id)
+		end
+
+		if lib.is_exist(plugin_id, version) then
+			return neo.plugin_registry[plugin_id .. "." .. version].plugin_folder
+		end
+		
+		return false, "plugin provided doesn't appear to exist"
+	else
+		--new behavior, caller is looking for their own path
+		local trace = debug.traceback()
+		local lines = {}
+		for line in trace:gmatch("[^\n]+") do
+			table.insert(lines, line)
+		end
+		
+		--escape special characters in folder name
+		--not useful in v6.3.x, but needed for incoming v7.x.x rewrite!
+		local loader_root = neo.path:gsub("([^%w])", "%%%1")
+		
+		local skipped_loader = false
+		for _, line in ipairs(lines) do
+			local path = line:match("([^\":]+):%d+")
+			if path then
+				path = path:match("^%s*(.-)%s*$")
+				if path:find("^plugins/") then
+					if not skipped_loader and path:find("^" .. loader_root) then
+						skipped_loader = true
+					else
+						-- Return only the folder path, like "plugins/my_plugin/"
+						local folder = path:match("^(.-/)[^/]-$")
+						return folder
+					end
+				end
+			end
+		end
+		
+		return false, "unable to determine caller's directory!?"
 	end
 end
 
