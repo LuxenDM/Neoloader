@@ -85,9 +85,9 @@ end
 --This will be local when released
 local neo = {
 	version = {
-		strver = "6.2.0",
+		strver = "6.3.0",
 		[1] = 6,
-		[2] = 2,
+		[2] = 3,
 		[3] = 0,
 		[4] = "",
 	},
@@ -109,9 +109,9 @@ local neo = {
 	
 	init = gkini.ReadInt("Neoloader", "Init", 0),
 	API = 3,
-	minor = 11, --lib.catch_block() & lib.update_state()
+	minor = 12, --lib.get_path() can provide caller's path data
 	patch = 0,
-	lmever = "3.11.0",
+	lmever = "3.12.0",
 	
 	pathlock = false,
 	statelock = false,
