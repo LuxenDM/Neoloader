@@ -497,7 +497,7 @@ function lib.build_ini(iniFilePointer)
 		return false, "ini file path not a string"
 	end
 	local ifp = iniFilePointer --less typing
-	lib.log_error("	Building INI " .. ifp, 1)
+	lib.log_error("Building INI " .. ifp, 1)
 	local getstr = gkini.ReadString2
 	local getint = gkini.ReadInt2
 	
@@ -878,9 +878,13 @@ function lib.activate_plugin(id, version, verify_key)
 	end
 
 	modreg.complete = true
+	modreg.stats = {
+		timestat = gk_get_microsecond() - time_start,
+		memstat = get_mem() - mem_start,
+	}
 	lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader successfully!", 2, id, version)
-	lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1, id, version)
-	lib.log_error("[memstat] memory footprint increased by " .. tostring(get_mem() - mem_start), 1, id, version)
+	lib.log_error("[timestat] activation took: " .. tostring(modreg.stats.timestat), 1, id, version)
+	lib.log_error("[memstat] memory footprint to load: " .. tostring(modreg.stats.memstat), 1, id, version)
 	if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
 		if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
 			lib.check_queue()
@@ -962,7 +966,8 @@ function lib.get_state(name, version)
 			plugin_dependencies = ref.plugin_dependencies,
 			
 			plugin_is_new = ref.new_entry,
-			compat_flag = ref.compat
+			compat_flag = ref.compat,
+			plugin_stats = ref.stats
 		}
 	end
 	
@@ -1867,6 +1872,8 @@ do --init process
 			dofile("vo/if.lua")
 		end
 	end
+	lib.log_error("[timestat] Interface loaded: " .. tostring(timestat_advance()), 1)
+	lib.log_error("[memstat] footprint increased by: " .. tostring(memstat_advance()), 1)
 	
 	if neo.listPresorted == "YES" then
 		lib.log_error("Config.ini claims to be presorted by an external application; dependency load ordering has been skipped!", 3)
@@ -1987,7 +1994,7 @@ RegisterEvent(function()
 	end
 	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step), 2)
 	local cur_mem = get_mem()
-	lib.log_error("[memstat] footprint currently at: " .. tostring(cur_mem) .. "; increased by " .. tostring(cur_mem - memstat_start) .. " from LME initialization", 1)
+	lib.log_error("[memstat] footprint currently at: " .. tostring(cur_mem) .. "; increased by " .. tostring(cur_mem - memstat_start) .. " from the start of LME initialization (Includes All LME plugins, the interface, and standard plugins)", 1)
 end, "PLUGINS_LOADED")
 
 local function reset_handler()
@@ -2023,7 +2030,7 @@ RegisterEvent(reset_handler, "QUIT")
 do
 	lib.log_error("[timestat] Neoloader completed in " .. tostring(gk_get_microsecond() - timestat_neo_start), 2)
 	local cur_mem = get_mem()
-	lib.log_error("[memstat] footprint currently at: " .. tostring(cur_mem) .. "; increased by " .. tostring(cur_mem - memstat_start) .. " from LME initialization", 1)
+	lib.log_error("[memstat] footprint currently at: " .. tostring(cur_mem) .. "; increased by " .. tostring(cur_mem - memstat_start) .. " from the start of LME initialization (includes all LME plugins and the interface)", 1)
 	lib.log_error("Neoloader has finished initial execution! The standard plugin loader will now take over.\n\n", 2)
 	ProcessEvent("LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
 end
