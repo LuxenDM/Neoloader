@@ -524,3 +524,31 @@ Neoloader 2025 May Release 6.2.0
 	The only major thing to share is that plugins can now directly call the 'create_CCD1_view' function in neomgr. The CCD1, or 'Common Content Descriptor 1', was intended to be like a skyrim MCM; instead of creating your own configuration window, you can just provide a settings template in your mod's public class and let neomgr create it for you.
 	
 	An interesting note is that this is the first version of Neoloader where an update could break someone's game, due to a limitation of how plugins are registered for visibility. With inline declaration, the INI files of the neomgr and neo-notif addons were removed. To fix this, Neoloader now has an update-check procedure, and will automatically alter the old registrations to point to the core files properly.
+
+Neoloader 2025 July Interim Release 6.3.0
+	
+	Neoloader Changes
+		major:	6
+		minor:	3
+		patch:	0
+		
+		NEW		memory footprint tracking added to existing time statistic
+		CHANGED	lib.log_error() redesigned to be more efficient
+		FIXED	lib.update_state() value validation and completion state changes
+		
+	API Changes
+		API:	3
+		minor:	12
+		patch:	0
+		
+		NEW		lib.get_state() returns a plugin's launch time and memory footprint statistics
+		NEW		lib.get_path() new behavior returns caller's folder path when no args provided
+		CHANGED	INI declaration data 'api' also checks 'API' (more common in existing mods)
+		
+	Neoloader v6.x.x is coming to a close with this version, a small update adding new features and fixing existing bugs. All forward progress will be dedicated to Neoloader v7.0.0, which provides a ground-up rework.
+	
+	lib.get_path's new behavior is backported from the v7.0.0 project, allowing mods to determine their own folder path. This will help mods that may have been moved away from their expected directory, or for libraries being distributed with other mods.
+	
+	Also implemented is a method to inspect a plugin's footprint, measured during its launch time, and how long it took to load. While not particularly useful to most mods, plugin developers seeking to improve their mod's efficiency for mobile or VR platforms can readily access this information more easily. Memory tracking is new, and while timestamps were always available in the LME logs, they're now kept within each plugin's registry directly.
+
+	The contents of this file will be moved to the project's wiki, as a development journal. Future changelogs will follow the keepachangelog format for both consistancy and machine readability. Why? Well, this isn't an appropriate changelog! As insightful as the commentary might be, the formatting is not mobile-friendly nor ingestible. Its also not contributor-friendly, and while I [luxen] have been the primary designer of Neoloader and the LME API for the past several years, that will not always be the case. Neoloader is expanding -- and, with luck, so will the modding community.
