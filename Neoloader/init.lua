@@ -91,7 +91,7 @@ local neo = {
 		[3] = 0,
 		[4] = "",
 	},
-	path = "plugins/Neoloader/" --static value here. upcoming v7.x.x can be variable!
+	path = "plugins/Neoloader/", --static value here. upcoming v7.x.x can be variable!
 	log = {},
 	error_flag = false, 
 	plugin_registry = {}, --holds registered plugin details [id .. version]; [id].latest will provide version sstring of latest version for redirect
