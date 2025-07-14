@@ -43,6 +43,21 @@ local function timestat_advance()
 	return retval
 end
 
+local get_mem = function()
+	return math.ceil(collectgarbage("count"))
+end
+
+local memstat_start = get_mem()
+local memstat_step = get_mem()
+local memstat_advance = function()
+	local next_step = get_mem()
+	local retval = next_step - memstat_step
+	memstat_step = next_step
+	return retval
+end
+
+print("[memstat] memory footprint tracking initialized at " .. tostring(memstat_start))
+
 local override_switch = gkini.ReadString2("Override", "doOverride", "NO", "plugins/Neoloader/config-override.ini")
 
 
@@ -1608,6 +1623,7 @@ end
 
 
 lib.log_error("[timestat] library function setup: " .. tostring(timestat_advance()), 1)
+lib.log_error("[memstat] footprint increased by: " .. tostring(memstat_advance()), 1)
 
 do
 	--check that all files exist
@@ -1657,7 +1673,7 @@ RegisterUserCommand("neodelete", function() lib.uninstall(mgr_key) end)
 RegisterUserCommand("reload", lib.reload)
 
 lib.log_error("[timestat] library extra environment setup: " .. tostring(timestat_advance()), 1)
-
+lib.log_error("[memstat] footprint increased by: " .. tostring(memstat_advance()), 1)
 
 
 
@@ -1758,6 +1774,7 @@ do --init process
 	
 	lib.log_error("Neoloader found " .. tostring(counter) .. " plugins/libraries.", 2)
 	lib.log_error("[timestat] Init stage 1: " .. tostring(timestat_advance()), 1)
+	lib.log_error("[memstat] footprint increased by: " .. tostring(memstat_advance()), 1)
 	--Init Stage 2: build INI files and register information
 	
 	for k, v in ipairs(registered_plugins) do
@@ -1786,6 +1803,7 @@ do --init process
 	
 	lib.log_error("Of those plugins, " .. tostring(#validqueue) .. " are set to be loaded\nNow breaking down dependency tree...", 2)
 	lib.log_error("[timestat] Init stage 2: " .. tostring(timestat_advance()), 1)
+	lib.log_error("[memstat] footprint increased by: " .. tostring(memstat_advance()), 1)
 	--[[Init Stage 3
 		We have filtered down to only plugins that SHOULD run; now we need to figure their load order based on dependencies.
 		
@@ -1895,6 +1913,7 @@ do --init process
 	end
 	
 	lib.log_error("[timestat] Init stage 3: " .. tostring(timestat_advance()), 1)
+	lib.log_error("[memstat] footprint increased by: " .. tostring(memstat_advance()), 1)
 	
 	--Init Stage 4
 	
@@ -1917,6 +1936,7 @@ do --init process
 		ProcessEvent("LME_PLUGINS_LOADED")
 		
 		lib.log_error("[timestat] Init stage 4: " .. tostring(timestat_advance()), 1)
+		lib.log_error("[memstat] footprint increased by: " .. tostring(memstat_advance()), 1)
 		if neo.error_flag == false then
 			lib.notify("SUCCESS")
 		end
@@ -1964,6 +1984,8 @@ RegisterEvent(function()
 		end
 	end
 	lib.log_error("[timestat] Standard plugin Loader completed in " .. tostring(gk_get_microsecond() - timestat_step), 2)
+	local cur_mem = get_mem()
+	lib.log_error("[memstat] footprint currently at: " .. tostring(cur_mem) .. "; increased by " .. tostring(cur_mem - memstat_start) .. " from LME initialization", 1)
 end, "PLUGINS_LOADED")
 
 local function reset_handler()
@@ -1996,7 +2018,10 @@ end
 RegisterEvent(reset_handler, "UNLOAD_INTERFACE")
 RegisterEvent(reset_handler, "QUIT")
 
-lib.log_error("[timestat] Neoloader completed in " .. tostring(gk_get_microsecond() - timestat_neo_start), 2)
-timestat_step = gk_get_microsecond()
-lib.log_error("Neoloader has finished initial execution! The standard plugin loader will now take over.\n\n", 2)
-ProcessEvent("LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
+do
+	lib.log_error("[timestat] Neoloader completed in " .. tostring(gk_get_microsecond() - timestat_neo_start), 2)
+	local cur_mem = get_mem()
+	lib.log_error("[memstat] footprint currently at: " .. tostring(cur_mem) .. "; increased by " .. tostring(cur_mem - memstat_start) .. " from LME initialization", 1)
+	lib.log_error("Neoloader has finished initial execution! The standard plugin loader will now take over.\n\n", 2)
+	ProcessEvent("LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
+end
