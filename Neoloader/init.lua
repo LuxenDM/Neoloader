@@ -815,6 +815,7 @@ end
 function lib.activate_plugin(id, version, verify_key)
 	id, version = lib.pass_ini_identifier(id, version)
 	local time_start = gk_get_microsecond()
+	local mem_start = get_mem()
 	lib.log_error("attempting activation of " .. tostring(id) .. "." .. tostring(version), 1)
 	if err_han( type(id) ~= "string", "lib.activate_plugin expected a string for its first argument, got " .. type(id) ) then
 		return false, "plugin ID not a string"
@@ -879,6 +880,7 @@ function lib.activate_plugin(id, version, verify_key)
 	modreg.complete = true
 	lib.log_error("Activated plugin " .. plugin_id .. " with Neoloader successfully!", 2, id, version)
 	lib.log_error("[timestat] activation took: " .. tostring(gk_get_microsecond() - time_start), 1, id, version)
+	lib.log_error("[memstat] memory footprint increased by " .. tostring(get_mem() - mem_start), 1, id, version)
 	if (neo.statelock == false) or (neo.allowDelayedLoad == "YES") then
 		if neo.plugin_registry[plugin_id].dependent_freeze < 1 then
 			lib.check_queue()
