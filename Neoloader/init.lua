@@ -500,7 +500,7 @@ function lib.build_ini(iniFilePointer)
 		local plugintype = getstr("modreg", "type", "plugin", ifp)
 		local name = getstr("modreg", "name", "UNTITLED: " .. ifp, ifp)
 		local pluginversion = getstr("modreg", "version", "0", ifp)
-		local pluginapi = getint("modreg", "api", 0, ifp)
+		local pluginapi = getint("modreg", "api", 0, ifp) or getint("modreg", "API", 0, ifp)
 		if err_han( pluginapi ~= neo.API and neo.allowBadAPIVersion == "NO" , "lib.build_ini failed; API mismatched. expected " .. tostring(neo.API) .. ", got " .. tostring(pluginapi) ) then
 			lib.log_error("INI Builder failed: API Mismatch!", 1)
 			return false, "API mismatch"
