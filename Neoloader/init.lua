@@ -19,6 +19,14 @@ local version = {
 	[4] = "",
 }
 
+local failsafe_recovery = function(reason)
+	console_print("Neoloader ran into a CRITICAL error and will not load! The failsafe system has been triggered; the default interface will now load.")
+	gkini.WriteString("Neoloader", "STOP", reason)
+	gkini.WriteString("Vendetta", "if", "")
+	dofile("vo/if.lua")
+	--reminder to self: make sure to return AFTER this function
+end
+
 local local_path = "plugins/Neoloader"
 if not gksys.IsExist(local_path .. "/init.lua") then
 	local_path = gkini.ReadString("Neoloader", "home_path_override", "plugins/Neoloader/Neoloader")
@@ -42,14 +50,25 @@ if not gksys.IsExist(local_path .. "/init.lua") then
 	if not gksys.IsExist(local_path .. "/init.lua") then
 		--We have NO idea where this file is executing from, and that is a PROBLEM! launch the default interface and inform the user that Neoloader is being run in a very unusual manner. We cannot launch the recovery interface if we cannot guarantee its location
 		
-		gkini.WriteString("Neoloader", "STOP", "init_failure: local_dir_find_failure")
-		gkini.WriteString("Vendetta", "if", "")
-		dofile("vo/if.lua")
-		return
+		return failsafe_recovery("init_failure: local_dir_find_failure")
 	end
 end
 
 console_print("Neoloader has identified its home directory as " .. local_path)
+console_print("Launching recovery system handler...")
+
+do
+	local rec_path = local_path .. "/recovery.lua"
+	if not gksys.IsExist(rec_path) then
+		return failsafe_recovery("init_failure: recovery_not_found")
+	end
+	local status, err = pcall(dofile(local_path .. "/recovery.lua"))
+	if not status then
+		return failsafe_recovery("init_failure: recovery_load_error: " .. tostring(err))
+	end
+	recovery_system = status
+end
+
 console_print("Verifying required files...")
 
 do
@@ -85,10 +104,6 @@ do
 			console_print("File missing: " .. local_path .. file)
 		end
 	end
-
-	if missing[1] ~= "/recovery.lua" then
-		recovery_system = dofile(local_path .. "/recovery.lua")
-	end
 	
 	if #missing > 0 then
 		if recovery_system.ready then
@@ -96,10 +111,7 @@ do
 			recovery_system.critical = true
 			recovery_system.push_error()
 		else
-			gkini.WriteString("Neoloader", "STOP", "init_failure: missing_recovery")
-			gkini.WriteString("Vendetta", "if", "")
-			dofile("vo/if.lua")
-			return
+			return failsafe_recovery("init_failure: missing_recovery")
 		end
 	end
 end
@@ -125,7 +137,7 @@ end
 declare("lib", {}) --LME API public table
 lib[0] = "LME"
 lib[1] = "Neoloader"
-lib.log_error = function(msg, lvl) --temporary
+lib.log_error = function(msg, lvl) --temporary <--- ###### Note to self - replace behavior with base from v6.3.0 (more efficient)
 	local status = "ALERT"
 	for i, v in ipairs {
 		"DEBUG",
