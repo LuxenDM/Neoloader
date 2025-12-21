@@ -974,7 +974,125 @@ local build_pre_LME_options = function()
 		table.insert(config_options, op_frame)
 	end
 
+	local option_list_container = iup.vbox {
+		iup.label {
+			title = lget("RECOVERY_CONFIG_MENU_PRE_DESCRIP|Set LME options and load states of registered plugins here"),
+		},
+		iup.fill { size = "%1", },
+	}
+
+	for i, v in ipairs(config_options) do
+		option_list_container:append(v)
+	end
+	
 	--todo: create scrolling frame here
+
+	local root_view = iup.vbox {
+		config_options,
+		iup.fill { },
+		--buttons to set default or return to current settings here
+	}
+
+	return root_view
+end
+
+local build_post_LME_options = function()
+	local config_options = {
+		oplist {
+			key = "launch_mode",
+			default = 1,
+			value = gkini.ReadString("Neoloader", "launch_mode", "independent") == "independent" and 1 or 2,
+			"independent",
+			"cooperative",
+			action = function(new_value)
+				if new_value == "independent" then
+					gkini.WriteString("Vendetta", "if", local_path .. "init.lua")
+				else
+					gkini.WriteString("Vendetta", "if", "")
+				end
+				neo.api.config.set_config(auth_key, "launch_mode", new_value)
+			end,
+		},
+		oplist {
+			key = "allow_bad_api_version",
+			default = 2,
+			value = gkini.ReadString("Neoloader", "allow_bad_api_version", "NO") == "YES" and 1 or 2,
+			"YES",
+			"NO",
+			action = function(new_value)
+				neo.api.config.set_config(auth_key, "allow_bad_api_version", new_value)
+			end,
+		},
+		oplist {
+			key = "default_load_state",
+			default = 1,
+			value = gkini.ReadString("Neoloader", "default_load_state", "YES") == "YES" and 1 or 2,
+			"YES",
+			"NO",
+			action = function(new_value)
+				neo.api.config.set_config(auth_key, "default_load_state", new_value)
+			end,
+		},
+		iup.fill { size = "%2", },
+	}
+
+	local counter = 0
+	while true do
+		counter = counter + 1
+		local reg_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+		if reg_file == "" then
+			break
+		end
+
+		local id = gkini.ReadString2("modreg", "id", "null")
+		local ver = gkini.ReadString2("modreg", "version", "null")
+		local name = gkini.ReadString2("modreg", "name", "null")
+		local idver_key = id .. "." .. ver
+		local current = gkini.ReadString("Neo-loadstate", idver_key, "NO")
+
+		local option_list = oplist {
+			header = "Neo-loadstate",
+			key = idver_key,
+			default = 2,
+			value = current == "YES" and 1 or 2,
+			"YES",
+			"NO",
+			action = function(new_value)
+				neo.lib.set_load(auth_key, id, ver, new_value)
+			end,
+		}
+
+		local op_frame = iup.hbox {
+			iup.label {
+				title = name .. " v" .. ver,
+			},
+			iup.fill { },
+			option_list,
+		}
+
+		table.insert(config_options, op_frame)
+	end
+
+	local option_list_container = iup.vbox {
+		iup.label {
+			title = lget("RECOVERY_CONFIG_MENU_POST_DESCRIP|Set LME options and load states of registered plugins here"),
+		},
+		iup.fill { size = "%1", },
+	}
+
+	for i, v in ipairs(config_options) do
+		option_list_container:append(v)
+	end
+	
+	--todo: create scrolling frame here
+
+	local root_view = iup.vbox {
+		config_options,
+		iup.fill { },
+		--buttons to set default or return to current settings here
+	}
+
+	return root_view
 	
 end
 
@@ -983,15 +1101,14 @@ local create_diag = function()
 	
 	local res_tab = build_resolution_tab()
 	
-	local lme_tab = iup.vbox {
-		iup.label { title = "LME configuration (to be implemented)" },
-		iup.fill {},
-	}
+	local lme_tab_pre = build_pre_LME_options()
+	local lme_tab_post = build_post_LME_options()
 	
 	local tabbox = iup.zbox {
 		value  = res_tab,
 		res_tab,
-		lme_tab,
+		lme_tab_pre,
+		lme_tab_post
 	}
 
 	local tabrow = iup.hbox {
@@ -1008,7 +1125,11 @@ local create_diag = function()
 			visible = rs.state.capabilities.has_lib and "YES" or "NO",
 			active  = rs.state.capabilities.has_lib and "YES" or "NO",
 			action = function()
-				tabbox.value = lme_tab
+				if not rs.state.capabilities.has_lib then
+					tabbox.value = lme_tab_pre
+				else
+					tabbox.value = lme_tab_post
+				end
 			end,
 		},
 		iup.fill {},
