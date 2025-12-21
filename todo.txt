@@ -1,20 +1,18 @@
 
 
 todo-list items:
-	• create LME Configuration tab; needs to have ability to change certain config options, and can list plugins to enable/disable.
-		♦ lib available? Use lib[func] to edit!
-		♦ not available? Direct access config values with gkini
+	• LME Config tab: make scrollable, then test
 	• handle localization of init and recovery_system (only creating the english as a file version, other langs created when nearly done)
+	• main.lua initializer and error reporter
+	• Setup and Uninstaller modules
 
 further out todo-list items:
-	• main.lua initializer and error reporter
 	• strict comparison of API surface, verify LME v3.12.x compliancy
 	• neomgr v2.1 <- just patch older edition for now, redesign later
 		♦ remove bad config values
 		♦ open recovery environment (GKProcessCommand recovery)
 		♦ move CCD1 generation outside of interface generation?
 	• neonotif v1.1 <- verify old edition works as is, or patch
-	• Setup and Uninstaller modules
 	• expand localization pass to add es, fr, pt languages (maybe also ge, it?)
 		♦ recovery: 	lget("access_key|title")
 			"lang/en/recovery.ini" [recovery]key=value
