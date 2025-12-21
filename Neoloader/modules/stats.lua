@@ -1,7 +1,7 @@
 --[[
 [metadata]
 description=This file from Neoloader keeps a checkpoint history of certain performance metrics
-version=1.0.0
+version=1.0.1
 owner=Neoloader|7.0.0
 type=lua
 created=2025-10-26
@@ -76,6 +76,11 @@ stats.checkpoint = function(label)
 	neo.lib.log_error("LME checkpoint: " .. label .. "\n\t" .. tostring(ncp.time_elapsed) .. "ms since last checkpoint\n\t" .. tostring(ncp.mem_change) .. " kb memory used", 1)
 	
 	table.insert(stats.checkpoint_history, ncp)
+	
+	--todo: make history length configurable, -1 for infinite
+	if #stats.checkpoint_history > 100 then
+		table.remove(stats.checkpoint_history, 1)
+	end
 end
 
 stats.get_history_range = function()
@@ -98,14 +103,12 @@ stats.get_history = function(index_start, index_end)
 	return history
 end
 
-if true then --neo.api.config.get_config("stat_graphing") == "NO" then
-	return
-end
-
 local stat_timer_interval = gkini.ReadInt("Neoloader", "stat_timer_interval_override", 60)
 local stat_timer = Timer()
 local stat_timer_update = function()
-	stats.checkpoint("graph_update")
+	if neo.api.config.get_config("stat_graphing") == "YES" then
+		stats.checkpoint("graph_update")
+	end
 	stat_timer:SetTimeout(1000 * stat_timer_interval)
 end
 

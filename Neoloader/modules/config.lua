@@ -37,6 +37,8 @@ neo.api.config = {}
 
 local api = neo.api.config
 
+api.validity_override = false --if true, allow invalid options to be written; used by recovery system
+
 local config_definitions = {
 	override_disabled_plugin_state = { --if plugins are disabled, Neoloader self-quits. this overrides that behavior, allowing Neoloader and any LME mods to run
 		valid = { --list of valid inputs (nil for 'any input'
@@ -151,6 +153,16 @@ local config_definitions = {
 			"launch_mode",
 		},
 	},
+	stat_graphing = { --If enabled, Neoloader will checkpoint periodically to mark time, memory, and network usage
+		valid = {
+			YES = true,
+			NO = true,
+		},
+		default = "NO",
+		legacy = {
+			"stat_graphing",
+		},
+	},
 	
 	--These are deprecated, and provided only for compatibility reasons
 	allowDelayedLoad = {
@@ -212,7 +224,7 @@ api.is_valid = function(setting, new_value)
 		return false, "invalid setting key"
 	end
 	
-	if not definition.valid then
+	if (api.validity_override) or (not definition.valid) then
 		return true, "all values valid"
 	end
 	
@@ -237,7 +249,7 @@ api.set_config = function(auth, setting, new_value)
 		)
 	end
 
-	if not config_definitions[canonical] then
+	if (not config_definitions[canonical]) then
 		return false, "invalid setting key"
 	end
 
