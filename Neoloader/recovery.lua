@@ -1,11 +1,12 @@
 --[[
 [metadata]
 description=This is Neoloader's recovery environment.
-version=3.0.0
+version=4.0.0
 owner=Neoloader|7.0.0
 type=lua
-created=2025-11-26
+created=2025-12-19
 ]]--
+
 
 local file_args = {...}
 
@@ -161,6 +162,8 @@ rs.lget = function(key_or_text)
 	lcache[cache_id] = raw
 	return raw
 end
+
+local lget = rs.lget
 
 
 
@@ -320,8 +323,6 @@ register_resolution {
 	end,
 
 	run = function(state)
-		-- VO's quit call; adapt as appropriate
-		--gkinterface.GKProcessCommand("quit")
 		Game.Quit()
 	end,
 }
@@ -329,6 +330,23 @@ register_resolution {
 --[[
 	reminder to self: if has_lib is false but has_neo is true, then the error is likely within the API generation! This means there is an error with NEOLOADER! 
 ]]--
+
+register_resolution {
+	key         = "LME_open_config",
+	title       = "Open LME management interface",
+	description = "If your LME loaded successfully, you may be able to manage plugins and settings directly. Recovery will remain open in the background.",
+	kind        = "immediate",
+	priority    = 250,  -- after safe settings, before nuclear stuff
+
+	visible_if = function(state)
+		-- Only makes sense if the LME completed successfully and lib table exists
+		return state.capabilities.has_lme and state.capabilities.has_lib
+	end,
+	
+	run = function(state)
+		lib.open_config()
+	end,
+}
 
 
 
@@ -471,6 +489,148 @@ register_resolution {
 	end,
 }
 
+register_resolution {
+	key 		= "disable_all_plugins",
+	title		= "Disable all plugins",
+	description = "Turns off the game's ability to load plugins and closes the game. When the game is next launched, no plugins will be able to run. To allow plugins to run again, you'll need to re-enable them from your options menu.",
+	kind		= "terminal",
+	priority 	= 800,
+	
+	visible_if = function(state)
+		return (true)
+	end,
+	
+	run = function(state)
+		gkini.WriteString("Vendetta", "plugins", "0") --prevent plugins from running
+		gkini.WriteString("Vendetta", "if", "") --clear custom interface option
+		
+		if state.capabilities.has_lib then
+			--lib available, use config manager
+			lib.lme_configure("override_disabled_plugin_state", "NO", auth_key)
+		else
+			--no lib available, set config directly
+			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "NO")
+		end
+		
+		Game.Quit()
+	end,
+}
+
+
+register_resolution {
+	key 		= "uninstall_lme",
+	title		= "Uninstall Neoloader",
+	description = "If your LME environment is misbehaving, this option will remove the settings and prevent Neoloader from executing until installed again. You should also use this option if you want to upgrade Neoloader and the standard uninstaller doesn't work.",
+	kind		= "terminal",
+	priority 	= 950,
+	
+	visible_if = function(state)
+		return (true)
+	end,
+	
+	run = function(state)
+		
+		if state.capabilities.has_lib then
+			--lib available, use config manager
+			neo.api.validity_override = true
+			local au = auth_key --shortcut
+			lib.lme_configure("override_disabled_plugin_state", "", au)
+			lib.lme_configure("allow_bad_api_version", "", au)
+			lib.lme_configure("default_load_state", "", au)
+			lib.lme_configure("do_err_popup", "", au)
+			lib.lme_configure("clear_commands_on_reload", "", au)
+			lib.lme_configure("hide_log_message_level", "", au)
+			lib.lme_configure("current_if", "", au)
+			lib.lme_configure("current_mgr", "", au)
+		else
+			--no lib available, set config directly
+			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
+			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
+			gkini.WriteString("Neoloader", "allow_bad_api_version", "")
+			gkini.WriteString("Neoloader", "default_load_state", "")
+			gkini.WriteString("Neoloader", "do_err_popup", "")
+			gkini.WriteString("Neoloader", "clear_commands_on_reload", "")
+			gkini.WriteString("Neoloader", "hide_log_message_level", "")
+			gkini.WriteString("Neoloader", "current_if", "")
+			gkini.WriteString("Neoloader", "current_mgr", "")
+			--ensure enabled state
+			gkini.WriteString("Neoloader", "current_notif", "")
+			gkini.WriteString("Neoloader", "launch_mode", "")
+		end
+		
+		Game.Quit()
+	end,
+}
+
+register_resolution {
+	key 		= "nuke_settings",
+	title		= "Nuclear reset",
+	description = "Removes as much LME data as possible from your config.ini, disables all plugins, and resets certain game options to known safe settings. If this doesn't fix your game, then you need help that an automated system cannot provide.",
+	kind		= "terminal",
+	priority 	= 1000,
+	
+	visible_if = function(state)
+		return (true)
+	end,
+	
+	run = function(state)
+		gkini.WriteString("Vendetta", "plugins", "0") --prevent plugins from running
+		
+		if state.capabilities.has_lib then
+			--lib available, use config manager
+			neo.api.validity_override = true
+			local au = auth_key --shortcut
+			lib.lme_configure("override_disabled_plugin_state", "", au)
+			lib.lme_configure("allow_bad_api_version", "", au)
+			lib.lme_configure("default_load_state", "", au)
+			lib.lme_configure("do_err_popup", "", au)
+			lib.lme_configure("clear_commands_on_reload", "", au)
+			lib.lme_configure("hide_log_message_level", "", au)
+			lib.lme_configure("current_if", "", au)
+			lib.lme_configure("current_mgr", "", au)
+		else
+			--no lib available, set config directly
+			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
+			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
+			gkini.WriteString("Neoloader", "allow_bad_api_version", "")
+			gkini.WriteString("Neoloader", "default_load_state", "")
+			gkini.WriteString("Neoloader", "do_err_popup", "")
+			gkini.WriteString("Neoloader", "clear_commands_on_reload", "")
+			gkini.WriteString("Neoloader", "hide_log_message_level", "")
+			gkini.WriteString("Neoloader", "current_if", "")
+			gkini.WriteString("Neoloader", "current_mgr", "")
+			--ensure enabled state
+			gkini.WriteString("Neoloader", "current_notif", "")
+			gkini.WriteString("Neoloader", "launch_mode", "")
+		end
+		
+		for _, setting in ipairs {
+			"if", "skin", "usenewui", "usefontscaling",
+			"fontscale", "AudioDriver", "VideoDriver",
+			"xres", "yres", "font", "enablevoicechat", "enabledeviceselection",
+			"playbackmode", "playbackdevice", "capturemode", "capturedevice",
+		} do
+			gkini.WriteString("Vendetta", v, "")
+		end
+		
+		local rem_counter = 0
+		while true do
+			rem_counter = rem_counter + 1
+			local line_opt = gkini.ReadString("Neo-registry", "reg" .. tostring(rem_counter), "")
+			if line_opt == "" then
+				break
+			end
+			
+			gkini.WriteString("Neo-registry", "reg" .. tostring(rem_counter), "")
+		end
+		
+		gkini.WriteString("Neoloader", "STOP", "uninstalled|nuke_settings")
+		
+		Game.Quit()
+	end,
+}
+
+
 
 
 ----------------------------------------------------------------------------------------------
@@ -482,164 +642,24 @@ Font = {
 }
 local height_scale = gkinterface.IsTouchModeEnabled() and (Font.Default * 2) or Font.Default
 
-local create_slider_control = function(intable)
-	local scroll_timer = Timer()
-	local scroll_flag = false
-	local defaults = {
-		ymin = 0,
-		ymax = 100,
-		dy = 30,
-		posy = 0,
-		scrollbar = "VERTICAL",
-		expand = "VERTICAL",
-		scroll_event_cb = function() end,
-		scroll_cb = function(self)
-			scroll_flag = true
-		end,
-		border = "NO",
-	}
+local diag				--forward-declared dialog root
+local mt_update			--forward-declared, call to update log display in header
+local rs_update			--forward-declared, call to update resolution list
+rs.current_mode			= "panel"
+rs.current_resolution	= nil
 
-	for k, v in pairs(intable) do
-		defaults[k] = v
-	end
-
-	local scroll = iup.canvas(defaults)
-	scroll.get_pos = function(self)
-		return self.posy
-	end
-
-	local scroll_update
-	scroll_update = function()
-		if not iup.IsValid(scroll) then
-			scroll_timer:Kill()
-			return
-		end
-		
-		if scroll_flag then
-			defaults.scroll_event_cb(scroll)
-			scroll_flag = false
-		end
-		scroll_timer:SetTimeout(1, scroll_update)
-	end
-
-	scroll.init_timer = scroll_update
-
-	return scroll
-end
-
-local create_list_control = function(intable)
-	--vscroll of static iup objects
-	local imposter = iup.frame { --get size of parent
-		expand = "YES",
-		image = "",
-		bgcolor = "0 0 0 0 *",
-		segmented = "0 0 1 1",
-		iup.vbox {
-			iup.fill { },
-			iup.hbox {
-				iup.fill { },
-			},
-		},
-	}
-
-	local content_container = iup.vbox {}
-	for i, v in ipairs(intable) do
-		iup.Append(content_container, v)
-	end
-
-	local match_widths = function(root_w)
-		--only call after map
-		for i, v in ipairs(intable) do
-			v.size = tostring(root_w - Font.Default) .. "x" .. tostring(v.h)
-		end
-	end
-
-	local content_frame = iup.frame {
-		image = "",
-		segmented = "0 0 1 1",
-		bgcolor = "0 0 0 0 *",
-		expand = "NO",
-		cx = 0,
-		cy = 0,
-		content_container,
-	}
-
-	local slider
-	slider = create_slider_control {
-		scroll_event_cb = function()
-			content_frame.cy = ((slider:get_pos() * (tonumber(content_container.h) - tonumber(slider.h))) / 100) * -1
-			iup.Refresh(content_frame)
-		end,
-	}
+local build_log_display = function()
+	--placed above tab system
 	
-	local cbox_area = iup.cbox { content_frame }
+	local notice_preamble = lget("RECOV_PREAMBLE|Errors captured by recovery:\n\n")
 	
-	local list_control_hbox = iup.hbox {
-		cbox_area,
-		slider,
-	}
-	
-	local display_frame = iup.frame {
-		list_control_hbox,
-	}
-	
-	display_frame.map_cb = function(self)
-		local w = imposter.w
-		local h = imposter.h
-		
-		self.size = tostring(w) .. "x" .. tostring(h)
-		slider.size = tostring(Font.Default) .. "x" .. tostring(h)
-		content_frame.size = tostring(w - Font.Default) .. "x" .. tostring(h)
-		
-		match_widths(w)
-		
-		iup.Refresh(self)
-		cbox_area.size = self.size
-		
-		iup.Refresh(self)
-		
-		iup.Refresh(self)
-		
-		slider.init_timer()
-	end
-	
-	local root_frame = iup.zbox {
-		all = "YES",
-		display_frame,
-		imposter,
-	}
-	
-	root_frame.map_action = display_frame.map_cb
-	
-	return root_frame
-end
-
-
-local diag          -- forward-declared
-local mt_update     -- updates error multiline
-rs.current_mode     = "panel"
-rs.current_resolution = nil
-
-local function get_priority(def)
-	return tonumber(def.priority) or 100
-end
-
-local function build_resolution_tab()
-	local notice_preamble = "A catastrophic error occurred. Errors reported to the recovery system are listed below.\nMore details may be available in the game console.\n\n"
-	
-	if rs.state.has_vo then
-		--has_vo is true if the game finished loading (hopefully successfully)
-		--todo: have better wording for this
-		notice_preamble = "Anything listed below is an error that was caught and logged to the recovery system.\nMore details may be available in the game console or in the LME log view in the Developer Tools tab.\n\n"
-	end
-
 	local mtline = iup.multiline {
 		expand = "HORIZONTAL",
 		readonly = "YES",
-		size = "%70x%10",
-		value = notice_preamble,
+		size = "%50x%10",
+		value = "",
 	}
-
+	
 	mt_update = function()
 		local parts = {}
 		for _, err in ipairs(rs.errors) do
@@ -648,130 +668,206 @@ local function build_resolution_tab()
 		mtline.value = notice_preamble .. table.concat(parts, "\n")
 		mtline.caret = string.len(mtline.value)
 	end
-
-	local res_listbox = iup.vbox {
-		--adjust this if has_vo is true
-		-- "possible actions":?
-		iup.label { title = "Try these options to recover:" },
+	
+	local qr_code = iup.label {
+		--qr code links to discord.
+		title = "",
+		image = local_path .. "assets/notif_placeholder.png",
+		size = "256x256", --placeholder, press to expand or access later?
 	}
+	
+	local report_builder = iup.button {
+		title = "Create report",
+		action = function()
+			--[[
+				send dedicated log to errors.log
+					list of LME plugins and their states
+					list of LME config values
+					latest captured log messages
+				take screenshot of log on screen via dump
+				attempt TCPsocket connection to send log. possible to send image maybe?
+			]]--
+		end,
+	}
+	
+	local close_btn = iup.button {
+		title = "Close",
+		action = function(self)
+			HideDialog(iup.GetDialog(self))
+		end,
+	}
+	
+	local header_pane = iup.vbox {
+		iup.fill {
+			size = "8",
+		},
+		iup.hbox {
+			iup.label {
+				title = lget("RECOV_TITLE|Neoloader error recovery environment"),
+			},
+			iup.fill { },
+			close_btn,
+		},
+		iup.fill {
+			size = "8",
+		},
+		iup.hbox {
+			iup.vbox {
+				qr_code,
+				report_builder,
+			},
+			mtline,
+		},
+	}
+	
+	return header_pane
+end
 
-	-- 1) Gather visible resolutions into an array
-	local sorted_resolutions = {}
-	for key, def in pairs(resolutions) do
-		-- use visible_if if present, otherwise always show
-		if (not def.visible_if) or def.visible_if(rs.state) then
-			table.insert(sorted_resolutions, { key = key, def = def })
+local build_resolution_tab = function()
+	
+	local list_contents = {}
+	local entry_index = -1
+	
+	local rebuild_contents = function()
+		-- wipe prior
+		for i = #list_contents, 1, -1 do
+			list_contents[i] = nil
+		end
+
+		-- collect visible resolutions
+		local tmp = {}
+		for _, def in pairs(resolutions) do
+			local ok = true
+			if type(def.visible_if) == "function" then
+				ok = def.visible_if(rs.state) == true
+			end
+			if ok then
+				table.insert(tmp, def)
+			end
+		end
+
+		table.sort(tmp, function(a, b)
+			local pa = tonumber(a.priority or 0) or 0
+			local pb = tonumber(b.priority or 0) or 0
+			if pa ~= pb then
+				return pa < pb
+			end
+			
+			return tostring(a.title or a.key) < tostring(b.title or b.key)
+		end)
+
+		-- copy into list_contents (1..n)
+		for i = 1, #tmp do
+			list_contents[i] = tmp[i]
 		end
 	end
+	
+	local entry_descrip = iup.label {
+		title = "",
+		size = "%30x%30",
+		expand = "YES",
+		wordwrap = "YES",
+	}
+	
+	local entry_action = iup.button {
+		title = "",
+		size = "x" .. tostring(height_scale),
+		expand = "HORIZONTAL",
+		action = function(self)
+			local def = list_contents[entry_index]
+			if not def then return end
 
-	-- 2) Sort by priority, then by key as a stable-ish tie-breaker
-	table.sort(sorted_resolutions, function(a, b)
-		local pa = get_priority(a.def)
-		local pb = get_priority(b.def)
-		if pa == pb then
-			-- fall back to key name for deterministic ordering
-			return a.key < b.key
-		end
-		return pa < pb  -- lower number = earlier in list
-	end)
+			rs.current_resolution = def
 
-	-- 3) Build UI in sorted order
-	for _, entry in ipairs(sorted_resolutions) do
-		local key = entry.key
-		local def = entry.def
-
-		local button = iup.button {
-			title  = def.title,
-			size   = "x" .. tostring(Font.Default),
-			expand = "HORIZONTAL",
-		}
-
-		button.action = function(self)
 			if def.kind == "immediate" then
-				def.run(rs.state)
+				local ok, err = pcall(def.run, rs.state)
+				if not ok then
+					rs.push_error("RECOV_RUN_FAIL|Resolution failed: " .. tostring(err), { level = 3 })
+				end
+				mt_update()
+				rs_update()
 				return
 			end
 
+			-- terminal
 			if rs.current_mode == "popup" then
-				rs.current_resolution = def
-				iup.GetDialog(self):hide()
-			else
-				def.run(rs.state)
+				-- let rs.open() run it after popup returns
+				HideDialog(iup.GetDialog(self))
+				return
 			end
-		end
 
-		local frame = iup.frame {
-			iup.vbox {
-				iup.hbox {
-					iup.vbox {
-						iup.label {
-							title = "",
-							size  = (not gkinterface.IsTouchModeEnabled()) and "32x32" or nil,
-							image = local_path .. "assets/notif_placeholder.png",
-						},
-					},
-					iup.vbox {
-						button,
-						iup.label {
-							title    = def.description,
-							wordwrap = "YES",
-						},
-					},
-					iup.fill {},
-				},
-				iup.hbox { iup.fill {} },
-			},
-		}
-
-		res_listbox:append(frame)
-	end
-
-	local res_listframe = iup.frame {
-		image     = "",
-		segmented = "0 0 1 1",
-		bgcolor   = "0 0 0 0 *",
-		res_listbox,
+			-- panel mode: run directly
+			local ok, err = pcall(def.run, rs.state)
+			if not ok then
+				rs.push_error("RECOV_RUN_FAIL|Resolution failed: " .. tostring(err), { level = 3 })
+			end
+			mt_update()
+			rs_update()
+		end,
 	}
-
-	local res_listview = create_list_control { res_listframe }
-
-	local tabwind = iup.vbox {
-		mtline,
+	
+	local resolution_selector = iup.list {
+		--todo: generic iup.list has bgcolor rendering issues, figure out how to fix this later
+		expand = "YES",
+		action = function(self, t, i, cv)
+			if cv == 1 then
+				entry_index = i
+				entry_descrip.title = list_contents[i].description
+			end
+			
+			if cv ~= 1 then return end
+			local def = list_contents[i]
+			if not def then return end
+			
+			entry_index = i
+			entry_descrip.title = lget(def.description or "")
+			entry_action.title = lget("RECOV_RUN|Run this action")
+			entry_action.active = "YES"
+		end,
+		font = height_scale,
+		value = "1",
+		update_list = function(self)
+			for i=#list_contents, 1, -1 do
+				self[i] = nil
+				list_contents[i] = nil
+			end
+			
+			rebuild_contents() --rebuilds list_contents with active resolutions
+			
+			for i, v in ipairs(list_contents) do
+				entry_index = -1
+				self[i] = v.title
+				self.value = "1"
+				entry_descrip.title = ""
+			end
+		end,
+	}
+	
+	rs_update = function() resolution_selector:update_list() end
+	
+	local content_pane = iup.frame {
 		iup.hbox {
-			iup.fill {},
-			iup.button {
-				title  = "Refresh",
-				action = mt_update,
+			resolution_selector,
+			iup.vbox {
+				entry_descrip,
+				entry_action,
 			},
 		},
-		iup.fill { size = Font.Default },
-		iup.frame {
-			image     = "",
-			segmented = "0 0 1 1",
-			bgcolor   = "0 0 0 0 *",
-			res_listview,
-		},
-		iup.fill { size = Font.Default },
 	}
-
-	local map_action = function()
-		res_listview:map_action()
-	end
-
-	return tabwind, map_action
+	
+	return content_pane
 end
 
-
-
-
-local function create_diag()
-	local res_tab, res_map_action = build_resolution_tab()
-
+local create_diag = function()
+	local header = build_log_display()
+	
+	local res_tab = build_resolution_tab()
+	
 	local lme_tab = iup.vbox {
 		iup.label { title = "LME configuration (to be implemented)" },
 		iup.fill {},
 	}
-
+	
 	local tabbox = iup.zbox {
 		value  = res_tab,
 		res_tab,
@@ -789,8 +885,8 @@ local function create_diag()
 		iup.fill {},
 		iup.button {
 			title  = "LME configuration",
-			visible = rs.state.has_lib and "YES" or "NO",
-			active =  rs.state.has_lib and "YES" or "NO",
+			visible = rs.state.capabilities.has_lib and "YES" or "NO",
+			active  = rs.state.capabilities.has_lib and "YES" or "NO",
 			action = function()
 				tabbox.value = lme_tab
 			end,
@@ -798,8 +894,8 @@ local function create_diag()
 		iup.fill {},
 		iup.button {
 			title  = "Developer tools",
-			visible = rs.state.has_neo and "YES" or "NO",
-			active =  rs.state.has_neo and "YES" or "NO",
+			visible = rs.state.capabilities.has_neo and "YES" or "NO",
+			active  = rs.state.capabilities.has_neo and "YES" or "NO",
 			action = function()
 				tabbox.value = lme_tab
 			end,
@@ -816,18 +912,7 @@ local function create_diag()
 			iup.vbox {
 				alignment = "ACENTER",
 				iup.fill { size = Font.Default },
-				iup.label { title = "Neoloader Recovery System" },
-				iup.hbox {
-					iup.fill { },
-					iup.button {
-						title = "Close",
-						action = function(self)
-							iup.GetDialog(self):hide()
-						end,
-						active = rs.current_mode == "panel" and "YES" or "NO",
-						visible = rs.current_mode == "panel" and "YES" or "NO",
-					},
-				},
+				header,
 				iup.fill { size = Font.Default },
 				tabrow,
 				tabbox,
@@ -838,9 +923,7 @@ local function create_diag()
 	}
 
 	diag_local:map()
-	res_map_action()
-	iup.Refresh(diag_local)
-
+	
 	return diag_local
 end
 
@@ -856,6 +939,7 @@ rs.open = function(mode)
 	end
 
 	mt_update()
+	rs_update()
 
 	if mode == "popup" then
 		-- interrupting mode: we want popup() semantics
