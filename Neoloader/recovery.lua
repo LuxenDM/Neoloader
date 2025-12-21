@@ -858,6 +858,126 @@ local build_resolution_tab = function()
 	return content_pane
 end
 
+local oplist = function(intable)
+	local default
+	default = {
+		header = "Neoloader",
+		key = "INVALID",
+		value = 1, --current setting
+		default = 1, --recommended setting
+		[1] = "INVALID", --setting value
+		action = function(new_value)
+			gkini.WriteString(default.header, default.key, new_value)
+		end,
+	}
+
+	for i, v in ipairs(intable) do
+		default[i] = v
+	end
+
+	local option_list = iup.list {
+		dropdown = "YES",
+		action = function(self, t, i, cv)
+			if cv ~= 1 then
+				return
+			end
+			default.action(t)
+		end,
+		value = default.default,
+		set_to_default = function(self)
+			self.value = default.default
+		end,
+		set_to_current = function(self)
+			self.value = default.value
+		end,
+	}
+	for i, v in ipairs(default) do
+		option_list[i] = v
+	end
+
+	local op_frame = iup.hbox {
+		iup.label {
+			title = default.key,
+		},
+		iup.fill { },
+		option_list,
+	}
+
+	return op_frame
+end
+
+local build_pre_LME_options = function()
+	local config_options = {
+		oplist {
+			key = "launch_mode",
+			default = 1,
+			value = gkini.ReadString("Neoloader", "launch_mode", "independent") == "independent" and 1 or 2,
+			"independent",
+			"cooperative",
+			action = function(new_value)
+				if new_value == "independent" then
+					gkini.WriteString("Vendetta", "if", local_path .. "init.lua")
+				else
+					gkini.WriteString("Vendetta", "if", "")
+				end
+				gkini.WriteString("Neoloader", "launch_mode", new_value)
+			end,
+		},
+		oplist {
+			key = "allow_bad_api_version",
+			default = 2,
+			value = gkini.ReadString("Neoloader", "allow_bad_api_version", "NO") == "YES" and 1 or 2,
+			"YES",
+			"NO",
+		},
+		oplist {
+			key = "default_load_state",
+			default = 1,
+			value = gkini.ReadString("Neoloader", "default_load_state", "YES") == "YES" and 1 or 2,
+			"YES",
+			"NO",
+		},
+		iup.fill { size = "%2", },
+	}
+
+	local counter = 0
+	while true do
+		counter = counter + 1
+		local reg_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+		if reg_file == "" then
+			break
+		end
+
+		local id = gkini.ReadString2("modreg", "id", "null")
+		local ver = gkini.ReadString2("modreg", "version", "null")
+		local name = gkini.ReadString2("modreg", "name", "null")
+		local idver_key = id .. "." .. ver
+		local current = gkini.ReadString("Neo-loadstate", idver_key, "NO")
+
+		local option_list = oplist {
+			header = "Neo-loadstate",
+			key = idver_key,
+			default = 2,
+			value = current == "YES" and 1 or 2,
+			"YES",
+			"NO",
+		}
+
+		local op_frame = iup.hbox {
+			iup.label {
+				title = name .. " v" .. ver,
+			},
+			iup.fill { },
+			option_list,
+		}
+
+		table.insert(config_options, op_frame)
+	end
+
+	--todo: create scrolling frame here
+	
+end
+
 local create_diag = function()
 	local header = build_log_display()
 	
