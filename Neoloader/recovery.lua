@@ -642,6 +642,138 @@ Font = {
 }
 local height_scale = gkinterface.IsTouchModeEnabled() and (Font.Default * 2) or Font.Default
 
+local create_slider_control = function(intable)
+	local scroll_timer = Timer()
+	local scroll_flag = false
+	local defaults = {
+		ymin = 0,
+		ymax = 100,
+		dy = 30,
+		posy = 0,
+		scrollbar = "VERTICAL",
+		expand = "VERTICAL",
+		scroll_event_cb = function() end,
+		scroll_cb = function(self)
+			scroll_flag = true
+		end,
+		border = "NO",
+	}
+
+	for k, v in pairs(intable) do
+		defaults[k] = v
+	end
+
+	local scroll = iup.canvas(defaults)
+	scroll.get_pos = function(self)
+		return self.posy
+	end
+
+	local scroll_update
+	scroll_update = function()
+		if not iup.IsValid(scroll) then
+			scroll_timer:Kill()
+			return
+		end
+		
+		if scroll_flag then
+			defaults.scroll_event_cb(scroll)
+			scroll_flag = false
+		end
+		scroll_timer:SetTimeout(1, scroll_update)
+	end
+
+	scroll.init_timer = scroll_update
+
+	return scroll
+end
+
+local create_list_control = function(intable)
+	--vscroll of static iup objects
+	local imposter = iup.frame { --get size of parent
+		expand = "YES",
+		image = "",
+		bgcolor = "0 0 0 0 *",
+		segmented = "0 0 1 1",
+		iup.vbox {
+			iup.fill { },
+			iup.hbox {
+				iup.fill { },
+			},
+		},
+	}
+
+	local content_container = iup.vbox {}
+	for i, v in ipairs(intable) do
+		iup.Append(content_container, v)
+	end
+
+	local match_widths = function(root_w)
+		--only call after map
+		for i, v in ipairs(intable) do
+			v.size = tostring(root_w - Font.Default) .. "x" .. tostring(v.h)
+		end
+	end
+
+	local content_frame = iup.frame {
+		image = "",
+		segmented = "0 0 1 1",
+		bgcolor = "0 0 0 0 *",
+		expand = "NO",
+		cx = 0,
+		cy = 0,
+		content_container,
+	}
+
+	local slider
+	slider = create_slider_control {
+		scroll_event_cb = function()
+			content_frame.cy = ((slider:get_pos() * (tonumber(content_container.h) - tonumber(slider.h))) / 100) * -1
+			iup.Refresh(content_frame)
+		end,
+	}
+	
+	local cbox_area = iup.cbox { content_frame }
+	
+	local list_control_hbox = iup.hbox {
+		cbox_area,
+		slider,
+	}
+	
+	local display_frame = iup.frame {
+		list_control_hbox,
+	}
+	
+	display_frame.map_cb = function(self)
+		local w = imposter.w
+		local h = imposter.h
+		
+		self.size = tostring(w) .. "x" .. tostring(h)
+		slider.size = tostring(Font.Default) .. "x" .. tostring(h)
+		content_frame.size = tostring(w - Font.Default) .. "x" .. tostring(h)
+		
+		match_widths(w)
+		
+		iup.Refresh(self)
+		cbox_area.size = self.size
+		
+		iup.Refresh(self)
+		
+		iup.Refresh(self)
+		
+		slider.init_timer()
+	end
+	
+	local root_frame = iup.zbox {
+		all = "YES",
+		display_frame,
+		imposter,
+	}
+	
+	root_frame.map_action = display_frame.map_cb
+	
+	return root_frame
+end
+
 local diag				--forward-declared dialog root
 local mt_update			--forward-declared, call to update log display in header
 local rs_update			--forward-declared, call to update resolution list
@@ -985,10 +1117,10 @@ local build_pre_LME_options = function()
 		option_list_container:append(v)
 	end
 	
-	--todo: create scrolling frame here
+	local scroll_pane = create_list_control {option_list_container}
 
 	local root_view = iup.vbox {
-		config_options,
+		scroll_pane,
 		iup.fill { },
 		--buttons to set default or return to current settings here
 	}
@@ -1084,10 +1216,10 @@ local build_post_LME_options = function()
 		option_list_container:append(v)
 	end
 	
-	--todo: create scrolling frame here
+	local scroll_pane = create_list_control { option_list_container }
 
 	local root_view = iup.vbox {
-		config_options,
+		scroll_pane,
 		iup.fill { },
 		--buttons to set default or return to current settings here
 	}
@@ -1104,26 +1236,30 @@ local create_diag = function()
 	local lme_tab_pre = build_pre_LME_options()
 	local lme_tab_post = build_post_LME_options()
 	
+	local lme_placeholder = iup.vbox {
+		iup.label {
+			title = "Placeholder tab",
+		},
+	}
+	
 	local tabbox = iup.zbox {
 		value  = res_tab,
 		res_tab,
 		lme_tab_pre,
-		lme_tab_post
+		lme_tab_post,
+		lme_placeholder,
 	}
 
 	local tabrow = iup.hbox {
-		iup.fill { },
 		iup.button {
-			title  = "Resolutions",
+			title  = lget("RECOVERY_TAB_RESOLVE|Resolutions"),
 			action = function()
 				tabbox.value = res_tab
 			end,
 		},
 		iup.fill {},
 		iup.button {
-			title  = "LME configuration",
-			visible = rs.state.capabilities.has_lib and "YES" or "NO",
-			active  = rs.state.capabilities.has_lib and "YES" or "NO",
+			title  = lget("RECOVERY_TAB_CONFIG|LME configuration"),
 			action = function()
 				if not rs.state.capabilities.has_lib then
 					tabbox.value = lme_tab_pre
@@ -1132,16 +1268,14 @@ local create_diag = function()
 				end
 			end,
 		},
-		iup.fill {},
 		iup.button {
-			title  = "Developer tools",
+			title  = lget("RECOVERY_TAB_DEV|Developer tools"),
 			visible = rs.state.capabilities.has_neo and "YES" or "NO",
 			active  = rs.state.capabilities.has_neo and "YES" or "NO",
 			action = function()
-				tabbox.value = lme_tab
+				tabbox.value = lme_placeholder
 			end,
 		},
-		iup.fill { },
 	}
 
 	local diag_local = iup.dialog {
