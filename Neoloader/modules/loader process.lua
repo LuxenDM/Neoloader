@@ -95,9 +95,9 @@ local trigger_plugins = function(ini_list)
 	--todo: flatten exec_mode checks
 	if exec_mode and if_id and if_id ~= "" then
         -- ask registry for the latest *active* version of the interface ID
-        local ver, err = registry.get_latest_ver(if_id)
-        if not ver then
-            cp("Interface '" .. if_id .. "' not available (" .. tostring(err) .. "); falling back to vo-if!", 3)
+        local status, ver = registry.get_latest_ver(if_id)
+        if not status then
+            cp("Interface '" .. if_id .. "' not available (" .. tostring(ver) .. "); falling back to vo-if!", 3)
             dofile("vo/if.lua")
             checkpoint("Finished launching vo-if!")
         else

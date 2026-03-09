@@ -1,7 +1,7 @@
 --[[
 [metadata]
 description=This is the core of Neoloader.
-version=7.0.39
+version=7.0.43
 owner=Neoloader|7.0.0
 type=lua
 created=2025-7-1
@@ -45,7 +45,6 @@ if (gkini.ReadString("Neoloader", "override_disabled_state", "NO") == "NO") and 
 end
 
 console_print("\n\n\nVendetta Online has loaded\nNeoloader is Initializing...")
---note to self: We can totally do a custom loading screen via popup method. Look into this?
 
 local alignment_offset = 0
 local pathlock = false
@@ -74,11 +73,11 @@ local recovery_system = {}
 local auth_key = SHA1(tostring(gkmisc.GetGameTime() + math.random()))
 
 local version = {
-	strver = "7.0.0 -indev",
+	strver = "7.0.0 -beta",
 	[1] = 7,
 	[2] = 0,
 	[3] = 0,
-	[4] = "indev",
+	[4] = "beta",
 }
 local lme_ver = {
 	strver = "3.12.0",
@@ -247,20 +246,12 @@ do
 		"modules/api.lua",
 		"modules/config.lua",
 		"modules/env.lua",
-		"modules/ifgen.lua",
 		"modules/loader process.lua",
 		"modules/locale.lua",
 		"modules/registry.lua",
 		"modules/stats.lua",
-		"modules/uninstaller.lua",
 		"modules/update patcher.lua",
-		
-		"modules/setup/setup.lua",
-		
-		"modules/interface/dialog.lua",
-		"modules/interface/scrollpane.lua",
-		"modules/interface/shrink_label.lua",
-		"modules/interface/subdialog.lua",
+		"modules/zcom.lua",
 	} do
 		if not gksys.IsExist(local_path .. file) then
 			table.insert(missing, local_path .. file)
@@ -439,8 +430,6 @@ if exec_mode == "independent" then
 	load_module("env.lua")
 end
 load_module("registry.lua")
-load_module("ifgen.lua")
-load_module("uninstaller.lua")
 
 neo.stats.checkpoint("Generating LME API v" .. neo.lme_ver.strver)
 load_module("api.lua")
@@ -452,22 +441,21 @@ recovery_system.lib_check_success {
 }
 
 neo.stats.checkpoint("Preparing mod loading system")
+load_module("zcom.lua") --handles command cleanup in rare legacy situations
 load_module("update patcher.lua")
-load_module("dependency handler.lua")
-load_module("ini cache.lua")
 load_module("loader process.lua")  --< triggers loading system; registered interface or VO-IF is handled first here (if independent exec_mode)
 
 neo.stats.checkpoint("Checking status of bundled assets")
 
-if not lib.is_exist("neomgr") then
+if not lib.is_exist(local_path .. "modules/neomgr/neomgr.lua") then
 	lib.register(local_path .. "modules/neomgr/neomgr.lua")
 end
 
-if not lib.is_exist("neonotif") then
+if not lib.is_exist(local_path .. "modules/neonotif/neonotif.lua") then
 	lib.register(local_path .. "modules/neonotif/neonotif.lua")
 end
 
-if not lib.is_exist("Vendetta Online Standard Interface") then
+if not lib.is_exist(local_path .. "modules/Vendetta Online Standard Interface/vosi.lua") then
 	lib.register(local_path .. "modules/Vendetta Online Standard Interface/vosi.lua")
 end
 
@@ -537,11 +525,9 @@ else
 	end, "LME_PLUGINS_LOADED")
 end
 
---set up default loader checkpoint system if running as independent
-
 if neo.api.get_exec_mode() == "independent" then
 	RegisterEvent(function()
-		
+		neo.stats.checkpoint("Default loader has finished execution and 'PLUGINS_LOADED' event has fired")
 	end, "PLUGINS_LOADED")
 end
 

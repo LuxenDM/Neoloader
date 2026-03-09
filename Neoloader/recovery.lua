@@ -52,7 +52,7 @@ local function make_error(message, opts)
     return {
         raw_message = tostring(message),     -- "KEY|fallback" or plain text
         level       = opts.level or 4,
-        critical    = not not opts.critical,
+        critical    = opts.critical,
         tag         = opts.tag or "generic",
         context     = opts.context or "",
         added_data  = opts.added_data,
@@ -374,8 +374,6 @@ register_resolution {
 					cp("disabling LME plugin " .. id .. " v" .. version)
 					gkini.WriteString("Neo-pluginstate", id .. "." .. version, "NO")
 				end
-				
-				counter = counter + 1
 			else
 				break
 			end
@@ -407,8 +405,6 @@ register_resolution {
 					cp("disabling LME plugin " .. id .. " v" .. version)
 					gkini.WriteString("Neo-pluginstate", id .. "." .. version, "NO")
 				end
-				
-				counter = counter + 1
 			else
 				break
 			end
@@ -542,6 +538,26 @@ register_resolution {
 			lib.lme_configure("hide_log_message_level", "", au)
 			lib.lme_configure("current_if", "", au)
 			lib.lme_configure("current_mgr", "", au)
+			lib.lme_configure("current_notif", "", au)
+			lib.lme_configure("stat_graphing", "", au)
+			lib.lme_configure("launch_mode", "", au)
+			
+			local plist = lib.get_gstate().pluginlist
+			for _, idvpairs in ipairs(plist) do
+				lib.set_load(au, idvpairs[1], idvpairs[2], "REM")
+			end
+			
+			local counter = 0
+			while true do
+				counter = counter + 1
+				
+				local reg_entry = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+				if reg_entry == "" then
+					break
+				end
+				
+				gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
+			end
 		else
 			--no lib available, set config directly
 			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
@@ -553,10 +569,33 @@ register_resolution {
 			gkini.WriteString("Neoloader", "hide_log_message_level", "")
 			gkini.WriteString("Neoloader", "current_if", "")
 			gkini.WriteString("Neoloader", "current_mgr", "")
-			--ensure enabled state
 			gkini.WriteString("Neoloader", "current_notif", "")
-			gkini.WriteString("Neoloader", "launch_mode", "")
+			gkini.WriteString("Neoloader", "stat_graphing", "")
+			gkini.WriteString("Neoloader", "launch_mode", "removed")
+			
+			local counter = 0
+			while true do
+				counter = counter + 1
+				local reg_entry = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+				if reg_entry == "" then
+					break
+				end
+				
+				local id = gkini.ReadString2("modreg", "id", "null", ini_file)
+				local version = gkini.ReadString2("modreg", "version", "null", ini_file)
+				
+				if id ~= "null" then
+					lib.log_error("de-registering LME plugin " .. id .. " v" .. version)
+					gkini.WriteString("Neo-pluginstate", id .. "." .. version, "REM")
+				end
+				
+				gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
+			end
 		end
+		
+		gkini.WriteString("Vendetta", "if", "")
+		
+		gkinterface.GKSaveCfg()
 		
 		Game.Quit()
 	end,
@@ -610,7 +649,7 @@ register_resolution {
 			"xres", "yres", "font", "enablevoicechat", "enabledeviceselection",
 			"playbackmode", "playbackdevice", "capturemode", "capturedevice",
 		} do
-			gkini.WriteString("Vendetta", v, "")
+			gkini.WriteString("Vendetta", setting, "")
 		end
 		
 		local rem_counter = 0
@@ -636,11 +675,30 @@ register_resolution {
 ----------------------------------------------------------------------------------------------
 -- interface
 ----------------------------------------------------------------------------------------------
+-- based on Helium v1.1.3
 
-Font = {
+Font = Font or {
 	Default = (gkinterface.GetYResolution()/1080) * 24,
 }
-local height_scale = gkinterface.IsTouchModeEnabled() and (Font.Default * 2) or Font.Default
+local height_scale = (gkinterface.IsTouchModeEnabled() and (Font.Default * 2)) or Font.Default
+
+local clearframe = function(intable)
+	assert(type(intable) == "table", "Helium.clearframe expects a table for its argument, got a " .. type(intable))
+	
+	local default = {
+		bgcolor = "0 0 0 0 *",
+		segmented = "0 0 1 1",
+		iup.vbox { },
+		expand = "NO",
+	}
+	
+	for k, v in pairs(intable) do
+		default[k] = v
+	end
+	assert((iup.IsValid(default[1])), "Helium.clearframe input table did not have a valid IUP element at [1]; got " .. type(intable[1]))
+	
+	return iup.frame(default)
+end
 
 local create_slider_control = function(intable)
 	local scroll_timer = Timer()
@@ -687,90 +745,135 @@ local create_slider_control = function(intable)
 	return scroll
 end
 
-local create_list_control = function(intable)
-	--vscroll of static iup objects
-	local imposter = iup.frame { --get size of parent
+local create_autobox = function(intable)
+	local default = {
 		expand = "YES",
-		image = "",
-		bgcolor = "0 0 0 0 *",
-		segmented = "0 0 1 1",
+		[1] = iup.vbox {},
+		cx = 0,
+		cy = 0,
+	}
+	
+	for k, v in pairs(intable) do
+		default[k] = v
+	end
+	
+	local cbox_children = {}
+	--add from default
+	for k, v in ipairs(default) do
+		cbox_children[k] = clearframe {
+			cx = v.cx or default.cx,
+			cy = v.cy or default.cy,
+			v,
+		}
+	end
+	--clear from default
+	for k, v in ipairs(cbox_children) do
+		default[k] = nil
+	end
+	
+	local imposter = clearframe {
+		--used to get size of parent
+		expand = "YES",
 		iup.vbox {
-			iup.fill { },
 			iup.hbox {
 				iup.fill { },
 			},
+			iup.fill { },
 		},
 	}
-
-	local content_container = iup.vbox {}
-	for i, v in ipairs(intable) do
-		iup.Append(content_container, v)
-	end
-
-	local match_widths = function(root_w)
-		--only call after map
-		for i, v in ipairs(intable) do
-			v.size = tostring(root_w - Font.Default) .. "x" .. tostring(v.h)
+	
+	local cbox_area = iup.cbox (cbox_children)
+	
+	default[1] = iup.zbox {
+		cbox_area,
+		default.expand ~= "NO" and imposter or nil,
+	}
+		
+	
+	local root_frame = clearframe(default)
+	root_frame.map_cb = function(self)
+		local root = imposter
+		local w = tostring(root.w)
+		local h = tostring(root.h)
+		cbox_area.size = w .. "x" .. h
+		for k, v in ipairs(cbox_children) do
+			v.size = w .. "x" .. h
 		end
+		iup.Refresh(self)
 	end
+	
+	root_frame.cbox = cbox_area
+	root_frame.cbox_children = cbox_children
+	root_frame.imposter = imposter
+	
+	return root_frame
+end
 
-	local content_frame = iup.frame {
-		image = "",
-		segmented = "0 0 1 1",
-		bgcolor = "0 0 0 0 *",
-		expand = "NO",
-		cx = 0,
-		cy = 0,
-		content_container,
+local create_list_control = function(intable)
+	local default = {
+		expand = "YES",
+		scrollbar = "YES",
+		[1] = iup.vbox {},
 	}
 
-	local slider
-	slider = create_slider_control {
+	for k, v in pairs(intable) do
+		default[k] = v
+	end
+
+	local iup_element = default[1]
+	default[1] = nil
+
+	-- use autobox with one child: the scrollable element
+	local ab = create_autobox {
+		iup_element,
+	}
+
+	local scroller
+	scroller = create_slider_control {
 		scroll_event_cb = function()
-			content_frame.cy = ((slider:get_pos() * (tonumber(content_container.h) - tonumber(slider.h))) / 100) * -1
-			iup.Refresh(content_frame)
+			local content = ab.cbox_children[1]
+			content.cy = ((scroller:get_pos() * (tonumber(content.h) - tonumber(scroller.h))) / 100) * -1
+			iup.Refresh(content)
 		end,
 	}
-	
-	local cbox_area = iup.cbox { content_frame }
-	
-	local list_control_hbox = iup.hbox {
-		cbox_area,
-		slider,
+
+	default[1] = iup.hbox {
+		ab,
+		scroller,
 	}
-	
-	local display_frame = iup.frame {
-		list_control_hbox,
-	}
-	
-	display_frame.map_cb = function(self)
-		local w = imposter.w
-		local h = imposter.h
-		
+
+	local root_frame = clearframe(default)
+
+	root_frame.map_cb = function(self)
+		if self.expand == "NO" then return end
+
+		local w = ab.imposter.w
+		local h = ab.imposter.h
+
 		self.size = tostring(w) .. "x" .. tostring(h)
-		slider.size = tostring(Font.Default) .. "x" .. tostring(h)
-		content_frame.size = tostring(w - Font.Default) .. "x" .. tostring(h)
+		scroller.size = tostring(Font.Default) .. "x" .. tostring(h)
+
+		local content = ab.cbox_children[1]
+
+		-- handle scrollbar logic
+		local content_h = content.h
+		local inner_w = w - Font.Default
+
+		if default.scrollbar == "NO" or content_h < h then
+			-- disable scrollbar if content fits
+			--scroller:detach()
+			ab.cbox.size = w .. "x" .. h
+			content.size = w .. "x" .. h
+		else
+			ab.cbox.size = inner_w .. "x" .. h
+			content.size = inner_w .. "x" .. content_h
+		end
 		
-		match_widths(w)
-		
+		scroller.init_timer()
+
 		iup.Refresh(self)
-		cbox_area.size = self.size
-		
-		iup.Refresh(self)
-		
-		iup.Refresh(self)
-		
-		slider.init_timer()
 	end
-	
-	local root_frame = iup.zbox {
-		all = "YES",
-		display_frame,
-		imposter,
-	}
-	
-	root_frame.map_action = display_frame.map_cb
-	
+
 	return root_frame
 end
 
@@ -786,9 +889,9 @@ local build_log_display = function()
 	local notice_preamble = lget("RECOV_PREAMBLE|Errors captured by recovery:\n\n")
 	
 	local mtline = iup.multiline {
-		expand = "HORIZONTAL",
+		expand = "YES",
+		shrink = "YES",
 		readonly = "YES",
-		size = "%50x%10",
 		value = "",
 	}
 	
@@ -805,34 +908,17 @@ local build_log_display = function()
 		--qr code links to discord.
 		title = "",
 		image = local_path .. "assets/notif_placeholder.png",
-		size = "256x256", --placeholder, press to expand or access later?
-	}
-	
-	local report_builder = iup.button {
-		title = "Create report",
-		action = function()
-			--[[
-				send dedicated log to errors.log
-					list of LME plugins and their states
-					list of LME config values
-					latest captured log messages
-				take screenshot of log on screen via dump
-				attempt TCPsocket connection to send log. possible to send image maybe?
-			]]--
-		end,
+		size = "128x128", --placeholder, press to expand or access later?
 	}
 	
 	local close_btn = iup.button {
 		title = "Close",
 		action = function(self)
-			HideDialog(iup.GetDialog(self))
+			iup.GetDialog(self):hide()
 		end,
 	}
 	
 	local header_pane = iup.vbox {
-		iup.fill {
-			size = "8",
-		},
 		iup.hbox {
 			iup.label {
 				title = lget("RECOV_TITLE|Neoloader error recovery environment"),
@@ -840,13 +926,9 @@ local build_log_display = function()
 			iup.fill { },
 			close_btn,
 		},
-		iup.fill {
-			size = "8",
-		},
 		iup.hbox {
 			iup.vbox {
 				qr_code,
-				report_builder,
 			},
 			mtline,
 		},
@@ -895,8 +977,7 @@ local build_resolution_tab = function()
 	end
 	
 	local entry_descrip = iup.label {
-		title = "",
-		size = "%30x%30",
+		title = lget("RECOV_SELECT_NEW_RESOLV|Select a resolution on the left. They are listed in order of severity; it is recommended to attempt them in order if you are unsure how to fix the bug yourself."),
 		expand = "YES",
 		wordwrap = "YES",
 	}
@@ -941,10 +1022,11 @@ local build_resolution_tab = function()
 	local resolution_selector = iup.list {
 		--todo: generic iup.list has bgcolor rendering issues, figure out how to fix this later
 		expand = "YES",
+		shrink = "YES",
 		action = function(self, t, i, cv)
 			if cv == 1 then
 				entry_index = i
-				entry_descrip.title = list_contents[i].description
+				entry_descrip.title = lget(list_contents[i].description)
 			end
 			
 			if cv ~= 1 then return end
@@ -967,11 +1049,14 @@ local build_resolution_tab = function()
 			rebuild_contents() --rebuilds list_contents with active resolutions
 			
 			for i, v in ipairs(list_contents) do
-				entry_index = -1
-				self[i] = v.title
-				self.value = "1"
-				entry_descrip.title = ""
+				self[i] = lget(v.title)
 			end
+			
+			entry_index = -1
+			entry_descrip.title = lget("RECOV_SELECT_NEW_RESOLV|Select a resolution on the left. They are listed in order of severity; it is recommended to attempt them in order if you are unsure how to fix the bug yourself.")
+			entry_action.title = ""
+			entry_action.active = "NO"
+			self.value = "1"
 		end,
 	}
 	
@@ -981,8 +1066,8 @@ local build_resolution_tab = function()
 		iup.hbox {
 			resolution_selector,
 			iup.vbox {
-				entry_descrip,
 				entry_action,
+				entry_descrip,
 			},
 		},
 	}
@@ -995,6 +1080,7 @@ local oplist = function(intable)
 	default = {
 		header = "Neoloader",
 		key = "INVALID",
+		hide_key = false,
 		value = 1, --current setting
 		default = 1, --recommended setting
 		[1] = "INVALID", --setting value
@@ -1003,7 +1089,7 @@ local oplist = function(intable)
 		end,
 	}
 
-	for i, v in ipairs(intable) do
+	for i, v in pairs(intable) do
 		default[i] = v
 	end
 
@@ -1015,7 +1101,7 @@ local oplist = function(intable)
 			end
 			default.action(t)
 		end,
-		value = default.default,
+		value = default.value,
 		set_to_default = function(self)
 			self.value = default.default
 		end,
@@ -1024,12 +1110,12 @@ local oplist = function(intable)
 		end,
 	}
 	for i, v in ipairs(default) do
-		option_list[i] = v
+		option_list[i] = lget(v)
 	end
 
 	local op_frame = iup.hbox {
 		iup.label {
-			title = default.key,
+			title = (not default.hide_key and lget(default.key) or ""),
 		},
 		iup.fill { },
 		option_list,
@@ -1073,34 +1159,44 @@ local build_pre_LME_options = function()
 	}
 
 	local counter = 0
+	local highlite_bg = false
 	while true do
 		counter = counter + 1
+		highlite_bg = not highlite_bg
 		local reg_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
 		if reg_file == "" then
 			break
 		end
 
-		local id = gkini.ReadString2("modreg", "id", "null")
-		local ver = gkini.ReadString2("modreg", "version", "null")
-		local name = gkini.ReadString2("modreg", "name", "null")
+		local id = gkini.ReadString2("modreg", "id", "null", reg_file)
+		local ver = gkini.ReadString2("modreg", "version", "null", reg_file)
+		local name = gkini.ReadString2("modreg", "name", "null", reg_file)
 		local idver_key = id .. "." .. ver
-		local current = gkini.ReadString("Neo-loadstate", idver_key, "NO")
+		local current = gkini.ReadString("Neo-pluginstate", idver_key, "NO")
 
 		local option_list = oplist {
-			header = "Neo-loadstate",
+			header = "Neo-pluginstate",
 			key = idver_key,
+			hide_key = true,
 			default = 2,
 			value = current == "YES" and 1 or 2,
 			"YES",
 			"NO",
 		}
 
-		local op_frame = iup.hbox {
-			iup.label {
-				title = name .. " v" .. ver,
+		local op_frame = iup.frame {
+			bgcolor = highlite_bg and "255 255 255 30 *" or "0 0 0 0 *",
+			segmented = "0 0 1 1",
+			image = "",
+			shrink = "YES",
+			expand = "HORIZONTAL",
+			iup.hbox {
+				iup.label {
+					title = name .. " v" .. ver,
+				},
+				iup.fill { },
+				option_list,
 			},
-			iup.fill { },
-			option_list,
 		}
 
 		table.insert(config_options, op_frame)
@@ -1108,7 +1204,7 @@ local build_pre_LME_options = function()
 
 	local option_list_container = iup.vbox {
 		iup.label {
-			title = lget("RECOVERY_CONFIG_MENU_PRE_DESCRIP|Set LME options and load states of registered plugins here"),
+			title = lget("RECOVERY_CONFIG_MENU_PRE_DESCRIP|Set LME options and load states of registered plugins here. The LME has not yet loaded, so some options may only apply the next time the game runs, or will only partially apply this session."),
 		},
 		iup.fill { size = "%1", },
 	}
@@ -1119,10 +1215,16 @@ local build_pre_LME_options = function()
 	
 	local scroll_pane = create_list_control {option_list_container}
 
-	local root_view = iup.vbox {
-		scroll_pane,
-		iup.fill { },
-		--buttons to set default or return to current settings here
+	local root_view = iup.frame {
+		post_map_update = function()
+			scroll_pane:map_cb()
+		end,
+		segmented = "0 0 1 1",
+		bgcolor = "0 0 0 0 *",
+		image = "",
+		iup.vbox {
+			scroll_pane,
+		}
 	}
 
 	return root_view
@@ -1169,37 +1271,39 @@ local build_post_LME_options = function()
 	}
 
 	local counter = 0
-	while true do
-		counter = counter + 1
-		local reg_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
-		if reg_file == "" then
-			break
-		end
-
-		local id = gkini.ReadString2("modreg", "id", "null")
-		local ver = gkini.ReadString2("modreg", "version", "null")
-		local name = gkini.ReadString2("modreg", "name", "null")
-		local idver_key = id .. "." .. ver
-		local current = gkini.ReadString("Neo-loadstate", idver_key, "NO")
-
+	local highlite_bg = false
+	local plugin_list = lib.get_gstate().pluginlist --{{id, ver}, {id, ver}, ...}
+	for _, idver_pair in ipairs(plugin_list) do
+		highlite_bg = not highlite_bg
+		
+		local id = idver_pair[1] or "null"
+		local ver = idver_pair[2] or "null"
+		local mod_obj = lib.get_state(id, ver)
+		local name = mod_obj.plugin_name
+		local current = mod_obj.load
+		
 		local option_list = oplist {
-			header = "Neo-loadstate",
-			key = idver_key,
+			hide_key = true,
 			default = 2,
 			value = current == "YES" and 1 or 2,
 			"YES",
 			"NO",
 			action = function(new_value)
-				neo.lib.set_load(auth_key, id, ver, new_value)
+				lib.set_load(auth_key, id, ver, new_value)
 			end,
 		}
 
-		local op_frame = iup.hbox {
-			iup.label {
-				title = name .. " v" .. ver,
+		local op_frame = iup.frame {
+			bgcolor = highlite_bg and "255 255 255 30 *" or "0 0 0 0 *",
+			segmented = "0 0 1 1",
+			image = "",
+			iup.hbox {
+				iup.label {
+					title = name .. " v" .. ver,
+				},
+				iup.fill { },
+				option_list,
 			},
-			iup.fill { },
-			option_list,
 		}
 
 		table.insert(config_options, op_frame)
@@ -1207,7 +1311,7 @@ local build_post_LME_options = function()
 
 	local option_list_container = iup.vbox {
 		iup.label {
-			title = lget("RECOVERY_CONFIG_MENU_POST_DESCRIP|Set LME options and load states of registered plugins here"),
+			title = lget("RECOVERY_CONFIG_MENU_POST_DESCRIP|Set LME options and load states of registered plugins here. The LME has loaded, allowing the direct management of configuration."),
 		},
 		iup.fill { size = "%1", },
 	}
@@ -1218,12 +1322,18 @@ local build_post_LME_options = function()
 	
 	local scroll_pane = create_list_control { option_list_container }
 
-	local root_view = iup.vbox {
-		scroll_pane,
-		iup.fill { },
-		--buttons to set default or return to current settings here
+	local root_view = iup.frame {
+		post_map_update = function()
+			scroll_pane:map_cb()
+		end,
+		segmented = "0 0 1 1",
+		image = "",
+		bgcolor = "0 0 0 0 *",
+		iup.vbox {
+			scroll_pane,
+		}
 	}
-
+	
 	return root_view
 	
 end
@@ -1233,8 +1343,8 @@ local create_diag = function()
 	
 	local res_tab = build_resolution_tab()
 	
-	local lme_tab_pre = build_pre_LME_options()
-	local lme_tab_post = build_post_LME_options()
+	local lme_tab = build_pre_LME_options()
+	--local lme_tab_post = build_post_LME_options()
 	
 	local lme_placeholder = iup.vbox {
 		iup.label {
@@ -1245,11 +1355,12 @@ local create_diag = function()
 	local tabbox = iup.zbox {
 		value  = res_tab,
 		res_tab,
-		lme_tab_pre,
-		lme_tab_post,
+		lme_tab,
 		lme_placeholder,
 	}
-
+	
+	local post_LME_once_flag = false
+	
 	local tabrow = iup.hbox {
 		iup.button {
 			title  = lget("RECOVERY_TAB_RESOLVE|Resolutions"),
@@ -1261,11 +1372,19 @@ local create_diag = function()
 		iup.button {
 			title  = lget("RECOVERY_TAB_CONFIG|LME configuration"),
 			action = function()
-				if not rs.state.capabilities.has_lib then
-					tabbox.value = lme_tab_pre
-				else
-					tabbox.value = lme_tab_post
+				if (rs.state.capabilities.has_lib) and (not post_LME_once_flag) then
+					post_LME_once_flag = true
+					lme_tab:detach()
+					lme_tab = build_post_LME_options()
+					tabbox:append(lme_tab)
+					iup.Refresh(iup.GetDialog(lme_tab))
+					iup.GetDialog(lme_tab):map()
+					iup.Refresh(iup.GetDialog(lme_tab))
+					lme_tab:post_map_update()
+					iup.Refresh(iup.GetDialog(lme_tab))
+					iup.Refresh(iup.GetDialog(lme_tab))
 				end
+				tabbox.value = lme_tab
 			end,
 		},
 		iup.button {
@@ -1283,9 +1402,8 @@ local create_diag = function()
 		fullscreen = "YES",
 		bgcolor   = "0 0 0",
 		iup.hbox {
-			iup.fill { size = "%6" },
+			iup.fill { size = "%3" },
 			iup.vbox {
-				alignment = "ACENTER",
 				iup.fill { size = Font.Default },
 				header,
 				iup.fill { size = Font.Default },
@@ -1298,11 +1416,16 @@ local create_diag = function()
 	}
 
 	diag_local:map()
+	lme_tab:post_map_update()
 	
 	return diag_local
 end
 
 local diag = create_diag()
+declare("diagtest", diag)
+RegisterUserCommand("dodiag", function()
+	diagtest = diag
+end)
 
 rs.open = function(mode)
 	mode = mode or "panel"
@@ -1332,6 +1455,9 @@ rs.open = function(mode)
 	end
 end
 
-RegisterUserCommand("recovery", rs.open)
+RegisterUserCommand("recovery", function()
+	rs.push_error("RECOV_USER_ACCESS_NOTIF|Recovery opened by user", {})
+	rs.open()
+end)
 
 return rs

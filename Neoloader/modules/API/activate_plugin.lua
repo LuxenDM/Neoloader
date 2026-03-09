@@ -58,6 +58,8 @@ lib.activate_plugin = function(id, version, verify_key)
     return false, "load state is NO"
   end
 
+	reg.mark_launching(id, version)
+
   -- compat fast path
   if rec.compat == "YES" then
     local dt_ms  = gktime() - t0
@@ -77,7 +79,8 @@ lib.activate_plugin = function(id, version, verify_key)
     deps_ok = lib.resolve_dep_table(rec.plugin_dependencies)
   end
   if not deps_ok and ls ~= "FORCE" then
-    lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
+    reg.mark_failure(id, version)
+	lib.log_error("Attempted to activate " .. plugin_id .. " but its dependencies aren't fulfilled!", 2)
     if type(lib.notify) == "function" then
       lib.notify("PLUGIN_FAILURE", { plugin_id = id, version = version, error_string = "Unfilled Dependencies!" })
     end
@@ -90,6 +93,7 @@ lib.activate_plugin = function(id, version, verify_key)
     status, err = lib.resolve_file(rec.plugin_path, nil, rec.plugin_folder)
   end
   if not status then
+    reg.mark_failure(id, version)
     lib.log_error("\127FF0000Failed to activate " .. plugin_id .. "\127FFFFFF", 3, id, version)
     lib.log_error("        error message: " .. tostring(err), 3, id, version)
     if type(lib.notify) == "function" then

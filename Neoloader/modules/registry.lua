@@ -1,7 +1,7 @@
 --[[
 [metadata]
 description=the Registery is the list of plugins Neoloader is aware of.
-version=1.0.13
+version=1.0.15
 owner=Neoloader|7.0.0
 type=lua
 created=2025-10-26
@@ -169,13 +169,23 @@ api.substitute_zero = function(id, zval)
 	if not ver_table then
 		return false, "id_match_fail"
 	end
-	
-	if zval == "0" then
-		return ver_table.latest_active
-	else
+
+	if zval ~= "0" then
 		return zval
 	end
+
+	local v = ver_table.latest_active
+	if (not v) or (v == "0") then
+		v = ver_table.latest_inactive
+	end
+
+	if (not v) or (v == "0") then
+		return false, "no_versions_known"
+	end
+
+	return v
 end
+
 
 api.get_latest_ver = function(id, ver_min, ver_max)
 	local order_list = version_order[id]
@@ -185,9 +195,12 @@ api.get_latest_ver = function(id, ver_min, ver_max)
 	end
 	
 	local ver_limit = ver_list.latest_active
+	if (not ver_limit) or (ver_limit == "0") then
+		ver_limit = ver_list.latest_inactive
+	end
 	
 	if not ver_min then
-		return true, ver_list.latest_active
+		return true, ver_limit
 	end
 	
 	ver_min = api.substitute_zero(id, ver_min)
@@ -236,7 +249,7 @@ api.get_latest_ver = function(id, ver_min, ver_max)
 		return false, "no_valid_ver_min_too_high"
 	end
 	
-	return order_list[max_index]
+	return true, order_list[max_index]
 end
 
 api.build_ini = function(ini_pointer)
@@ -446,7 +459,7 @@ function _update_indexes(record, mode)
   list_versions[id].latest_inactive = newest
 
   -- refresh latest_active only on activation success (and if newest)
-  if mode == "activate" and record.complete == true then
+  if mode == "activate" and ((record.launched == true) or (record.complete == true)) then
     -- pick the newest version among those not explicitly "NO"
     -- quick scan from newest backwards
     local latest_ok = nil
@@ -464,16 +477,37 @@ end
 
 -- tiny helper to mark completion (activation success path can call this)
 api.mark_complete = function(id, ver, stats)
-  local key = id.."."..ver
-  local idx = plugin_lookups[key]
-  if not idx then return false, "not found" end
-  local rec = registry[idx]
-  rec.complete = true
-  if stats then rec.stats = stats end
+	local key = id.."."..ver
+	local idx = plugin_lookups[key]
+	if not idx then return false, "not found" end
+	local rec = registry[idx]
+	rec.complete = true
+	if stats then rec.stats = stats end
+	
+	rec.launched = true --in case somehow didn't get triggered
 
-  -- activation-time index refresh (may bump latest_active)
-  _update_indexes(rec, "activate")
-  return true, rec
+	-- activation-time index refresh (may bump latest_active)
+	_update_indexes(rec, "activate")
+	return true, rec
+end
+
+api.mark_failure = function(id, ver)
+	local key = id.."."..ver
+	local idx = plugin_lookups[key]
+	if not idx then return false, "not found" end
+	
+	local rec = registry[idx]
+	rec.launched = false
+end
+
+api.mark_launching = function(id, ver)
+	
+	local key = id.."."..ver
+	local idx = plugin_lookups[key]
+	if not idx then return false, "not found" end
+	
+	local rec = registry[idx]
+	rec.launched = true
 end
 
 --[[
@@ -555,7 +589,7 @@ local registry_reset_handler = function()
 	for index, reg_table in ipairs(registry) do
 		local id   = reg_table.plugin_id
 		local ver  = reg_table.plugin_version
-		local load = reg_table.load
+		local load = reg_table.nextload or reg_table.load or "NO"
 		gkini.WriteString("Neo-pluginstate", id .. "." .. ver, load)
 	end
 	

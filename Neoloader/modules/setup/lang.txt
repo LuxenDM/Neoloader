@@ -1,1 +1,0 @@
-This module's multi-language function is hardcoded, not provided by/expanded with Babel

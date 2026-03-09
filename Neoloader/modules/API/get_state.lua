@@ -72,7 +72,7 @@ lib.get_state = function(name, version)
     plugin_frozen       = (ref.dependents_frozen and "YES" or "NO"),
 
     plugin_dependencies = ref.plugin_dependencies or {},
-    plugin_is_new       = ref.new_entry or false,
+    plugin_is_new       = false, --ref.new_entry or false,
     compat_flag         = ref.compat or "NO",
     plugin_stats        = ref.stats,  -- {timestat, memstat} if present
   }

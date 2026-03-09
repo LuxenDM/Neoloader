@@ -12,36 +12,36 @@ local lib = neo.lib
 local reg = neo.api.registry
 
 lib.set_class = function(name, version, ftable)
-  name, version = lib.pass_ini_identifier(name, version)
-  if lib.err_handle(type(name) ~= "string",
-      "lib.set_class expected a string for its first argument, got " .. type(name)) then
-    return false, "plugin ID not a string"
-  end
+	name, version = lib.pass_ini_identifier(name, version)
+	if lib.err_handle(type(name) ~= "string",
+		"lib.set_class expected a string for its first argument, got " .. type(name)) then
+		return false, "plugin ID not a string"
+	end
 
-  version = tostring(version or "0")
-  if version == "0" then
-    version = lib.get_latest(name)
-  end
+	version = tostring(version or "0")
+	if version == "0" then
+		version = lib.get_latest(name)
+	end
 
-  lib.log_error("Setting class for " .. name .. " v" .. tostring(version), 1)
+	lib.log_error("Setting class for " .. name .. " v" .. tostring(version), 1)
 
-  if type(ftable) ~= "table" then
-    ftable = { ftable }
-  end
+	if type(ftable) ~= "table" then
+		ftable = { ftable }
+	end
 
-  if not lib.is_exist(name, version) then
-    return false, "mod doesn't exist"
-  end
+	if not lib.is_exist(name, version) then
+		return false, "mod doesn't exist"
+	end
 
-  local ok, _, rec = reg.find_plugin(name, version)
-  if not ok or not rec then
-    return false, "mod doesn't exist"
-  end
+	local ok, _, rec = reg.find_plugin(name, version)
+	if not ok or not rec then
+		return false, "mod doesn't exist"
+	end
 
-  if rec.container_locked then
-    return false, "locked"
-  end
+	if rec.container_locked then
+		return false, "locked"
+	end
 
-  reg.set_container(name, version, ftable)
-  return true
+	reg.set_container(name, version, ftable)
+	return true
 end

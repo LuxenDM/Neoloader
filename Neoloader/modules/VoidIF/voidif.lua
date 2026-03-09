@@ -19,4 +19,4 @@ local class = {
 	['IF'] = true,
 }
 
-lib.set_class("vosi", "0", class)
+lib.set_class("voidif", "0", class)

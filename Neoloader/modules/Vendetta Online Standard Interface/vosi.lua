@@ -2,26 +2,39 @@
 [modreg]
 type=interface
 API=3
-id=Vendetta Online Standard Interface
+id=vosi-bridge
 version=1.0.0
-name=Vendetta Online Standard Interface
+name=Vendetta Online Standard Interface Bridge
 author=Guild Software
 path=vosi.lua
 
 [metadata]
-description=This stub tells the Vendetta Online Standard Interface to load. Neoloader will launch that anyways if no interface is available, but this should help make interface selection and management more user-evident.
+description=This stub tells the Vendetta Online Standard Interface to load. Neoloader will launch that anyways if no interface is available, but this should help make interface selection and management more user-evident. It also provides methods to access the LME in the default interface directly.
 version=1.1.0
 owner=Neoloader|7.0.0
 type=lua
 created=2025-10-08
 ]]--
 
-dofile("vo/if.lua")
-
-local mod_path = lib.get_path()
-local cp = function(msg)
-	lib.log_error("[VOSII] " .. msg, 1, "Vendetta Online Standard Interface", "1.0.0")
+local mod_path = lib.get_path() or lib.get_path("vosi-bridge", "0")
+local self_id, self_ver = lib.pass_ini_identifier(mod_path .. "vosi.lua", "")
+if self_id == mod_path then
+	error("Catastrophic failure")
 end
+local cur_if = lib.get_gstate().current_if
+local cur_mode = lib.lme_get_config("launch_mode")
+
+if (cur_mode == "independent") and (cur_if == "vosi-bridge") then
+	dofile("vo/if.lua")
+end
+
+local cp = function(msg)
+	lib.log_error("[VOSI] " .. msg, 1, self_id, self_ver)
+end
+
+cp("self-check: " .. self_id .. " v" .. self_ver .. " running from " .. mod_path .. " under LME in mode " .. cur_mode)
+
+
 
 
 
@@ -29,9 +42,8 @@ local class = {
 	CCD1 = true,
 	commands = {},
 	manifest = {},
-	
-	['IF'] = true,
 }
+class.IF = true
 
 local bstr = function(id, val)
 	return val
@@ -65,22 +77,30 @@ update_class = function()
 		},
 	}
 	
-	lib.set_class("Vendetta Online Standard Interface", "0", class)
+	lib.set_class(self_id, self_ver, class)
 end
 
 update_class()
 
-
 --create buttons on menu
 local button_creator = function()
-	local cur_if = lib.get_gstate().current_if
 	
-	if (cur_if ~= "Vendetta Online Standard Interface") and (cur_if ~= "vo-if") then
-		cp("Vendetta Online's Standard Interface does not appear to be active; integrations will not be made.")
+	
+	if (cur_if ~= "Vendetta Online Standard Interface") and (cur_mode == "independent") then
+		cp("Vendetta Online's Standard Interface does not appear to be the current interface; integrations will not be made.")
 		return
 	end
 	
 	local angular_check = gkini.ReadString("Vendetta", "usenewui", "1")
+	
+	local open_config_or_recovery = function()
+		local cur_mgr = lib.get_gstate().current_mgr
+		if lib.is_ready(cur_mgr) then
+			lib.open_config()
+		else
+			gkinterface.GKProcessCommand("recovery")
+		end
+	end
 	
 	if angular_check == "1" and Platform == "Windows" then
 		local odbutton = OptionsDialog[1][1][15]
@@ -99,19 +119,23 @@ local button_creator = function()
 			cx = x_pos,
 			cy = y_pos,
 			image = odbutton.image,
-			action = lib.open_config,
+			action = open_config_or_recovery,
 		}
+		
 		
 		iup.Append(OptionsDialog[1][1], neobutton)
 	else
 		local neobutton = iup.stationbutton {
 			title = bstr(4, "Open Mod Manager"),
 			expand = "HORIZONTAL",
-			action = neo.open,
+			action = open_config_or_recovery,
 		}
 		
 		iup.Append(OptionsDialog[1][1][1], neobutton)
 	end
+	
+	cp("LME integrations for the standard interface have been added")
 end
 
 
+RegisterEvent(button_creator, "PLUGINS_LOADED")

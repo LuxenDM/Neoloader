@@ -22,7 +22,7 @@ end
 local diag_tree = {} --tracks dialogs opened with ShowDialog function
 
 HideDialog = HideDialog or function(dlg) 
-	if diag_tree[#diag_tree] = dlg then
+	if diag_tree[#diag_tree] == dlg then
 		diag_tree[#diag_tree] = nil
 	end
 	dlg:hide() 

@@ -23,6 +23,7 @@ lib.lme_configure = function(cfg_option, new_val, auth)
     return true, "ok"
   else
     -- preserve v6-ish behavior of returning failure without side effects
+	console_print("config change failure: " .. tostring(msg))
     return false, msg or "failed"
   end
 end

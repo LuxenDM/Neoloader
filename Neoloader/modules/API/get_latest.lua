@@ -18,8 +18,8 @@ neo.lib.get_latest = function(id, min, max)
 		return "?"
 	end
 
-	local ver, err = reg.get_latest_ver(id, min, max)
-	if not ver then
+	local status, ver = reg.get_latest_ver(id, min, max)
+	if not status then
 		return "?"
 	end
 	return ver

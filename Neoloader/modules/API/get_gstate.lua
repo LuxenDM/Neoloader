@@ -65,11 +65,11 @@ neo.lib.get_gstate = function()
 		
 		-- secondary loop: all known versions, active or not
 		for _, v in ipairs(vers) do
-			--cp("check: " .. id .. " v" .. v)
 			data.pluginlist[#data.pluginlist + 1] = { id, v }
 			
 			local class_tbl = reg.get_container(id, v) or {}
 			
+			--cp("check: " .. id .. " v" .. v .. ": IF = " .. tostring(class_tbl.IF))
 			-- v6 compatibility: roles are simple booleans on the class table
 			if class_tbl.mgr then
 				table.insert(data.mgr_list, id)

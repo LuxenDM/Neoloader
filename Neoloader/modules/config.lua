@@ -37,7 +37,7 @@ neo.api.config = {}
 
 local api = neo.api.config
 
-api.validity_override = false --if true, allow invalid options to be written; used by recovery system
+api.validity_override = false --if true, allow invalid options to be written; used by recovery system and uninstaller
 
 local config_definitions = {
 	override_disabled_plugin_state = { --if plugins are disabled, Neoloader self-quits. this overrides that behavior, allowing Neoloader and any LME mods to run
@@ -45,8 +45,9 @@ local config_definitions = {
 			YES = true,
 			NO = true,
 		},
-		default = "NO", --when set to default, what to write
-		legacy = { --if 'import from previous version' is used during setup, try these
+		default = "NO", --when set to default, what to write.
+		preferred = "NO", --recommended options may be less 'safe' than default
+		legacy = { --previous IDs for this configuration, provided for legacy support
 			"override_disabled_plugin_state",
 			"rOverrideDisabledState",
 			"ignoreOverrideState",
@@ -58,6 +59,7 @@ local config_definitions = {
 			NO = true,
 		},
 		default = "NO",
+		recommended = "NO",
 		legacy = {
 			"allow_bad_api_version",
 			"rAllowBadAPIVersion",
@@ -73,6 +75,7 @@ local config_definitions = {
 			AUTH = true,
 		},
 		default = "YES",
+		recommended = "YES",
 		legacy = {
 			"default_load_state",
 			"rDefaultLoadState",
@@ -86,6 +89,7 @@ local config_definitions = {
 			INTERRUPT = true, --shows error handler with a popup dialog that stops game execution while visible
 		},
 		default = "NO",
+		recommended = "NO",
 		legacy = {
 			"do_err_popup",
 			"rDoErrPopup",
@@ -98,6 +102,7 @@ local config_definitions = {
 			NO = true, --recommended unless you know what you're doing
 		},
 		default = "NO",
+		recommended = "NO",
 		legacy = {
 			"clear_commands_on_reload",
 			"rClearCommands",
@@ -113,25 +118,28 @@ local config_definitions = {
 			['4'] = true,
 		},
 		default = "0", --"2",
+		recommended = "0",
 		legacy = {
 			"hide_log_message_level",
 			"iDbgIgnoreLevel",
 			"dbgIgnoreLevel",
 		},
 	},
+	--[[
 	external_plugin_list = { --if it exists, appends all plugins in list to registry during pre-load locate. Used for external mod management utilities. Not yet implemented.
 		need_auth = "YES",
 		valid = nil,
 		default = "",
 		legacy = {},
 	},
+	]]--
 	current_if = { --tells Neoloader what interface to launch and authenticate. the interface is always launched first. If empty or interface isn't present or errors, launches default interface directly.
 		need_auth = "YES",
 		valid = nil,
 		default = "Vendetta Online Standard Interface",
 		legacy = {},
 	},
-	current_mgr = { --tells Neoloader what LME control interface to authenticate. failback to neomgr. cannot be empty.
+	current_mgr = { --tells Neoloader what LME control interface to authenticate. failback to neomgr. failback again, to just using recovery interface
 		need_auth = "YES",
 		valid = nil,
 		default = "neomgr",
@@ -147,8 +155,10 @@ local config_definitions = {
 		valid = {
 			independent = true,
 			cooperative = true,
+			removed = false, --force-set when uninstalled
 		},
-		default = "independent",
+		default = "cooperative",
+		recommended = "independent",
 		legacy = {
 			"launch_mode",
 		},
@@ -159,13 +169,14 @@ local config_definitions = {
 			NO = true,
 		},
 		default = "NO",
+		recommended = "YES",
 		legacy = {
 			"stat_graphing",
 		},
 	},
 	
 	--These are deprecated, and provided only for compatibility reasons
-	allowDelayedLoad = {
+	allowDelayedLoad = { --always enabled now
 		valid = {
 			deprecated = true,
 		},
@@ -174,7 +185,7 @@ local config_definitions = {
 			"allowDelayedLoad",
 		},
 	},
-	echoLogging = {
+	echoLogging = { --always enabled now
 		valid = {
 			deprecated = true,
 		},
@@ -183,7 +194,7 @@ local config_definitions = {
 			"echoLogging",
 		},
 	},
-	protectResolveFile = {
+	protectResolveFile = { --always enabled now
 		valid = {
 			deprecated = true,
 		},
@@ -192,7 +203,7 @@ local config_definitions = {
 			"protectResolveFile",
 		},
 	},
-	dbgFormatting = {
+	dbgFormatting = { --always enabled now
 		valid = {
 			deprecated = true,
 		},
@@ -203,7 +214,7 @@ local config_definitions = {
 	},
 }
 
-local legacy_alias = {}
+local legacy_alias = {} --reverse-mapped legacy keys to modern key equivilants
 
 for canonical, def in pairs(config_definitions) do
 	if def.legacy then
@@ -224,13 +235,13 @@ api.is_valid = function(setting, new_value)
 		return false, "invalid setting key"
 	end
 	
-	if (api.validity_override) or (not definition.valid) then
+	if (neo.api.validity_override) or (not definition.valid) then
 		return true, "all values valid"
 	end
 	
 	local is_valid = definition.valid[new_value]
 	
-	if not is_valid then
+	if (not is_valid) then
 		return false, "invalid value"
 	else
 		return true, "valid value"
@@ -331,7 +342,7 @@ end
 api.setup_config()
 
 api.set_defaults = function()
-	--todo, used for setup or recovery
+	--todo, used for recovery interface
 end
 
 local config_reset_handler = function()
