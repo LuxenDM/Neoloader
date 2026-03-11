@@ -73,6 +73,8 @@ version_order = { --oldest to newest
 	}
 }
 
+Not all of this is still accurate, but its fairly close
+
 ]]--
 
 local _update_indexes --declared below
@@ -81,8 +83,8 @@ local ini_pointer_cache = {}  -- [ifp] = { id=<id>, ver=<version> }
 
 -- Fast check: does this ID exist in the registry (any version)?
 api.has_id = function(id)
-  if type(id) ~= "string" then return false end
-  return version_order[id] ~= nil and #version_order[id] > 0
+	if type(id) ~= "string" then return false end
+	return version_order[id] ~= nil and #version_order[id] > 0
 end
 
 
@@ -176,11 +178,7 @@ api.substitute_zero = function(id, zval)
 
 	local v = ver_table.latest_active
 	if (not v) or (v == "0") then
-		v = ver_table.latest_inactive
-	end
-
-	if (not v) or (v == "0") then
-		return false, "no_versions_known"
+		return false, "no_active_versions_known"
 	end
 
 	return v
@@ -192,6 +190,11 @@ api.get_latest_ver = function(id, ver_min, ver_max)
 	local ver_list = list_versions[id]
 	if not order_list then
 		return false, "id_match_fail"
+	end
+	
+	if ver_max == "~" then
+		--lib.log_error("get_latest_ver called with ver_max='~' for " .. tostring(id) .. "; '~' means exact-only and must be handled outside get_latest_ver.", 3)
+		return false, "exact_version_required"
 	end
 	
 	local ver_limit = ver_list.latest_active
@@ -308,10 +311,10 @@ api.build_ini = function(ini_pointer)
 end
 
 -- Resolve an INI file path (that has been parsed before) and returns its registry entry
-function api.from_ini_pointer(ifp)
-  local rec = ini_pointer_cache[ifp]
-  if not rec then return false, "not_cached" end
-  return true, rec
+api.from_ini_pointer = function(ifp)
+	local rec = ini_pointer_cache[ifp]
+	if not rec then return false, "not_cached" end
+	return true, rec
 end
 
 
@@ -433,46 +436,46 @@ end
 
 -- shared bookkeeping for inserts/updates
 -- mode = "register" | "activate"
-function _update_indexes(record, mode)
-  local id, ver = record.plugin_id, record.plugin_version
-  list_versions[id] = list_versions[id] or { latest_active = "0", latest_inactive = "0" }
+_update_indexes = function(record, mode)
+	local id, ver = record.plugin_id, record.plugin_version
+	list_versions[id] = list_versions[id] or { latest_active = "0", latest_inactive = "0" }
 
 
-  -- ensure per-ID tables
-  list_versions[id]   = list_versions[id]   or { latest_active = nil, latest_inactive = nil }
-  version_order[id]   = version_order[id]   or {}
-  plugin_lookups[id.."."..ver] = record.index
+	-- ensure per-ID tables
+	list_versions[id]   = list_versions[id]   or { latest_active = nil, latest_inactive = nil }
+	version_order[id]   = version_order[id]   or {}
+	plugin_lookups[id.."."..ver] = record.index
 
-  -- update version_order[id] (dedupe + sort)
-  local vo = version_order[id]
-  local seen = false
-  for i=1, #vo do if vo[i] == ver then seen = true break end end
-  if not seen then table.insert(vo, ver) end
-  table.sort(vo, function(a, b) return api.compare_ver(a, b) < 0 end)
+	-- update version_order[id] (dedupe + sort)
+	local vo = version_order[id]
+	local seen = false
+	for i=1, #vo do if vo[i] == ver then seen = true break end end
+	if not seen then table.insert(vo, ver) end
+	table.sort(vo, function(a, b) return api.compare_ver(a, b) < 0 end)
 
-  -- cache the current load state for quick reporting
-  list_versions[id][ver] = record.load
+	-- cache the current load state for quick reporting
+	list_versions[id][ver] = record.load
 
-  -- refresh latest_inactive immediately on registration (or any insert)
-  -- (= newest by api.compare_ver regardless of load)
-  local newest = vo[#vo]
-  list_versions[id].latest_inactive = newest
+	-- refresh latest_inactive immediately on registration (or any insert)
+	-- (= newest by api.compare_ver regardless of load)
+	local newest = vo[#vo]
+	list_versions[id].latest_inactive = newest
 
-  -- refresh latest_active only on activation success (and if newest)
-  if mode == "activate" and ((record.launched == true) or (record.complete == true)) then
-    -- pick the newest version among those not explicitly "NO"
-    -- quick scan from newest backwards
-    local latest_ok = nil
-    for i = #vo, 1, -1 do
-      local v = vo[i]
-      local state = list_versions[id][v]
-      if state ~= "NO" then
-        latest_ok = v
-        break
-      end
-    end
-    list_versions[id].latest_active = latest_ok
-  end
+	-- refresh latest_active only on activation success (and if newest)
+	if mode == "activate" and ((record.launched == true) or (record.complete == true)) then
+		-- pick the newest version among those not explicitly "NO"
+		-- quick scan from newest backwards
+		local latest_ok = nil
+		for i = #vo, 1, -1 do
+			local v = vo[i]
+			local state = list_versions[id][v]
+			if state ~= "NO" then
+				latest_ok = v
+				break
+			end
+		end
+		list_versions[id].latest_active = latest_ok
+	end
 end
 
 -- tiny helper to mark completion (activation success path can call this)
@@ -498,6 +501,9 @@ api.mark_failure = function(id, ver)
 	
 	local rec = registry[idx]
 	rec.launched = false
+	rec.complete = false
+	_update_indexes(rec, "activate")
+	return true, rec
 end
 
 api.mark_launching = function(id, ver)
@@ -508,6 +514,17 @@ api.mark_launching = function(id, ver)
 	
 	local rec = registry[idx]
 	rec.launched = true
+end
+
+api.mark_launching = function(id, ver)
+	local key = id.."."..ver
+	local idx = plugin_lookups[key]
+	if not idx then return false, "not found" end
+	
+	local rec = registry[idx]
+	rec.launched = true
+	_update_indexes(rec, "activate")
+	return true, rec
 end
 
 --[[
@@ -525,33 +542,33 @@ Returns:
   true, record     – on success
   false, err       – if plugin not found or patch invalid
 ]]--
-function api.update_record_fields(id, ver, patch)
-  if type(id) ~= "string" or type(ver) ~= "string" then
-    return false, "invalid id or version"
-  end
-  if type(patch) ~= "table" then
-    return false, "patch must be a table"
-  end
+api.update_record_fields = function(id, ver, patch)
+	if type(id) ~= "string" or type(ver) ~= "string" then
+		return false, "invalid id or version"
+	end
+	if type(patch) ~= "table" then
+		return false, "patch must be a table"
+	end
 
-  local ok, idx, rec = api.find_plugin(id, ver)
-  if not ok or not rec then
-    return false, "plugin not found"
-  end
+	local ok, idx, rec = api.find_plugin(id, ver)
+	if not ok or not rec then
+		return false, "plugin not found"
+	end
 
-  -- shallow merge of patch into the record
-  for k, v in pairs(patch) do
-    rec[k] = v
-  end
+	-- shallow merge of patch into the record
+	for k, v in pairs(patch) do
+		rec[k] = v
+	end
 
-  -- write-back to registry slot (guaranteed valid)
-  registry[idx] = rec
+	-- write-back to registry slot (guaranteed valid)
+	registry[idx] = rec
 
-  -- update any cached metadata that depends on these keys
-  if patch.complete ~= nil or patch.load ~= nil then
-    _update_indexes(rec, "activate")
-  end
+	-- update any cached metadata that depends on these keys
+	if patch.complete ~= nil or patch.load ~= nil then
+		_update_indexes(rec, "activate")
+	end
 
-  return true, rec
+	return true, rec
 end
 
 -- inside registry.lua
@@ -602,7 +619,7 @@ RegisterEvent(registry_reset_handler, "QUIT")
 
 
 -- internal-only; called from recovery.lua UI
-function api.cleanse_registration()
+api.cleanse_registration = function()
     local survivors = {}
     local max_seen  = 0
 
@@ -665,7 +682,7 @@ function api.cleanse_registration()
 end
 
 -- returns a shallow-copied list of known versions for this id, oldest→newest
-function api.get_version_list(id)
+api.get_version_list = function(id)
 	local vo = version_order[id]
 	if not vo then return {} end
 	local out = {}

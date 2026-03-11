@@ -21,18 +21,29 @@ local self_id, self_ver = lib.pass_ini_identifier(mod_path .. "vosi.lua", "")
 if self_id == mod_path then
 	error("Catastrophic failure")
 end
-local cur_if = lib.get_gstate().current_if
-local cur_mode = lib.lme_get_config("launch_mode")
-
-if (cur_mode == "independent") and (cur_if == "vosi-bridge") then
-	dofile("vo/if.lua")
-end
 
 local cp = function(msg)
 	lib.log_error("[VOSI] " .. msg, 1, self_id, self_ver)
 end
 
-cp("self-check: " .. self_id .. " v" .. self_ver .. " running from " .. mod_path .. " under LME in mode " .. cur_mode)
+local cur_if = lib.get_gstate().current_if
+local cur_mode = lib.lme_get_config("launch_mode")
+
+local actual_cur_mode = (lib.get_gstate().pathlock and "cooperative" or "independent")
+
+cp("self-check: " .. self_id .. " v" .. self_ver .. " running from " .. mod_path .. " under LME in mode " .. cur_mode .. "; current interface should be " .. cur_if)
+
+if (cur_mode == "independent") and (cur_if == "vosi-bridge") then
+	cp("Running in independent mode; executing game interface")
+	dofile("vo/if.lua")
+end
+
+if (cur_mode ~= actual_cur_mode) and (cur_mode == "cooperative") and (cur_if == "vosi-bridge") then
+	cp("Mode mismatch, currently running as independent while reporting as cooperative. Executing game interface 'just in case'.")
+	dofile("vo/if.lua")
+end
+
+
 
 
 
@@ -83,10 +94,21 @@ end
 update_class()
 
 --create buttons on menu
+
+
+local vosi_timer = Timer()
+
+local recheck_flag = false
 local button_creator = function()
+	vosi_timer:IsActive() --have to re-reference timer or it might not fire
 	
+	if recheck_flag then
+		return
+	end
 	
-	if (cur_if ~= "Vendetta Online Standard Interface") and (cur_mode == "independent") then
+	recheck_flag = true
+	
+	if ((cur_if ~= self_id) and (cur_mode == "independent")) and (not (cur_if == "vo-if")) then
 		cp("Vendetta Online's Standard Interface does not appear to be the current interface; integrations will not be made.")
 		return
 	end
@@ -136,6 +158,10 @@ local button_creator = function()
 	
 	cp("LME integrations for the standard interface have been added")
 end
+
+vosi_timer:SetTimeout(100, button_creator)
+
+
 
 
 RegisterEvent(button_creator, "PLUGINS_LOADED")

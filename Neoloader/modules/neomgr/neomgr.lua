@@ -89,7 +89,7 @@ local config = {
 	show_debuginfo = gkrs("neomgr", "show_debuginfo", "NO"),
 }
 
-function update_class()
+local update_class = function()
 	local class = {
 		CCD1 = true,
 		smart_config = {
@@ -142,7 +142,7 @@ function update_class()
 	lib.set_class("neomgr", re_ver, neo)
 end
 
-function neo.auth_key_receiver(new_key)
+neo.auth_key_receiver = function(new_key)
 	if not auth_key then
 		auth_key = new_key
 	end
@@ -165,7 +165,7 @@ end
 
 
 	
-local function create_subdlg(ctrl)
+local create_subdlg = function(ctrl)
 	
 	local dlg = iup.dialog{
 		border="NO",
@@ -489,7 +489,7 @@ local create_CCD1_view = function(id, version)
 	disp_frame.size = "x%40"
 	local disp_obj = {}
 	
-	local function mk_item(ihandle)
+	local mk_item = function(ihandle)
 		--adds item to frame and obj table
 		table.insert(disp_obj, ihandle)
 		disp_frame:add_item(ihandle)
@@ -746,7 +746,7 @@ local diag_constructor = function()
 				[3] = bstr(10, "Loaded"),
 			}
 			
-			if lib.lme_get_config("defaultLoadState") == "YES" then
+			if lib.lme_get_config("default_load_state") == "YES" then
 				load_status[-1] = bstr(11, "Will load")
 			end
 			
@@ -795,7 +795,7 @@ local diag_constructor = function()
 				end
 			elseif data.current_state == 2 then
 				--cannot load, failure/error
-				log_display = log_display ..  bstr(71, "This plugin failed to load") .. "; " .. bstr(83, "error details can be found below")
+				log_display = log_display .. bstr(71, "This plugin failed to load") .. "; " .. bstr(83, "error details can be found below")
 			elseif data.current_state == 1 then
 				--cannot load, missing dependency
 				log_display = log_display .. bstr(72, "This plugin depends on a plugin that either failed to load or is not found")
@@ -1490,6 +1490,14 @@ local diag_constructor = function()
 							},
 							iup.hbox {
 								iup.label {
+									title = bstr(-1, "This is ignored if you are using cooperative mode"),
+								},
+							},
+							iup.fill {
+								size = tostring(Font.Default),
+							},
+							iup.hbox {
+								iup.label {
 									title = bstr(49, "Select your LME manager") .. ": ",
 								},
 								iup.fill { },
@@ -1512,7 +1520,7 @@ local diag_constructor = function()
 					alignment = "ACENTER",
 					iup.fill { },
 					iup.label {
-						title = bstr(51, "Check for Neoloader updates on") .. "   ",
+						title = bstr(51, "Check for Neoloader updates on") .. "	 ",
 					},
 					iup.stationbutton {
 						title = "NexusMods",

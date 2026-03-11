@@ -14,45 +14,48 @@ local waitq = neo.runtime.waitq
 local rt    = neo.runtime
 
 lib.check_queue = function()
-    if #waitq == 0 then return end
-    if neo.api.get_pathlock_value() then
-        -- still pathlocked; don't activate anything yet
-        return
-    end
+	if #waitq == 0 then return end
+	if neo.api.get_pathlock_value() then
+		-- still pathlocked; don't activate anything yet
+		return
+	end
+	
+	-- If we're already processing, just set the retry flag and bail.
+	if rt.in_check_queue then
+		rt.queue_retry = true
+		return
+	end
+	
+	rt.in_check_queue = true
+	
+	repeat
+		rt.queue_retry = false
 
-    -- If we're already processing, just set the retry flag and bail.
-    if rt.in_check_queue then
-        rt.queue_retry = true
-        return
-    end
+		-- optional debug:
+		-- dump_table(waitq)
 
-    rt.in_check_queue = true
+		-- Single pass over the current queue
+		for i = #waitq, 1, -1 do
+			local item = waitq[i]
+			if item and lib.resolve_dep_table(item.deps) then
+				lib.log_error("        A dependency was resolved for a function in the processing queue!", 1)
+				table.remove(waitq, i)
 
-    repeat
-        rt.queue_retry = false
-
-        -- optional debug:
-        -- dump_table(waitq)
-
-        -- Single pass over the current queue
-        for i = #waitq, 1, -1 do
-            local item = waitq[i]
-            if item and lib.resolve_dep_table(item.deps) then
-                lib.log_error("        A dependency was resolved for a mod in the processing queue!", 1)
-                table.remove(waitq, i)
-
-                if item.id then
-                    lib.block_trap(item.id, item.ver or "0", function() item.cb() end)
-                else
-                    pcall(item.cb)
-                end
-            end
-        end
-        -- If any nested require/check_queue happened while we were
-        -- processing, rt.queue_retry will have been set to true.
-        -- The loop will spin once more and re-scan the queue.
-    until not rt.queue_retry or #waitq == 0
-
-    rt.in_check_queue = false
-    rt.queue_retry    = false
+				if item.id then
+					lib.block_trap(item.id, item.ver or "0", function() item.cb() end)
+				else
+					local status, err = pcall(item.cb)
+					if not status then
+						lib.log_error("A delayed function in the queue errored when called: " .. tostring(err), 3)
+					end
+				end
+			end
+		end
+		-- If any nested require/check_queue happened while we were
+		-- processing, rt.queue_retry will have been set to true.
+		-- The loop will spin once more and re-scan the queue.
+	until not rt.queue_retry or #waitq == 0
+	
+	rt.in_check_queue = false
+	rt.queue_retry    = false
 end

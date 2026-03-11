@@ -18,9 +18,7 @@ neo.lib.reload = function()
 	
 	ProcessEvent("PRE_RELOAD_INTERFACE")
 	
-	--[[ <Command Clearing should occur here!>
-		This will be re-implemented for emergency situations, but is not available at this time.
-	]]--
+	-- command clearing: is now tied to the PLUGINS_LOADED event in the game, we don't trigger it manually here
 	
 	ReloadInterface()
 end

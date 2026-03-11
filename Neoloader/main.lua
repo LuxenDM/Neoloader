@@ -87,6 +87,8 @@ local pre_setup_handler = function()
 	end
 end
 
+
+local delay_timer = Timer()
 local setup_handler = function()
 	--trigger after LME loads
 	
@@ -103,7 +105,7 @@ local setup_handler = function()
 				override disabled state
 				enable stat graphing
 	]]--
-	console_print("WWWWWWWWW\n\n\nSetup Handler firing now!")
+	delay_timer:Kill()
 	
 	local auth_key = "null"
 	
@@ -331,7 +333,7 @@ local setup_handler = function()
 		op_cfg_key = "launch_mode",
 		op_key_for_lookup = "launch_mode",
 		op_name = "Neoloader's operating mode",
-		op_descrip = "Select if Neoloader should run independently of the standard plugin loader. Cooperative mode is available as a fallback, but is not recommended.",
+		op_descrip = "Select if Neoloader should run independently of the standard plugin loader. Cooperative mode puts the Game's default loader in control, but older LME plugins may fail.",
 		op_callback = function(val)
 			lib.lme_configure("launch_mode", val)
 			if val == "independent" then
@@ -381,10 +383,12 @@ local setup_handler = function()
 		op_cfg_key = "stat_graphing",
 		op_key_for_lookup = "stat_graphing",
 		op_name = "Enable periodic performance recording",
-		op_descrip = "When enabled, a timer will periodically gather performance metrics of the game state. This feature currently stores and logs the metrics gathered.",
+		op_descrip = "When enabled, a timer will periodically gather performance metrics of the game state. This feature currently stores and logs the metrics gathered. This data is never 'released' and is only visible in the log at this time, but may be accessible via a sub-module in the future.",
 		op_callback = function(val)
 			lib.lme_configure("stat_graphing", val)
 		end,
+		"NO",
+		"YES",
 	}
 	
 	make_base(iup.frame {
@@ -428,13 +432,6 @@ local setup_handler = function()
 							iup.label {
 								title = "Neoloader setup",
 							},
-							--iup.fill { },
-							iup.stationbutton {
-								title = "Close",
-								action = function(self)
-									HideDialog(iup.GetDialog(self))
-								end,
-							},
 						},
 						setup_viewer,
 					},
@@ -454,21 +451,11 @@ end
 
 
 --first-time config request
-local delay_timer = Timer()
 local config_request = function()
 	--LME launches, then request is triggered. prevents dialogs being behind game dialogs
 	
-	delay_timer:SetTimeout(10, function()
-		console_print("XXXXXXXXX")
-		setup_handler()
-	end)
+	delay_timer:SetTimeout(10, setup_handler)
 	
-	console_print("WWWWWWWWW")
-	console_print("config request was fired")
-	
-	console_print(type(delay_timer))
-	console_print(delay_timer:IsActive())
-	console_print(spickle { delay_timer:GetMetrics() })
 	
 	setup_handler()
 	

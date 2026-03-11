@@ -26,6 +26,17 @@ local cp = function(msg, v)
 	lib.log_error("[neonotif] " .. tostring(msg), v or 1, "neonotif", re_ver)
 end
 
+cp("neonotif " .. re_ver .. " is operating out of " .. re_path)
+
+--verify API compatibility
+local api_check = lib.get_gstate()
+for k, v in ipairs {
+	api_check.major == 3,
+	api_check.minor >= 12,
+} do
+	assert(v, "This version of neomgr is not compatible with the version of Neoloader installed! Please use the version bundled with your latest installation of Neoloader!")
+end
+
 local neo = {}
 local babel, shelf_id, update_class
 local bstr = function(id, def)

@@ -174,7 +174,15 @@ local config_definitions = {
 			"stat_graphing",
 		},
 	},
-	
+	update_check = {
+		valid = nil,
+		default = "1",
+		legacy = {
+			"update_check",
+			"iUpdateCheck",
+		},
+	},
+
 	--These are deprecated, and provided only for compatibility reasons
 	allowDelayedLoad = { --always enabled now
 		valid = {
@@ -234,13 +242,13 @@ api.is_valid = function(setting, new_value)
 	if not definition then
 		return false, "invalid setting key"
 	end
-	
+
 	if (neo.api.validity_override) or (not definition.valid) then
 		return true, "all values valid"
 	end
-	
+
 	local is_valid = definition.valid[new_value]
-	
+
 	if (not is_valid) then
 		return false, "invalid value"
 	else
@@ -346,10 +354,23 @@ api.set_defaults = function()
 end
 
 local config_reset_handler = function()
+
+	if config.launch_mode == "cooperative" then
+		if gkini.ReadString("Vendetta", "if", "") == (neo.path .. "init.lua") then
+			lib.log_error("launch_mode set to cooperative, removing Neoloader from immediate execution via if= option", 1)
+			gkini.WriteString("Vendetta", "if", "")
+		end
+	elseif config.launch_mode == "independent" then
+		if gkini.ReadString("Vendetta", "if", "") == "" then
+			lib.log_error("launch_mode set to independent, adding Neoloader from immediate execution via if= option", 1)
+			gkini.WriteString("Vendetta", "if", neo.path .. "init.lua")
+		end
+	end
+
 	for k, v in pairs(config) do
 		gkini.WriteString("Neoloader", k, v)
 	end
-	
+
 	gkinterface.GKSaveCfg()
 end
 

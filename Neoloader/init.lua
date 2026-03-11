@@ -286,9 +286,12 @@ recovery_system.file_check_success {
 
 
 
-local log = {}
+local log = {
+	"Neoloader is Initializing...",
+	
+}
 
-print = function(msg)
+print = print or function(msg)
 	table.insert(log, msg)
 	console_print(msg)
 end
@@ -419,6 +422,8 @@ local load_module = neo.load_module --shortcut
 
 lib.log_error("Loading initial core modules")
 --initial modules for core operation
+load_module("update patcher.lua") --must load first
+
 load_module("locale.lua")
 load_module("config.lua")
 --load_module("tree.lua") --later project
@@ -442,7 +447,6 @@ recovery_system.lib_check_success {
 
 neo.stats.checkpoint("Preparing mod loading system")
 load_module("zcom.lua") --handles command cleanup in rare legacy situations
-load_module("update patcher.lua")
 load_module("loader process.lua")  --< triggers loading system; registered interface or VO-IF is handled first here (if independent exec_mode)
 
 neo.stats.checkpoint("Checking status of bundled assets")
@@ -533,6 +537,7 @@ end
 
 
 recovery_system.lme_check_success()
+lib.notify("SUCCESS")
 neo.stats.checkpoint("Neoloader has finished initial execution! The standard plugin loader will now take over.")
-console_print("\n\n")
+lib.log_error("[breakpoint]\n\n\n", 0)
 ProcessEvent("LIBRARY_MANAGEMENT_ENGINE_COMPLETE")

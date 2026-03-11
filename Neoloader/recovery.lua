@@ -42,12 +42,12 @@ rs.auth_key = auth_key  -- if we ever need to do LME calls inside recovery
 local register_resolution --declared later
 
 -- convenience
-local function now_ms()
+local now_ms = function()
 	local gtime_ms = (gkmisc.GetGameTime() + rs.state.alignment_offset) % 1000
 	return gtime_ms
 end
 
-local function make_error(message, opts)
+local make_error = function(message, opts)
     opts = opts or {}
     return {
         raw_message = tostring(message),     -- "KEY|fallback" or plain text
@@ -109,7 +109,7 @@ local lang_path    = nil
 local read_locale  = gkini.ReadString
 local read_string2 = gkini.ReadString2
 
-local function refresh_locale()
+local refresh_locale = function()
 	local locale_flag = read_locale("Vendetta", "locale", "en")
 
 	if locale_flag ~= last_locale then
@@ -120,7 +120,7 @@ local function refresh_locale()
 	end
 end
 
-local function split_key_and_fallback(key_or_text)
+local split_key_and_fallback = function(key_or_text)
 	-- look for the first '|' as separator
 	local sep = key_or_text:find("|", 1, true)
 	if not sep then
@@ -167,7 +167,7 @@ local lget = rs.lget
 
 
 
-local function format_error_for_display(err)
+local format_error_for_display = function(err)
     -- this handles "KEY|fallback" or plain text
     local base = rs.lget(err.raw_message) or err.raw_message
 
