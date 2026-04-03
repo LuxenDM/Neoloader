@@ -50,6 +50,7 @@ lib.update_state = function(id, ver, state_data)
 
 				-- Handle plugin failure self-report
 				if k == "complete" and newval == false then
+					reg.mark_failure(id, ver)
 					lib.log_error("\127FF0000Plugin encountered an error and triggered its own failure state.", 3, id, ver)
 					lib.log_error("	stated error: " .. tostring(state_data.err_details or "no passed message"), 3, id, ver)
 					lib.notify("PLUGIN_FAILURE", {
@@ -65,7 +66,6 @@ lib.update_state = function(id, ver, state_data)
 			end
 		end
 	end
-
-	reg.update_plugin(id, ver, ref)
+	
 	return true
 end

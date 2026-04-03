@@ -10,7 +10,7 @@ path=neonotif.lua
 
 [metadata]
 description=neonotif is the standard LME notification front-end bundled with Neoloader
-version=1.2.0
+version=1.2.1
 owner=Neoloader|7.0.0
 type=lua
 created=2025-03-09
@@ -100,7 +100,12 @@ update_class = function()
 			re_path .. "neo_notif.lua",
 			
 			re_path .. "assets/notif_placeholder.png",
-			re_path .. "assets/thumb.png",
+			re_path .. "assets/notif_pluginfail.png",
+			re_path .. "assets/notif_pluginnew.png",
+			re_path .. "assets/notif_regdirty.png",
+			re_path .. "assets/notif_success.png",
+			re_path .. "assets/notif_unhandled.png",
+			re_path .. "assets/Neoloader v7 icon (PBR).png",
 			
 			re_path .. "lang/en.ini",
 			re_path .. "lang/es.ini",
@@ -282,7 +287,7 @@ new_generator("SUCCESS",
 				iup.vbox {
 					iup.label {
 						title = "",
-						image = re_path .. "assets/thumb.png",
+						image = re_path .. "assets/notif_success.png",
 						size = get_scale(),
 					},
 				},
@@ -302,12 +307,12 @@ new_generator("NEW_REGISTRY",
 		return bstr(9, "A new plugin has been registered") .. ": " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
 	end,
 	function(data) --notification iup generator
-		return iup.iup.pdarootframe {
+		return iup.pdarootframe {
 			iup.hbox {
 				iup.vbox {
 					iup.label {
 						title = "",
-						image = re_path .. "assets/thumb.png",
+						image = re_path .. "assets/notif_pluginnew.png",
 						size = get_scale(),
 					},
 				},
@@ -331,12 +336,12 @@ new_generator("PLUGIN_FAILURE",
 		return lib[1] .. " " .. bstr(10, "encountered an error while loading a plugin") .. ": " .. tostring(data.plugin_id or "???") .. " v" .. tostring(data.version or "???")
 	end,
 	function(data) --notification iup generator
-		return iup.iup.pdarootframe {
+		return iup.pdarootframe {
 			iup.hbox {
 				iup.vbox {
 					iup.label {
 						title = "",
-						image = re_path .. "assets/thumb.png",
+						image = re_path .. "assets/notif_pluginfail.png",
 						size = get_scale(),
 					},
 				},
@@ -351,6 +356,40 @@ new_generator("PLUGIN_FAILURE",
 					},
 					iup.label {
 						title = tostring(data.error_string or bstr(12, "<failed to fetch error string>")),
+						font = Font.H6,
+					},
+				},
+				iup.fill { },
+			},
+		}
+	end
+)
+new_generator("NEO_REGISTRY_DIRTY", --[1]: expected [2]: total found
+	function(data) --notification chat print
+		return "Neoloader has detected dirty entries in the registry. This should not cause issues, but can be fixed from the recovery menu."
+			.. "\n\t" .. "The registry expected to find" .. " " .. tostring(data[1]) .. " " .. "entry, but instead got" .. " " .. tostring(data[2])
+	end,
+	function(data) --notification iup generator
+		return iup.pdarootframe {
+			iup.hbox {
+				iup.vbox {
+					iup.label {
+						title = "",
+						image = re_path .. "assets/notif_regdirty.png",
+						size = get_scale(),
+					},
+				},
+				iup.vbox {
+					iup.label {
+						title = bstr(11, "Neoloader has detected dirty entries in the registry") .. "!",
+						font = Font.H4,
+					},
+					iup.label {
+						title = "This should not cause issues, but can be fixed from the recovery menu.",
+						font = Font.H6,
+					},
+					iup.label {
+						title = "The registry expected to find" .. " " .. tostring(data[1]) .. " " .. "entry, but instead got" .. " " .. tostring(data[2]),
 						font = Font.H6,
 					},
 				},

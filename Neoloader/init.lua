@@ -1,43 +1,13 @@
 --[[
 [metadata]
 description=This is the core of Neoloader.
-version=7.0.43
 owner=Neoloader|7.0.0
 type=lua
 created=2025-7-1
 ]]--
 
-declare("dump_table", "")
-dump_table = function(t, indent, visited)
-    indent  = indent or ""
-    visited = visited or {}
 
-    if visited[t] then
-        console_print(indent .. "*RECURSIVE*")
-        return
-    end
-    visited[t] = true
-
-    for k, v in pairs(t) do
-        local kt = type(k)
-        local vt = type(v)
-        local key_str = "[" .. kt .. "] " .. tostring(k) .. " = "
-
-        if vt == "table" then
-            console_print(indent .. key_str .. "{table}")
-			if k == "log" then
-				console_print(indent .. "(skipped)")
-			else
-				dump_table(v, indent .. "  ", visited)
-			end
-        else
-            console_print(indent .. key_str .. "[" .. vt .. "] " .. tostring(v))
-        end
-    end
-end
-
-
---this can only trigger in independent mode; if using cooperative mode and plugins are disabled, Neoloader will never run.
+--this can only trigger in independent mode; if using cooperative (or first-run) mode and plugins are disabled, Neoloader will never run.
 if (gkini.ReadString("Neoloader", "override_disabled_state", "NO") == "NO") and (gkini.ReadInt("Vendetta", "plugins", 1) == 0) then
 	console_print("Plugins are disabled, and Neoloader is not configured to override this setting! The default interface will load, and Neoloader will exit!")
 	dofile("vo/if.lua")
@@ -73,11 +43,11 @@ local recovery_system = {}
 local auth_key = SHA1(tostring(gkmisc.GetGameTime() + math.random()))
 
 local version = {
-	strver = "7.0.0 -beta",
+	strver = "7.0.0 -PBR2",
 	[1] = 7,
 	[2] = 0,
 	[3] = 0,
-	[4] = "beta",
+	[4] = "PBR2",
 }
 local lme_ver = {
 	strver = "3.12.0",
@@ -87,14 +57,40 @@ local lme_ver = {
 	[4] = "",
 }
 
+local local_path = "plugins/Neoloader/"
+if not gksys.IsExist(local_path .. "init.lua") then
+	local_path = gkini.ReadString("Neoloader", "home_path_override", "plugins/!Neoloader/")
+end
+if not gksys.IsExist(local_path .. "init.lua") then
+	--attempt to get path by sniffing error()
+
+	local ok, err = pcall(function()
+		error("Path lookup")
+	end)
+
+	if not ok and type(err) == "string" then
+		-- Try to extract the filename prefix
+		local path = err:match("([^:]+):%d+: Path lookup")
+		if path then
+			-- Strip filename if needed
+			local_path = path:match("^(.-/)[^/]-$")
+		end
+	end
+end
+
+local reclget = function(key, def) --recovery-mode lget
+	local locale = gkini.ReadString("Vendetta", "locale", "en")
+	return gkini.ReadString2("recovery", key, def, local_path .. "lang/" .. locale .. "/core.ini")
+end
+
 local failsafe_recovery = function(reason)
-	local fsr_msg = "Neoloader ran into a CRITICAL error and will not load! The failsafe system has been triggered; the default interface will now load. Error stated:\n\n" .. tostring(reason)
+	local fsr_msg = reclget("RECOVERY_FAILSAFE", "Neoloader ran into a CRITICAL error and will not load! The failsafe system has been triggered; the default interface will now load. Error stated") .. ":\n\n" .. tostring(reason)
 	console_print(fsr_msg)
 	
 	local fsr_diag = iup.dialog {
 		fullscreen = "YES",
 		topmost = "YES",
-		bgcolor = "0 0 0 0 *",
+		bgcolor = "0 0 0 200 *",
 		iup.vbox {
 			iup.fill { },
 			iup.hbox {
@@ -116,7 +112,7 @@ local failsafe_recovery = function(reason)
 						iup.fill {size = "%2", },
 						iup.hbox {
 							iup.button {
-								title = "Okay",
+								title = reclget("RECOVERY_CONFIRM", "Okay"),
 								action = function(self)
 									iup.GetDialog(self):hide()
 									--dofile((pathlock and "../../" or "") .. "vo/if.lua")
@@ -147,31 +143,11 @@ local failsafe_recovery = function(reason)
 	--reminder to self: make sure to return AFTER this function
 end
 
-local local_path = "plugins/Neoloader/"
-if not gksys.IsExist(local_path .. "init.lua") then
-	local_path = gkini.ReadString("Neoloader", "home_path_override", "plugins/Neoloader/Neoloader/")
-end
-if not gksys.IsExist(local_path .. "init.lua") then
-	--attempt to get path by sniffing error()
-
-	local ok, err = pcall(function()
-		error("Path lookup")
-	end)
-
-	if not ok and type(err) == "string" then
-		-- Try to extract the filename prefix
-		local path = err:match("([^:]+):%d+: Path lookup")
-		if path then
-			-- Strip filename if needed
-			local_path = path:match("^(.-/)[^/]-$")
-		end
-	end
 	
-	if not gksys.IsExist(local_path .. "init.lua") then
-		--We have NO idea where this file is executing from, and that is a PROBLEM! launch the default interface and inform the user that Neoloader is being run in a very unusual manner. We cannot launch the recovery interface if we cannot guarantee its location
-		
-		return failsafe_recovery("init_failure: local_dir_find_failure")
-	end
+if not gksys.IsExist(local_path .. "init.lua") then
+	--We have NO idea where this file is executing from, and that is a PROBLEM! launch the default interface and inform the user that Neoloader is being run in a very unusual manner. We cannot launch the recovery interface if we cannot guarantee its location
+	
+	return failsafe_recovery(reclget("DIR_FIND_FAIL", "local_dir_find_failure: Was unable to determine the home directory using a variety of methods."))
 end
 
 console_print("Neoloader has identified its home directory as " .. local_path)
@@ -180,7 +156,6 @@ console_print("Neoloader has identified its home directory as " .. local_path)
 --if path is prepended, escape with ../../
 pathlock = false --declared local above
 local exec_mode = "independent"
-local test_file = "init.lua.version"
 do
 	local status, result = pcall(dofile, "init.lua.version")
 	if result == 1 then
@@ -188,7 +163,13 @@ do
 		exec_mode = "cooperative"
 		console_print("path lock is engaged; Neoloader appears to be running in 'cooperative mode' with the default loader (or another loading service). Neoloader will not launch the interface or load environmental placeholder values in this mode.")
 	else
-		console_print("path lock is not engaged; Neoloader appears to be running in 'independent mode'.") --recommended
+		local state_status, state_result = pcall(function() neo_this_tests_for_state_lock = false end)
+		if not state_status then
+			console_print("state lock is engaged, Neoloader must have run after the PLUGINS_LOADED event occured (maybe the user is trying to reinstall after removing Neoloader?)")
+			statelock = true
+		else
+			console_print("path lock and state lock are not engaged; Neoloader appears to be running in 'independent mode'.") --recommended
+		end
 	end
 end
 
@@ -204,7 +185,16 @@ RegisterEvent(function()
 end, "LIBRARY_MANAGEMENT_ENGINE_COMPLETE")
 
 --pathlock is cleared when the game loader finishes
-RegisterEvent(function()
+
+local once_flag = false
+local process_final_task_queue = function()
+	-- called in coop mode by PLUGINS_LOADED event, OR
+	-- called when late-triggered by setup
+	if once_flag then
+		return
+	end
+	once_flag = true
+	
 	pathlock = false
 	statelock = true
 	lib.log_error("path lock is cleared; state lock is engaged", 1)
@@ -215,22 +205,24 @@ RegisterEvent(function()
 		--in coop mode, this starts queue processing
 	recovery_system.vo_check_success()
 	neo.stats.checkpoint("Default plugin loader has finished loading standard plugins!")
-end, "PLUGINS_LOADED")
+end
+
+RegisterEvent(process_final_task_queue, "PLUGINS_LOADED")
 
 console_print("Launching recovery system handler...")
 do
 	local rec_path = (pathlock and "../../" or "") .. local_path .. "recovery.lua"
 	console_print("Looking in path " .. tostring(rec_path))
 	if not gksys.IsExist(local_path .. "recovery.lua") then
-		return failsafe_recovery("init_failure: recovery_not_found, should be at " .. rec_path .. "; pathlock was " .. tostring(pathlock))
+		return failsafe_recovery(reclget("RECOVERY_NOT_FOUND", "Recovery system was not found. Expected to find it at should be at ") .. rec_path .. reclget("RECOVERY_NOT_FOUND_PCHECK", " pathlock was ") .. tostring(pathlock))
 	end
 	local file_f, err = loadfile(rec_path)
 	if not file_f then
-		return failsafe_recovery("init_failure: recovery_load_error: " .. tostring(err))
+		return failsafe_recovery(reclget("RECOVERY_LOAD_ERROR", "Failed to load recovery system. Obtained the following error: ") .. tostring(err))
 	end
 	local status, err = pcall(file_f, local_path, auth_key, alignment_offset, exec_mode)
 	if not status then
-		return failsafe_recovery("init_failure: recovery_exec_error: " .. tostring(err))
+		return failsafe_recovery(reclget("RECOVERY_EXEC_ERROR", "Failed to start recovery system. Obtained the following error: ") .. tostring(err))
 	end
 	recovery_system = err
 	console_print("\trecovery system online")
@@ -240,8 +232,11 @@ console_print("Verifying required files...")
 do
 	local missing = {}
 	for index, file in ipairs {
+		"init.lua",
+		"init.lua.version",
 		"recovery.lua",
 		"main.lua",
+		"setup.lua",
 		
 		"modules/api.lua",
 		"modules/config.lua",
@@ -273,7 +268,8 @@ do
 
 		else
 			--how did we get here without recovery?
-			return failsafe_recovery("init_failure: missing_recovery_2")
+			console_print("ERROR! missing_recovery_2: somehow, recovery check succeeded, but the recovery system wasn't ready when we began checking file system and found an error.")
+			return failsafe_recovery(reclget("MISSING_RECOVERY_2", "recovery check passed but recovery system wasn't ready when a core file check failed!") .. " \n\t" .. table.concat(missing, ",\n\t"))
 		end
 	end
 end
@@ -288,7 +284,14 @@ recovery_system.file_check_success {
 
 local log = {
 	"Neoloader is Initializing...",
-	
+	"Aligned ms time value with discovered offset of " .. tostring(alignment_offset) .. "ms",
+	"Neoloader has identified its home directory as " .. local_path,
+	"pathlock resolved as currently " .. tostring(pathlock),
+	"statelock resolved as currently " .. tostring(statelock),
+	"Launching recovery system handler...",
+	"\trecovery system online",
+	"Verifying required files...",
+	"\tAll files verified! Neoloader will now begin creating the LME environment and loading modules...",
 }
 
 print = print or function(msg)
@@ -431,7 +434,7 @@ load_module("stats.lua")
 
 neo.stats.checkpoint("Preparing environment for operation")
 --prepare Neoloader environment
-if exec_mode == "independent" then
+if (exec_mode == "independent") and (not statelock) then
 	load_module("env.lua")
 end
 load_module("registry.lua")
@@ -521,12 +524,16 @@ local recov_startup_mgr_check = function()
 	end
 end
 
-if neo.api.get_exec_mode() == "independent" then
+if (neo.api.get_exec_mode() == "independent") then
 	recov_startup_mgr_check()
 else
 	RegisterEvent(function()
 		recov_startup_mgr_check()
 	end, "LME_PLUGINS_LOADED")
+end
+
+if statelock then
+	process_final_task_queue()
 end
 
 if neo.api.get_exec_mode() == "independent" then

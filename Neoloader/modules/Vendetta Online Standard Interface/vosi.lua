@@ -153,7 +153,42 @@ local button_creator = function()
 			action = open_config_or_recovery,
 		}
 		
-		iup.Append(OptionsDialog[1][1][1], neobutton)
+		local opframe_ref = OptionsDialog[1][1][1]
+		local fill_ref
+		
+		local get_num_children = function(ihandle)
+			if not iup.IsValid(ihandle) then
+				return -1
+			end
+			
+			local counter = 1
+			local child_ref = iup.GetNextChild(ihandle)
+			while true do
+				local next_child_ref = iup.GetNextChild(ihandle, child_ref)
+				if (not next_child_ref) or (not iup.IsValid(next_child_ref)) then
+					break
+				end
+				counter = counter + 1
+				child_ref = next_child_ref
+			end
+			return counter
+		end
+		
+		for i=1, get_num_children(opframe_ref) do
+			if iup.GetType(opframe_ref[i]) == "fill" then
+				fill_ref = opframe_ref[i]
+				break
+			end
+		end
+		
+		iup.Append(opframe_ref, neobutton)
+		fill_ref.size = "0"
+		if (tonumber(opframe_ref.gap) or 8) > 10 then
+			opframe_ref.gap = "8"
+		else
+			opframe_ref.gap = "0"
+		end
+		iup.Refresh(opframe_ref)
 	end
 	
 	cp("LME integrations for the standard interface have been added")

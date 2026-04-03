@@ -35,6 +35,15 @@ rs.state = {
 	},
 }
 
+local ui_post_update = {}
+local refresh_ui_state = function()
+	for _, ihandle in pairs(ui_post_update) do
+		if ihandle.do_update then
+			ihandle:do_update()
+		end
+	end
+end
+
 rs.errors = {}          -- newest first
 local neo    = nil         -- filled by neo_check_success
 rs.auth_key = auth_key  -- if we ever need to do LME calls inside recovery
@@ -70,6 +79,9 @@ rs.file_check_success = function(intable)
 	for k, v in pairs(intable or {}) do
 		rs.state[k] = v
 	end
+	if refresh_ui_state then
+		refresh_ui_state()
+	end
 end
 
 -- called by init.lua after neo table is created
@@ -77,6 +89,9 @@ rs.neo_check_success = function(parent_neo)
 	rs.state.capabilities.has_neo = true
 	rs.state.phase = "neo_ok"
 	neo = parent_neo
+	if refresh_ui_state then
+		refresh_ui_state()
+	end
 end
 
 -- called by init.lua after lib table is populated by API
@@ -86,18 +101,42 @@ rs.lib_check_success = function(intable)
 	for k, v in pairs(intable or {}) do
 		rs.state[k] = v
 	end
+	if refresh_ui_state then
+		refresh_ui_state()
+	end
 end
 
+local call_close_diag
 --called when init.lua is about to reach final lines of file
 rs.lme_check_success = function()
 	rs.state.capabilities.has_lme = true
 	rs.state.phase = "lme_ok"
+	
+	if call_close_diag then
+		call_close_diag()
+	end
+	if refresh_ui_state then
+		refresh_ui_state()
+	end
 end
 
 --called when PLUGINS_LOADED event occurs, Vendetta Online has loaded successfully
 rs.vo_check_success = function()
 	rs.state.capabilities.has_vo = true
 	rs.state.phase = "vo_ok"
+	if refresh_ui_state then
+		refresh_ui_state()
+	end
+end
+
+local recovery_can_close = function()
+	local c = rs.state.capabilities
+	return c.has_fs and c.has_neo and c.has_lib and c.has_lme and c.has_vo
+end
+
+local recovery_can_open_lme = function()
+	local c = rs.state.capabilities
+	return c.has_lme and c.has_lib
 end
 
 
@@ -540,10 +579,11 @@ register_resolution {
 			lib.lme_configure("current_mgr", "", au)
 			lib.lme_configure("current_notif", "", au)
 			lib.lme_configure("stat_graphing", "", au)
-			lib.lme_configure("launch_mode", "", au)
+			lib.lme_configure("launch_mode", "removed", au)
 			
 			local plist = lib.get_gstate().pluginlist
 			for _, idvpairs in ipairs(plist) do
+					lib.log_error("de-registering LME plugin " .. idvpairs[1] .. " v" .. idvpairs[2])
 				lib.set_load(au, idvpairs[1], idvpairs[2], "REM")
 			end
 			
@@ -883,198 +923,6 @@ local rs_update			--forward-declared, call to update resolution list
 rs.current_mode			= "panel"
 rs.current_resolution	= nil
 
-local build_log_display = function()
-	--placed above tab system
-	
-	local notice_preamble = lget("RECOV_PREAMBLE|Errors captured by recovery:\n\n")
-	
-	local mtline = iup.multiline {
-		expand = "YES",
-		shrink = "YES",
-		readonly = "YES",
-		value = "",
-	}
-	
-	mt_update = function()
-		local parts = {}
-		for _, err in ipairs(rs.errors) do
-			table.insert(parts, format_error_for_display(err))
-		end
-		mtline.value = notice_preamble .. table.concat(parts, "\n")
-		mtline.caret = string.len(mtline.value)
-	end
-	
-	local qr_code = iup.label {
-		--qr code links to discord.
-		title = "",
-		image = local_path .. "assets/notif_placeholder.png",
-		size = "128x128", --placeholder, press to expand or access later?
-	}
-	
-	local close_btn = iup.button {
-		title = "Close",
-		action = function(self)
-			iup.GetDialog(self):hide()
-		end,
-	}
-	
-	local header_pane = iup.vbox {
-		iup.hbox {
-			iup.label {
-				title = lget("RECOV_TITLE|Neoloader error recovery environment"),
-			},
-			iup.fill { },
-			close_btn,
-		},
-		iup.hbox {
-			iup.vbox {
-				qr_code,
-			},
-			mtline,
-		},
-	}
-	
-	return header_pane
-end
-
-local build_resolution_tab = function()
-	
-	local list_contents = {}
-	local entry_index = -1
-	
-	local rebuild_contents = function()
-		-- wipe prior
-		for i = #list_contents, 1, -1 do
-			list_contents[i] = nil
-		end
-
-		-- collect visible resolutions
-		local tmp = {}
-		for _, def in pairs(resolutions) do
-			local ok = true
-			if type(def.visible_if) == "function" then
-				ok = def.visible_if(rs.state) == true
-			end
-			if ok then
-				table.insert(tmp, def)
-			end
-		end
-
-		table.sort(tmp, function(a, b)
-			local pa = tonumber(a.priority or 0) or 0
-			local pb = tonumber(b.priority or 0) or 0
-			if pa ~= pb then
-				return pa < pb
-			end
-			
-			return tostring(a.title or a.key) < tostring(b.title or b.key)
-		end)
-
-		-- copy into list_contents (1..n)
-		for i = 1, #tmp do
-			list_contents[i] = tmp[i]
-		end
-	end
-	
-	local entry_descrip = iup.label {
-		title = lget("RECOV_SELECT_NEW_RESOLV|Select a resolution on the left. They are listed in order of severity; it is recommended to attempt them in order if you are unsure how to fix the bug yourself."),
-		expand = "YES",
-		wordwrap = "YES",
-	}
-	
-	local entry_action = iup.button {
-		title = "",
-		size = "x" .. tostring(height_scale),
-		expand = "HORIZONTAL",
-		action = function(self)
-			local def = list_contents[entry_index]
-			if not def then return end
-
-			rs.current_resolution = def
-
-			if def.kind == "immediate" then
-				local ok, err = pcall(def.run, rs.state)
-				if not ok then
-					rs.push_error("RECOV_RUN_FAIL|Resolution failed: " .. tostring(err), { level = 3 })
-				end
-				mt_update()
-				rs_update()
-				return
-			end
-
-			-- terminal
-			if rs.current_mode == "popup" then
-				-- let rs.open() run it after popup returns
-				HideDialog(iup.GetDialog(self))
-				return
-			end
-
-			-- panel mode: run directly
-			local ok, err = pcall(def.run, rs.state)
-			if not ok then
-				rs.push_error("RECOV_RUN_FAIL|Resolution failed: " .. tostring(err), { level = 3 })
-			end
-			mt_update()
-			rs_update()
-		end,
-	}
-	
-	local resolution_selector = iup.list {
-		--todo: generic iup.list has bgcolor rendering issues, figure out how to fix this later
-		expand = "YES",
-		shrink = "YES",
-		action = function(self, t, i, cv)
-			if cv == 1 then
-				entry_index = i
-				entry_descrip.title = lget(list_contents[i].description)
-			end
-			
-			if cv ~= 1 then return end
-			local def = list_contents[i]
-			if not def then return end
-			
-			entry_index = i
-			entry_descrip.title = lget(def.description or "")
-			entry_action.title = lget("RECOV_RUN|Run this action")
-			entry_action.active = "YES"
-		end,
-		font = height_scale,
-		value = "1",
-		update_list = function(self)
-			for i=#list_contents, 1, -1 do
-				self[i] = nil
-				list_contents[i] = nil
-			end
-			
-			rebuild_contents() --rebuilds list_contents with active resolutions
-			
-			for i, v in ipairs(list_contents) do
-				self[i] = lget(v.title)
-			end
-			
-			entry_index = -1
-			entry_descrip.title = lget("RECOV_SELECT_NEW_RESOLV|Select a resolution on the left. They are listed in order of severity; it is recommended to attempt them in order if you are unsure how to fix the bug yourself.")
-			entry_action.title = ""
-			entry_action.active = "NO"
-			self.value = "1"
-		end,
-	}
-	
-	rs_update = function() resolution_selector:update_list() end
-	
-	local content_pane = iup.frame {
-		iup.hbox {
-			resolution_selector,
-			iup.vbox {
-				entry_action,
-				entry_descrip,
-			},
-		},
-	}
-	
-	return content_pane
-end
-
 local oplist = function(intable)
 	local default
 	default = {
@@ -1099,7 +947,7 @@ local oplist = function(intable)
 			if cv ~= 1 then
 				return
 			end
-			default.action(t)
+			default.action((t == lget("BINARY_YES|YES") and "YES") or (t == lget("BINARY_NO|NO") and "NO") or t)
 		end,
 		value = default.value,
 		set_to_default = function(self)
@@ -1124,6 +972,566 @@ local oplist = function(intable)
 	return op_frame
 end
 
+local build_plugin_card = function(default)
+	local title = default.title or "Unknown plugin"
+	local status = default.status or nil
+	local option_control = default.option_control
+
+	return iup.frame {
+		segmented = "0 0 1 1",
+		image = "",
+		bgcolor = default.bgcolor or "0 0 0 0 *",
+		shrink = "YES",
+		expand = "HORIZONTAL",
+		iup.vbox {
+			margin = tostring(Font.Default / 2) .. "x" .. tostring(Font.Default / 2),
+			gap = tostring(math.max(4, Font.Default / 4)),
+			
+			iup.label {
+				title = title,
+				expand = "HORIZONTAL",
+				wordwrap = "YES",
+			},
+			
+			status and iup.label {
+				title = status,
+				expand = "HORIZONTAL",
+				wordwrap = "YES",
+				fgcolor = "200 200 200",
+			} or nil,
+			
+			option_control,
+		},
+	}
+end
+
+local build_home_tab = function(switch_page)
+	local home_title = iup.label {
+		title = lget("RECOVERY_HOME_TITLE|Neoloader Recovery"),
+		expand = "HORIZONTAL",
+		wordwrap = "YES",
+	}
+
+	local home_body = iup.label {
+		title = lget("RECOVERY_HOME_BODY|This is the recovery interface. Unless you manually opened this menu, Neoloader may have run into a catastrophic error while trying to load. Use the pages on the left to inspect logs, change what plugins are loaded, or run recovery actions to try and fix detected problems."),
+		expand = "HORIZONTAL",
+		wordwrap = "YES",
+	}
+
+	local home_warn = iup.label {
+		title = lget("RECOVERY_HOME_WARN|Only change what is needed. Some changes may apply immediately, while others may require the next load to fully take effect."),
+		expand = "HORIZONTAL",
+		wordwrap = "YES",
+	}
+	
+	local open_lme_button = iup.button {
+		title = lget("RECOVERY_HOME_OPEN_LME|Open LME manager"),
+			size = "%30x",
+		visible = recovery_can_open_lme() and "YES" or "NO",
+		active = recovery_can_open_lme() and "YES" or "NO",
+		action = function()
+			if type(lib) == "table" and type(lib.open_config) == "function" then
+				lib.open_config()
+			end
+		end,
+		do_update = function(self)
+			self.visible = recovery_can_open_lme() and "YES" or "NO"
+			self.active = recovery_can_open_lme() and "YES" or "NO"
+		end,
+	}
+	
+	local close_recovery_button = iup.button {
+		title = lget("RECOVERY_HOME_CLOSE|Close recovery"),
+			size = "%30x",
+		visible = recovery_can_close() and "YES" or "NO",
+		active = recovery_can_close() and "YES" or "NO",
+		action = function(self)
+			iup.GetDialog(self):hide()
+		end,
+		do_update = function(self)
+			self.visible = recovery_can_close() and "YES" or "NO"
+			self.active = recovery_can_close() and "YES" or "NO"
+		end,
+	}
+	
+	local suggest_action = function()
+		local c = rs.state.capabilities
+
+		if not c.has_fs then
+			return lget("RECOVERY_SUGGEST_FS_FAILURE|Filesystem check failed. Your LME provider was not installed correctly.")
+		elseif not c.has_neo then
+			return lget("RECOVERY_SUGGEST_NEO_FAILURE|Neoloader failed early. Check logs for more details. Your LME provider may not have been installed correctly, or needs an update.")
+		elseif not c.has_lib then
+			return lget("RECOVERY_SUGGEST_LIB_FAILURE|Core API not available. Check logs for more details. Your LME provider may not have been installed correctly, or needs an update.")
+		elseif not c.has_lme then
+			return lget("RECOVERY_SUGGEST_LME_FAILURE|The LME provider did not finish loading. Try safe LME settings.")
+		elseif not c.has_vo then
+			return lget("RECOVERY_SUGGEST_VO_FAILURE|The game interface does not appear to have opened. Try to manually launch the game's default interface from the resolutions tab.")
+		else
+			return lget("RECOVERY_SUGGEST_ALL_SUCCESS|No critical failures detected in your LME provider. If you did not open this interface, a non-LME plugin may have failed or a non-critical issue occured.")
+		end
+	end
+	
+	local recommended_action = iup.label {
+		title = " ",
+		expand = "HORIZONTAL",
+		wordwrap = "YES",
+		do_update = function(self)
+			self.title = suggest_action()
+		end,
+	}
+	
+	table.insert(ui_post_update, open_lme_button)
+	table.insert(ui_post_update, close_recovery_button)
+	table.insert(ui_post_update, recommended_action)
+
+	local shortcut_box = iup.vbox {
+		gap = tostring(math.max(6, Font.Default / 3)),
+
+		iup.button {
+			title = lget("RECOVERY_HOME_OPEN_PLUGINS|Open plugin controls"),
+			size = "%30x",
+			action = function()
+				switch_page("plugins")
+			end,
+		},
+		iup.button {
+			title = lget("RECOVERY_HOME_OPEN_RESOLUTIONS|Open recovery tools"),
+			size = "%30x",
+			action = function()
+				switch_page("resolutions")
+			end,
+		},
+		iup.button {
+			title = lget("RECOVERY_HOME_OPEN_LOGS|View logs"),
+			size = "%30x",
+			action = function()
+				switch_page("logs")
+			end,
+		},
+
+		iup.button {
+			title = lget("RECOVERY_HOME_ACCESS_CONSOLE|Open game console"),
+			size = "%30x",
+			action = function()
+				gkinterface.GKProcessCommand("ConsoleToggle")
+			end,
+		},
+
+		open_lme_button,
+
+		close_recovery_button,
+	}
+
+	local content_box = iup.vbox {
+		margin = tostring(Font.Default) .. "x" .. tostring(Font.Default),
+		gap = tostring(math.max(8, Font.Default / 2)),
+
+		home_title,
+		home_body,
+		home_warn,
+		
+		iup.fill { size = "%2", },
+		recommended_action,
+		iup.fill { size = "%1", },
+		shortcut_box,
+		iup.fill { size = "%2", },
+	}
+
+	local scroll_content = iup.frame {
+		bgcolor = "0 0 0 0 *",
+		segmented = "0 0 1 1",
+		image = "",
+		content_box,
+	}
+
+	local scroll_pane = create_list_control { scroll_content }
+
+	local root_view = iup.frame {
+
+		post_map_update = function()
+			scroll_pane:map_cb()
+		end,
+
+		display_trigger = function()
+			local pane_w = tonumber(scroll_pane.w) or 0
+			if pane_w <= 0 then
+				return
+			end
+
+			local frame_w = math.max(1, pane_w - Font.Default)
+			local inner_w = math.max(1, frame_w - (Font.Default * 2))
+			
+			local safe_inner = tostring(inner_w) .. "x"
+			
+			scroll_content.size = tostring(frame_w) .. "x"
+			content_box.size = safe_inner
+
+			home_title.size = safe_inner
+			home_body.size  = safe_inner
+			home_warn.size  = safe_inner
+			
+			recommended_action.size = safe_inner
+
+			iup.Refresh(scroll_pane)
+		end,
+
+		iup.vbox {
+			scroll_pane,
+		},
+	}
+
+	return root_view
+end
+
+local build_logs_tab = function()
+	local log_pages = {}
+	local log_page_index = 1
+	local LOG_PAGE_MAX = 8000 -- adjust below actual multiline hard limit
+	
+	local mtline = iup.multiline {
+		readonly = "YES",
+		expand = "YES",
+		value = "",
+	}
+	
+	local split_log_pages = function(full_text, max_chars)
+		local pages = {}
+		local current = ""
+		
+		local function push_current()
+			if current ~= "" then
+				table.insert(pages, current)
+				current = ""
+			end
+		end
+		
+		for line in (tostring(full_text or "") .. "\n"):gmatch("(.-)\n") do
+			local candidate
+			if current == "" then
+				candidate = line
+			else
+				candidate = current .. "\n" .. line
+			end
+			
+			if #candidate > max_chars then
+				push_current()
+				
+				if #line > max_chars then
+					local start_i = 1
+					while start_i <= #line do
+						table.insert(pages, line:sub(start_i, start_i + max_chars - 1))
+						start_i = start_i + max_chars
+					end
+				else
+					current = line
+				end
+			else
+				current = candidate
+			end
+		end
+		
+		push_current()
+		
+		if #pages == 0 then
+			pages[1] = ""
+		end
+		
+		return pages
+	end
+	
+	local page_label = iup.label {
+		title = lget("RECOVERY_LOGS_PAGE|Page") .. " 1 / 1",
+	}
+
+	local prev_button = iup.button {
+		title = "< " .. lget("RECOVERY_LOGS_PREV|Prev"),
+	}
+
+	local next_button = iup.button {
+		title = lget("RECOVERY_LOGS_NEXT|Next") .. " >",
+	}
+	
+	local update_log_page_view = function()
+		local total = #log_pages
+		if total < 1 then total = 1 end
+		
+		if log_page_index < 1 then log_page_index = 1 end
+		if log_page_index > total then log_page_index = total end
+		
+		mtline.value = log_pages[log_page_index] or ""
+		mtline.caret = 1
+		page_label.title = lget("RECOVERY_LOGS_PAGE|Page") .. " " .. tostring(log_page_index) .. " / " .. tostring(total)
+		
+		prev_button.active = (log_page_index > 1) and "YES" or "NO"
+		next_button.active = (log_page_index < total) and "YES" or "NO"
+		
+		iup.Refresh(page_label)
+		iup.Refresh(prev_button)
+		iup.Refresh(next_button)
+		iup.Refresh(mtline)
+	end
+	
+	mt_update = function()
+		local parts = {}
+
+		if #rs.errors > 0 then
+			table.insert(parts, lget("RECOV_PREAMBLE|Errors captured by recovery") .. ":\n\127FF8888")
+			for _, err in ipairs(rs.errors) do
+				table.insert(parts, format_error_for_display(err))
+			end
+		else
+			table.insert(parts, lget("RECOVERY_LOGS_PREAMBLE_RLOG_EMPTY|Recovery log is empty."))
+		end
+		
+		if rs.state.capabilities.has_neo and type(neo) == "table" and type(neo.log) == "table" and #neo.log > 0 then
+			table.insert(parts, "\127FFFFFF")
+			table.insert(parts, "----------------")
+			table.insert(parts, lget("RECOVERY_LOGS_LME_LOG|Full Neoloader log") .. ":")
+			table.insert(parts, "")
+			table.insert(parts, table.concat(neo.log, "\n"))
+		end
+		
+		local full_text = table.concat(parts, "\n")
+		log_pages = split_log_pages(full_text, LOG_PAGE_MAX)
+		
+		if log_page_index > #log_pages then
+			log_page_index = #log_pages
+		end
+		if log_page_index < 1 then
+			log_page_index = 1
+		end
+		
+		update_log_page_view()
+	end
+	
+	prev_button.action = function()
+		if log_page_index > 1 then
+			log_page_index = log_page_index - 1
+			update_log_page_view()
+		end
+	end
+
+	next_button.action = function()
+		if log_page_index < #log_pages then
+			log_page_index = log_page_index + 1
+			update_log_page_view()
+		end
+	end
+
+	local root_view = iup.frame {
+		post_map_update = function()
+			mt_update()
+		end,
+		iup.vbox {
+			margin = tostring(Font.Default) .. "x" .. tostring(Font.Default),
+			gap = tostring(math.max(8, Font.Default / 2)),
+			
+			iup.label {
+				title = lget("RECOVERY_LOGS_TITLE|Recovery logs"),
+				expand = "HORIZONTAL",
+				wordwrap = "YES",
+			},
+			
+			iup.label {
+				title = lget("RECOVERY_LOGS_DESCRIP|These logs may help identify which plugin or system failed during load."),
+				expand = "HORIZONTAL",
+				wordwrap = "YES",
+			},
+			
+			mtline,
+			
+			iup.hbox {
+				alignment = "ACENTER",
+				prev_button,
+				page_label,
+				next_button,
+			},
+			
+			iup.button {
+				title = lget("RECOVERY_LOGS_REFRESH|Refresh logs"),
+				action = function()
+					mt_update()
+				end,
+			},
+		},
+	}
+
+	root_view.refresh_logs = mt_update
+	root_view.mtline = mtline
+	return root_view
+end
+
+local build_resolution_tab = function()
+	local list_contents = {}
+	local entry_index = -1
+
+	local entry_title = iup.label {
+		title = lget("RECOVERY_RESOLVE_NONE|No recovery option selected."),
+		expand = "HORIZONTAL",
+		wordwrap = "YES",
+	}
+
+	local entry_descrip = iup.label {
+		title = " ",
+		--expand = "HORIZONTAL",
+		wordwrap = "YES",
+	}
+
+	local entry_action = iup.button {
+		title = lget("RECOVERY_WAITING_FOR_SELECTION|Waiting for selection..."),
+		expand = "HORIZONTAL",
+		active = "NO",
+	}
+
+	local resolution_selector = iup.list {
+		dropdown = "NO",
+		expand = "HORIZONTAL",
+		size = "x" .. tostring(Font.Default * 8),
+	}
+
+	local rebuild_contents = function()
+		local tmp = {}
+
+		for i = #list_contents, 1, -1 do
+			list_contents[i] = nil
+		end
+
+		for _, def in pairs(resolutions) do
+			local ok = true
+			if type(def.visible_if) == "function" then
+				ok = def.visible_if(rs.state) == true
+			end
+			if ok then
+				table.insert(tmp, def)
+			end
+		end
+
+		table.sort(tmp, function(a, b)
+			local pa = tonumber(a.priority or 0) or 0
+			local pb = tonumber(b.priority or 0) or 0
+			if pa ~= pb then
+				return pa < pb
+			end
+			return tostring(a.title or a.key) < tostring(b.title or b.key)
+		end)
+
+		for i = 1, #tmp do
+			list_contents[i] = tmp[i]
+		end
+	end
+
+	local set_selected_resolution = function(i)
+		local def = list_contents[i]
+		entry_index = i
+
+		if not def then
+			entry_title.title = lget("RECOVERY_RESOLVE_NONE|No recovery option selected.")
+			entry_descrip.title = lget("RECOV_SELECT_NEW_RESOLV|Select a recovery action above.")
+			entry_action.title = ""
+			entry_action.active = "NO"
+			rs.current_resolution = nil
+			return
+		end
+
+		rs.current_resolution = def
+		entry_title.title = lget(def.key .. "_TITLE|" .. (def.title or def.name or ""))
+		entry_descrip.title = lget(def.key .. "_DESCRIP|" .. (def.description or def.descrip or ""))
+		entry_action.title = lget("RECOV_RUN|Run this action")
+		entry_action.active = "YES"
+		entry_action.action = function(self)
+			if def.kind == "terminal" and rs.current_mode == "popup" then
+				HideDialog(iup.GetDialog(self))
+				return
+			end
+
+			local ok, err = pcall(def.run, rs.state)
+			if not ok then
+				rs.push_error("RECOV_RUN_FAIL|Resolution failed: " .. tostring(err), { level = 3 })
+			end
+			mt_update()
+			rs_update()
+		end
+	end
+
+	local refresh_resolutions = function()
+		for i = #list_contents, 1, -1 do
+			resolution_selector[i] = nil
+		end
+
+		rebuild_contents()
+
+		for i, def in ipairs(list_contents) do
+			resolution_selector[i] = lget(def.title or def.name or ("Option " .. tostring(i)))
+		end
+
+		entry_index = -1
+		rs.current_resolution = nil
+
+		entry_title.title = lget("RECOVERY_RESOLVE_NONE|No recovery option selected.")
+		entry_descrip.title = lget("RECOV_SELECT_NEW_RESOLV|Select a recovery action above. They are listed in order of severity; it is recommended to attempt them in order if you are unsure how to fix the bug yourself.")
+		entry_action.title = ""
+		entry_action.active = "NO"
+
+		if #list_contents > 0 then
+			resolution_selector.value = "1"
+		else
+			resolution_selector.value = nil
+		end
+	end
+
+	local scroll_content = iup.frame {
+		segmented = "0 0 1 1",
+		image = "",
+		bgcolor = "0 0 0 0 *",
+		iup.vbox {
+			margin = tostring(Font.Default) .. "x" .. tostring(Font.Default),
+			gap = tostring(math.max(8, Font.Default / 2)),
+			
+			resolution_selector,
+			entry_action,
+			iup.fill {
+				size = "%2",
+			},
+			entry_title,
+			entry_descrip,
+		},
+	}
+
+	local scroll_pane = create_list_control { scroll_content }
+
+	resolution_selector.action = function(self, text, i, state)
+		if state == 1 then
+			set_selected_resolution(i)
+		end
+	end
+	
+	local root_view = iup.frame {
+		post_map_update = function()
+			scroll_pane:map_cb()
+		end,
+		display_trigger = function()
+			local safe_width = tostring(scroll_pane.w - (Font.Default * 3)) .. "x"
+			
+			scroll_content.size = safe_width
+			resolution_selector.size = safe_width .. tostring(Font.Default * 8)
+			entry_action.size = safe_width
+			entry_title.size = safe_width
+			entry_descrip.size = safe_width
+			
+			iup.Refresh(scroll_content)
+		end,
+		iup.vbox {
+			scroll_pane,
+		},
+	}
+
+	rs_update = refresh_resolutions
+	root_view.set_selected_resolution = set_selected_resolution
+
+	return root_view
+end
+
 local build_pre_LME_options = function()
 	local config_options = {
 		oplist {
@@ -1145,88 +1553,100 @@ local build_pre_LME_options = function()
 			key = "allow_bad_api_version",
 			default = 2,
 			value = gkini.ReadString("Neoloader", "allow_bad_api_version", "NO") == "YES" and 1 or 2,
-			"YES",
-			"NO",
+			lget("BINARY_YES|YES"),
+			lget("BINARY_NO|NO"),
 		},
 		oplist {
 			key = "default_load_state",
 			default = 1,
 			value = gkini.ReadString("Neoloader", "default_load_state", "YES") == "YES" and 1 or 2,
-			"YES",
-			"NO",
+			lget("BINARY_YES|YES"),
+			lget("BINARY_NO|NO"),
 		},
-		iup.fill { size = "%2", },
 	}
-
+	
+	local opt_list_text = iup.label {
+		title = lget("RECOVERY_CONFIG_MENU_PRE_DESCRIP|Set LME options and load states of registered plugins here. The LME has not yet loaded, so some options may only apply the next time the game runs, or will only partially apply this session."),
+		expand = "HORIZONTAL",
+		wordwrap = "YES",
+	}
+	
+	local option_list_container = iup.vbox {
+		margin = tostring(Font.Default) .. "x" .. tostring(Font.Default),
+		gap = tostring(math.max(8, Font.Default / 2)),
+		
+		opt_list_text,
+		
+		iup.fill { size = "%1", },
+	}
+	
+	for _, v in ipairs(config_options) do
+		option_list_container:append(v)
+	end
+	
 	local counter = 0
 	local highlite_bg = false
 	while true do
 		counter = counter + 1
 		highlite_bg = not highlite_bg
+		
 		local reg_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
 		if reg_file == "" then
 			break
 		end
-
+		
 		local id = gkini.ReadString2("modreg", "id", "null", reg_file)
 		local ver = gkini.ReadString2("modreg", "version", "null", reg_file)
 		local name = gkini.ReadString2("modreg", "name", "null", reg_file)
 		local idver_key = id .. "." .. ver
 		local current = gkini.ReadString("Neo-pluginstate", idver_key, "NO")
-
+		
 		local option_list = oplist {
 			header = "Neo-pluginstate",
 			key = idver_key,
 			hide_key = true,
 			default = 2,
 			value = current == "YES" and 1 or 2,
-			"YES",
-			"NO",
+			lget("BINARY_YES|YES"),
+			lget("BINARY_NO|NO"),
 		}
-
-		local op_frame = iup.frame {
+		
+		local card = build_plugin_card {
+			title = name .. " v" .. ver,
+			status = lget("RECOVERY_PLUGIN_CARD_PRE|Registered plugin load state."),
+			option_control = option_list,
 			bgcolor = highlite_bg and "255 255 255 30 *" or "0 0 0 0 *",
-			segmented = "0 0 1 1",
-			image = "",
-			shrink = "YES",
-			expand = "HORIZONTAL",
-			iup.hbox {
-				iup.label {
-					title = name .. " v" .. ver,
-				},
-				iup.fill { },
-				option_list,
-			},
 		}
-
-		table.insert(config_options, op_frame)
-	end
-
-	local option_list_container = iup.vbox {
-		iup.label {
-			title = lget("RECOVERY_CONFIG_MENU_PRE_DESCRIP|Set LME options and load states of registered plugins here. The LME has not yet loaded, so some options may only apply the next time the game runs, or will only partially apply this session."),
-		},
-		iup.fill { size = "%1", },
-	}
-
-	for i, v in ipairs(config_options) do
-		option_list_container:append(v)
+		
+		option_list_container:append(card)
 	end
 	
-	local scroll_pane = create_list_control {option_list_container}
-
+	local scroll_content = iup.frame {
+		segmented = "0 0 1 1",
+		image = "",
+		bgcolor = "0 0 0 0 *",
+		option_list_container,
+	}
+	
+	local scroll_pane = create_list_control { scroll_content }
+	
 	local root_view = iup.frame {
 		post_map_update = function()
 			scroll_pane:map_cb()
 		end,
-		segmented = "0 0 1 1",
-		bgcolor = "0 0 0 0 *",
-		image = "",
+		display_trigger = function()
+			local safe_width = tostring(scroll_pane.w - (Font.Default * 3)) .. "x"
+			
+			scroll_content.size = safe_width
+			opt_list_text.size = safe_width
+			
+			iup.Refresh(scroll_content)
+		end,
 		iup.vbox {
 			scroll_pane,
-		}
+		},
 	}
-
+	
 	return root_view
 end
 
@@ -1251,8 +1671,8 @@ local build_post_LME_options = function()
 			key = "allow_bad_api_version",
 			default = 2,
 			value = gkini.ReadString("Neoloader", "allow_bad_api_version", "NO") == "YES" and 1 or 2,
-			"YES",
-			"NO",
+			lget("BINARY_YES|YES"),
+			lget("BINARY_NO|NO"),
 			action = function(new_value)
 				neo.api.config.set_config(auth_key, "allow_bad_api_version", new_value)
 			end,
@@ -1261,162 +1681,262 @@ local build_post_LME_options = function()
 			key = "default_load_state",
 			default = 1,
 			value = gkini.ReadString("Neoloader", "default_load_state", "YES") == "YES" and 1 or 2,
-			"YES",
-			"NO",
+			lget("BINARY_YES|YES"),
+			lget("BINARY_NO|NO"),
 			action = function(new_value)
 				neo.api.config.set_config(auth_key, "default_load_state", new_value)
 			end,
 		},
-		iup.fill { size = "%2", },
 	}
-
+	
+	local opt_list_text = iup.label {
+		title = lget("RECOVERY_CONFIG_MENU_POST_DESCRIP|Set LME options and load states of registered plugins here. The LME has loaded, allowing the direct management of configuration."),
+		expand = "HORIZONTAL",
+		wordwrap = "YES",
+	}
+	
+	local option_list_container = iup.vbox {
+		margin = tostring(Font.Default) .. "x" .. tostring(Font.Default),
+		gap = tostring(math.max(8, Font.Default / 2)),
+		
+		opt_list_text,
+		
+		iup.fill { size = "%1", },
+	}
+	
+	for _, v in ipairs(config_options) do
+		option_list_container:append(v)
+	end
+	
 	local counter = 0
 	local highlite_bg = false
 	local plugin_list = lib.get_gstate().pluginlist --{{id, ver}, {id, ver}, ...}
-	for _, idver_pair in ipairs(plugin_list) do
+	while true do
+		counter = counter + 1
 		highlite_bg = not highlite_bg
 		
-		local id = idver_pair[1] or "null"
-		local ver = idver_pair[2] or "null"
+		local this_entry = plugin_list[counter]
+		if not this_entry then
+			break
+		end
+		local id = this_entry[1]
+		local ver = this_entry[2]
 		local mod_obj = lib.get_state(id, ver)
 		local name = mod_obj.plugin_name
+		local idver_key = id .. "." .. ver
 		local current = mod_obj.load
 		
 		local option_list = oplist {
 			hide_key = true,
 			default = 2,
 			value = current == "YES" and 1 or 2,
-			"YES",
-			"NO",
+			lget("BINARY_YES|YES"),
+			lget("BINARY_NO|NO"),
 			action = function(new_value)
 				lib.set_load(auth_key, id, ver, new_value)
 			end,
 		}
-
-		local op_frame = iup.frame {
+		
+		local card = build_plugin_card {
+			title = name .. " v" .. ver,
+			status = lget("RECOVERY_PLUGIN_CARD_PRE|Registered plugin load state."),
+			option_control = option_list,
 			bgcolor = highlite_bg and "255 255 255 30 *" or "0 0 0 0 *",
-			segmented = "0 0 1 1",
-			image = "",
-			iup.hbox {
-				iup.label {
-					title = name .. " v" .. ver,
-				},
-				iup.fill { },
-				option_list,
-			},
 		}
-
-		table.insert(config_options, op_frame)
-	end
-
-	local option_list_container = iup.vbox {
-		iup.label {
-			title = lget("RECOVERY_CONFIG_MENU_POST_DESCRIP|Set LME options and load states of registered plugins here. The LME has loaded, allowing the direct management of configuration."),
-		},
-		iup.fill { size = "%1", },
-	}
-
-	for i, v in ipairs(config_options) do
-		option_list_container:append(v)
+		
+		option_list_container:append(card)
 	end
 	
-	local scroll_pane = create_list_control { option_list_container }
-
+	local scroll_content = iup.frame {
+		segmented = "0 0 1 1",
+		image = "",
+		bgcolor = "0 0 0 0 *",
+		option_list_container,
+	}
+	
+	local scroll_pane = create_list_control { scroll_content }
+	
 	local root_view = iup.frame {
 		post_map_update = function()
 			scroll_pane:map_cb()
 		end,
+		display_trigger = function()
+			local safe_width = tostring(scroll_pane.w - (Font.Default * 3)) .. "x"
+			
+			scroll_content.size = safe_width
+			opt_list_text.size = safe_width
+			
+			iup.Refresh(scroll_content)
+		end,
+		iup.vbox {
+			scroll_pane,
+		},
+	}
+	
+	return root_view
+end
+
+local create_diag = function()
+	local home_tab
+	local logs_tab
+	local res_tab
+	local lme_tab
+	local dev_tab
+	
+	local page_box
+	local nav_status
+	
+	local post_LME_once_flag = false
+	
+	local switch_page = function(page_name)
+		if page_name == "home" then
+			page_box.value = home_tab
+		elseif page_name == "resolutions" then
+			page_box.value = res_tab
+		elseif page_name == "plugins" then
+			if (rs.state.capabilities.has_lib) and (not post_LME_once_flag) then
+				post_LME_once_flag = true
+				lme_tab:detach()
+				lme_tab = build_post_LME_options()
+				page_box:append(lme_tab)
+				
+				local diag_ref = iup.GetDialog(lme_tab)
+				if diag_ref then
+					iup.Refresh(diag_ref)
+					diag_ref:map()
+					iup.Refresh(diag_ref)
+				end
+				if lme_tab.post_map_update then
+					lme_tab:post_map_update()
+				end
+			end
+			page_box.value = lme_tab
+		elseif page_name == "logs" then
+			if logs_tab.refresh_logs then
+				logs_tab:refresh_logs()
+			end
+			page_box.value = logs_tab
+		elseif page_name == "dev" then
+			page_box.value = dev_tab
+		end
+		
+		if page_box.value.display_trigger then
+			page_box.value.display_trigger()
+		end
+	end
+	
+	home_tab = build_home_tab(switch_page)
+	logs_tab = build_logs_tab()
+	res_tab = build_resolution_tab()
+	lme_tab = build_pre_LME_options()
+	
+	dev_tab = iup.frame {
 		segmented = "0 0 1 1",
 		image = "",
 		bgcolor = "0 0 0 0 *",
 		iup.vbox {
-			scroll_pane,
-		}
-	}
-	
-	return root_view
-	
-end
-
-local create_diag = function()
-	local header = build_log_display()
-	
-	local res_tab = build_resolution_tab()
-	
-	local lme_tab = build_pre_LME_options()
-	--local lme_tab_post = build_post_LME_options()
-	
-	local lme_placeholder = iup.vbox {
-		iup.label {
-			title = "Placeholder tab",
+			margin = tostring(Font.Default) .. "x" .. tostring(Font.Default),
+			iup.label {
+				title = lget("RECOVERY_DEV_PLACEHOLDER|Developer tools are not yet implemented."),
+				expand = "HORIZONTAL",
+				wordwrap = "YES",
+			},
 		},
 	}
 	
-	local tabbox = iup.zbox {
-		value  = res_tab,
+	page_box = iup.zbox {
+		value = home_tab,
+		home_tab,
 		res_tab,
 		lme_tab,
-		lme_placeholder,
+		logs_tab,
+		dev_tab,
 	}
 	
-	local post_LME_once_flag = false
-	
-	local tabrow = iup.hbox {
-		iup.button {
-			title  = lget("RECOVERY_TAB_RESOLVE|Resolutions"),
-			action = function()
-				tabbox.value = res_tab
-			end,
-		},
-		iup.fill {},
-		iup.button {
-			title  = lget("RECOVERY_TAB_CONFIG|LME configuration"),
-			action = function()
-				if (rs.state.capabilities.has_lib) and (not post_LME_once_flag) then
-					post_LME_once_flag = true
-					lme_tab:detach()
-					lme_tab = build_post_LME_options()
-					tabbox:append(lme_tab)
-					iup.Refresh(iup.GetDialog(lme_tab))
-					iup.GetDialog(lme_tab):map()
-					iup.Refresh(iup.GetDialog(lme_tab))
-					lme_tab:post_map_update()
-					iup.Refresh(iup.GetDialog(lme_tab))
-					iup.Refresh(iup.GetDialog(lme_tab))
-				end
-				tabbox.value = lme_tab
-			end,
-		},
-		iup.button {
-			title  = lget("RECOVERY_TAB_DEV|Developer tools"),
-			visible = rs.state.capabilities.has_neo and "YES" or "NO",
-			active  = rs.state.capabilities.has_neo and "YES" or "NO",
-			action = function()
-				tabbox.value = lme_placeholder
-			end,
-		},
+	local dev_tab_button = iup.button {
+		title = lget("RECOVERY_NAV_DEV|Developer tools"),
+				expand = "HORIZONTAL",
+		visible = rs.state.capabilities.has_neo and "YES" or "NO",
+		active = rs.state.capabilities.has_neo and "YES" or "NO",
+		action = function()
+			switch_page("dev")
+		end,
+		do_update = function(self)
+			self.visible = recovery_can_open_lme() and "YES" or "NO"
+			self.active = recovery_can_open_lme() and "YES" or "NO"
+		end,
 	}
-
-	local diag_local = iup.dialog {
-		topmost   = "YES",
-		fullscreen = "YES",
-		bgcolor   = "0 0 0",
-		iup.hbox {
-			iup.fill { size = "%3" },
-			iup.vbox {
-				iup.fill { size = Font.Default },
-				header,
-				iup.fill { size = Font.Default },
-				tabrow,
-				tabbox,
-				iup.fill { size = Font.Default },
+	
+	table.insert(ui_post_update, dev_tab_button)
+	
+	local nav_column = iup.frame {
+		size = "%7x",
+		shrink = "YES",
+		iup.vbox {
+			margin = tostring(Font.Default / 2) .. "x" .. tostring(Font.Default / 2),
+			gap = tostring(math.max(6, Font.Default / 3)),
+			
+			iup.label {
+				title = lget("RECOVERY_NAV_TITLE|Recovery"),
+				expand = "HORIZONTAL",
+				wordwrap = "YES",
 			},
-			iup.fill { size = "%6" },
+			
+			iup.button {
+				title = lget("RECOVERY_NAV_HOME|Home"),
+				expand = "HORIZONTAL",
+				action = function()
+					switch_page("home")
+				end,
+			},
+			iup.button {
+				title = lget("RECOVERY_NAV_RESOLVE|Resolutions"),
+				expand = "HORIZONTAL",
+				action = function()
+					switch_page("resolutions")
+				end,
+			},
+			iup.button {
+				title = lget("RECOVERY_NAV_PLUGINS|Plugins"),
+				expand = "HORIZONTAL",
+				action = function()
+					switch_page("plugins")
+				end,
+			},
+			iup.button {
+				title = lget("RECOVERY_NAV_LOGS|Logs"),
+				expand = "HORIZONTAL",
+				action = function()
+					switch_page("logs")
+				end,
+			},
+			dev_tab_button,
+			
+			iup.fill { },
 		},
 	}
-
+	
+	local diag_local = iup.dialog {
+		topmost = "YES",
+		fullscreen = "YES",
+		bgcolor = "0 0 0",
+		iup.hbox {
+			margin = tostring(Font.Default / 2) .. "x" .. tostring(Font.Default / 2),
+			gap = tostring(math.max(6, Font.Default / 3)),
+			
+			nav_column,
+			
+			iup.vbox {
+				page_box,
+			},
+		},
+	}
+	
 	diag_local:map()
-	lme_tab:post_map_update()
+	if lme_tab.post_map_update then
+		lme_tab:post_map_update()
+		page_box.value.display_trigger()
+	end
 	
 	return diag_local
 end
@@ -1438,6 +1958,10 @@ rs.open = function(mode)
 
 	mt_update()
 	rs_update()
+	
+	if refresh_ui_state then
+		refresh_ui_state()
+	end
 
 	if mode == "popup" then
 		-- interrupting mode: we want popup() semantics
@@ -1451,7 +1975,16 @@ rs.open = function(mode)
 		end
 	else
 		-- user-invoked: just show, do not try to run actions after show
+		-- or invoked as safety background catch
 		diag:show()
+	end
+end
+
+rs.open()
+
+call_close_diag = function()
+	if (diag.visible == "YES") and (#rs.errors < 1) then
+		diag:hide()
 	end
 end
 

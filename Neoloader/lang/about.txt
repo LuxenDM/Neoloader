@@ -1,0 +1,26 @@
+plugin-facing language support is in a unique position.
+
+Vendetta Online supports a wide variety of languages and uses different rendering methods depending on the selected locale and font. However, plugins must provide their own text for each supported language, and cannot directly use the game's full localization system.
+
+In practice, most plugins will not support every available language. Doing so would require a level of effort that is not realistic for most modders.
+
+Neoloader aims to support the major latin-based languages available in Vendetta Online. By limiting support to latin-based languages, font-specific behavior and text direction can be avoided, simplifying implementation.
+
+There are still some limitations. The character set available to plugins is more restricted than what the game itself supports. As a result, accent characters have been removed, and translations have been slightly simplified to preserve meaning rather than exact wording.
+
+Translations have been initially generated using AI, unless otherwise noted. Contributions and corrections from native speakers are welcome and encouraged.
+
+Language support:	ISO code	When support began
+======================================================================
+English:		en		base original language
+Spanish:		es		Supported since v6.x.x
+French:			fr		Supported since v6.x.x
+Portuguese:		pt		Supported since v6.x.x
+German:			de		(planned) Support in v7.0.0
+Italian:		it		(planned) Support in v7.0.0
+Polish:			pl		(planned) Support in v7.0.0
+Turkish:		tr		(planned) Support in v7.0.0
+Dutch:			nl		(planned) Support in v7.0.0
+Danish:			da		(planned) Support in v7.0.0
+Indonesian:		id		(planned) Support in v7.0.0
+Esperanto:		eo		(planned) Support in v7.0.0

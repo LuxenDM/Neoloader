@@ -27,7 +27,7 @@ lib.uninstall = function(au)
 	lib.lme_configure("current_mgr", "", au)
 	lib.lme_configure("current_notif", "", au)
 	lib.lme_configure("stat_graphing", "", au)
-	lib.lme_configure("launch_mode", "", au)
+	lib.lme_configure("launch_mode", "removed", au)
 	
 	local plist = lib.get_gstate().pluginlist
 	for _, idvpairs in ipairs(plist) do

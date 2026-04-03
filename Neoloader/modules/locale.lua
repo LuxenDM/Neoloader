@@ -9,11 +9,11 @@ created=2025-11-23
 
 
 local neo = ...
-neo_path = neo.path
+local neo_path = neo.path
 
-local err_val = "STRING_LOOKUP_ERROR"
-
-neo.api.lget = function(chapter, header, key)
+neo.api.lget = function(chapter, header, key, err_val)
+	err_val = (type(err_val) == "string" and err_val) or "STRING_LOOKUP_ERROR"
+	
 	local locale_flag = gkini.ReadString("Vendetta", "locale", "en") .. "/"
 	
 	local lang_path = neo_path .. "lang/" .. locale_flag .. chapter .. ".ini"

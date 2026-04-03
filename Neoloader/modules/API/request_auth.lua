@@ -22,6 +22,7 @@ lib.request_auth = function(name, callback)
 	
 	local grant = iup.stationbutton {
 		title = lget("core", "AUTH", "GRANT_AUTH", "Give Access"),
+		size = "x" .. tostring(Font.Default + 6),
 		action = function(self)
 			callback(neo.auth_key)
 			HideDialog(iup.GetDialog(self))
@@ -30,6 +31,7 @@ lib.request_auth = function(name, callback)
 	
 	local deny = iup.stationbutton {
 		title = lget("core", "AUTH", "DENY_AUTH", "Deny Access"),
+		size = "x" .. tostring(Font.Default + 6),
 		action = function(self)
 			HideDialog(iup.GetDialog(self))
 		end,
@@ -45,27 +47,47 @@ lib.request_auth = function(name, callback)
 			iup.hbox {
 				iup.fill { },
 				iup.stationsubframe {
-					iup.vbox {
-						alignment = "ACENTER",
-						iup.fill {
-							size = "%2",
-						},
-						iup.label {
-							title = name .. " " .. lget("core", "AUTH", "REQUEST_AUTH", "is requesting management permission over Neoloader!"),
-						},
-						iup.fill {
-							size = "%2",
-						},
-						iup.hbox {
-							grant,
-							iup.fill {
-								size = "%4",
+					size = "%40x%30",
+					iup.hbox {
+						iup.fill { },
+						iup.vbox {
+							alignment = "ACENTER",
+							iup.fill { },
+							iup.fill { },
+							iup.label {
+								title = "",
+								image = neo.path .. "assets/auth_request.png",
+								size = tostring(Font.Default * 4) .. "x" .. tostring(Font.Default * 4)
 							},
-							deny,
+							iup.fill { },
+							iup.label {
+								title = name .. " " .. lget("core", "AUTH", "REQUEST_AUTH", "is requesting management permission over Neoloader!"),
+								wordwrap = "YES",
+								size = "%35x",
+								font = Font.Default + 4,
+							},
+							iup.fill { },
+							iup.hbox {
+								iup.label {
+									title = "",
+									image = neo.path .. "assets/auth_key.png",
+									size = tostring(Font.Default + 6) .. "x" .. tostring(Font.Default + 6),
+								},
+								grant,
+								iup.fill {
+									size = "%4",
+								},
+								iup.label {
+									title = "",
+									image = neo.path .. "assets/auth_deny.png",
+									size = tostring(Font.Default + 6) .. "x" .. tostring(Font.Default + 6),
+								},
+								deny,
+							},
+							iup.fill { },
+							iup.fill { },
 						},
-						iup.fill {
-							size = "%2",
-						},
+						iup.fill { },
 					},
 				},
 				iup.fill { },

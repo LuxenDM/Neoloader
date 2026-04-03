@@ -13,7 +13,7 @@ local get_conf = neo.api.config.get_config
 
 
 lib.notify = function(status, ...)
-	args = ...
+	local args = ...
 	if type(args) ~= "table" then
 		args = {args}
 	end

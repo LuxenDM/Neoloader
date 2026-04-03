@@ -49,7 +49,7 @@ end
 
 
 ---wtf is this function even for?
-CreditAndCrystal = CreditAndCrystal or function(in1, in2, in3, in4, in5)
+CreditAndCrystal = (isdeclared("CreditAndCrystal") and CreditAndCrystal) or function(in1, in2, in3, in4, in5)
 	print(type(in1) .. ">" .. tostring(in1))
 	print(type(in2) .. ">" .. tostring(in2))
 	print(type(in3) .. ">" .. tostring(in3))
@@ -58,7 +58,7 @@ CreditAndCrystal = CreditAndCrystal or function(in1, in2, in3, in4, in5)
 	return 1
 end
 
-OpenAlarm = OpenAlarm or function(title, text, buttontext)
+OpenAlarm = (isdeclared("OpenAlarm") and OpenAlarm) or function(title, text, buttontext)
 	PopupDialog(iup.dialog{
 		iup.vbox{
 			iup.label{title = title.."\n"..text},
@@ -78,19 +78,19 @@ OpenAlarm = OpenAlarm or function(title, text, buttontext)
 	}, iup.CENTER, iup.CENTER)
 end
 
-IF_DIR = IF_DIR or 'vo/'
-IMAGE_DIR = IMAGE_DIR or gkini.ReadString("Vendetta", "skin", "images/station/")
-tabseltextcolor = tabseltextcolor or "1 241 255"
-tabunseltextcolor = tabunseltextcolor or "0 185 199"
+IF_DIR = (isdeclared("IF_DIR") and IF_DIR) or 'vo/'
+IMAGE_DIR = (isdeclared("IMAGE_DIR") and IMAGE_DIR) or gkini.ReadString("Vendetta", "skin", "images/station/")
+tabseltextcolor = (isdeclared("tabseltextcolor") and tabseltextcolor) or "1 241 255"
+tabunseltextcolor = (isdeclared("tabunseltextcolor") and tabunseltextcolor) or "0 185 199"
 
-defaultedittextcolor = defaultedittextcolor or "255 255 255"
-listboxbordercolor = listboxbordercolor or "0 0 0"
-listboxfocusedbordercolor = listboxfocusedbordercolor or "0 0 0"
-buttondisabledcolor = buttondisabledcolor or "127 127 127"
-textlistboxselcolor = textlistboxselcolor or "127 127 127"
-textlistboxunfocusedselcolor = textlistboxunfocusedselcolor or "0 0 0"
-UseCondensedUI = UseCondensedUI or "false"
-defaulttextcolor = defaulttextcolor or "255 255 255"
+defaultedittextcolor = (isdeclared("defaultedittextcolor") and defaultedittextcolor) or "255 255 255"
+listboxbordercolor = (isdeclared("listboxbordercolor") and listboxbordercolor) or "0 0 0"
+listboxfocusedbordercolor = (isdeclared("listboxfocusedbordercolor") and listboxfocusedbordercolor) or "0 0 0"
+buttondisabledcolor = (isdeclared("buttondisabledcolor") and buttondisabledcolor) or "127 127 127"
+textlistboxselcolor = (isdeclared("textlistboxselcolor") and textlistboxselcolor) or "127 127 127"
+textlistboxunfocusedselcolor = (isdeclared("textlistboxunfocusedselcolor") and textlistboxunfocusedselcolor) or "0 0 0"
+UseCondensedUI = (isdeclared("UseCondensedUI") and UseCondensedUI) or "false"
+defaulttextcolor = (isdeclared("defaulttextcolor") and defaulttextcolor) or "255 255 255"
 
 dofile('vo/if_fontsize.lua')
 dofile('vo/if_templates.lua')

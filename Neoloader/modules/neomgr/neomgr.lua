@@ -182,8 +182,6 @@ end
 
 local control_list_creator = function()
 	
-	cp("executing control list creator")
-	
 	local lockstate = false
 	local actual_items = {}
 	local contents = {}
@@ -206,7 +204,6 @@ local control_list_creator = function()
 	end
 	
 	ctl.add_item = function(self, obj)
-		cp("adding an item!")
 		table.insert(contents, obj)
 	end
 	
@@ -223,15 +220,9 @@ local control_list_creator = function()
 			self:unlock()
 		end
 		
-		cp("CTL update function")
-		cp("sort type provided is " .. tostring(sorttype))
-		
 		if sorttype and sort_methods[sorttype] then
-			cp("sorting as " .. sorttype .. " in direction " .. config.sort_dir)
 			table.sort(contents, sort_methods[sorttype])
 		end
-		
-		cp("	detaching old items")
 		
 		for k, v in ipairs(actual_items) do
 			v:detach()
@@ -242,12 +233,9 @@ local control_list_creator = function()
 		end
 		actual_items = {}
 		
-		cp("	resizing new items")
-		
 		--prepare items
 		local x_size = string.match(ctl.size, "%d+") or "100"
 		for k, v in ipairs(contents) do
-			--cp("	mapping index " .. tostring(k))
 			local obj = create_subdlg(v)
 			actual_items[k] = obj
 			obj:map()
@@ -257,34 +245,20 @@ local control_list_creator = function()
 				value = tonumber(value)
 				table.insert(sizes, value)
 			end
-			--cp("	applying size")
-			--cp("	CTL size is " .. ctl.size or "???")
-			--cp("	x_size is " .. tostring(x_size) .. " of type " .. type(x_size))
 			obj.size = tostring(tonumber(x_size) - Font.Default) .. "x" .. tostring(sizes[2])
-			--cp("	size now " .. obj.size)
 		end
-		
-		cp("Appending new items")
 		
 		for k, v in ipairs(actual_items) do
 			iup.Append(self, v)
 		end
 		
-		cp("Locking items")
-		
 		self:lock()
-		
-		cp("Refreshing")
 		
 		iup.Refresh(self)
 	end
 	
-	cp("CTL functions created")
-	
 	iup.Append(ctl, create_subdlg(iup.hbox {}))
 	--ctl:lock()
-	
-	cp("CTL appended and locked")
 	
 	return ctl
 end
@@ -362,10 +336,7 @@ local create_CCD1_view = function(id, version)
 	end
 	
 	local mk_slider = function(ref, data)
-		local apply_timer = Timer()
-		local handle_func = function(a, b)
-			ctable.cb(a, b)
-		end
+		local apply_flag = false
 		
 		local slider = iup.canvas {
 			size = "200x" .. button_scalar(),
@@ -373,13 +344,28 @@ local create_CCD1_view = function(id, version)
 			xmin = tonumber(data.min) or 1,
 			xmax = tonumber(data.max) or 100,
 			posx = tonumber(data.default) or 50,
-			dx = (tonumber(data.max) - tonumber(data.min))/10,
+			dx = ((tonumber(data.max) or 100) - (tonumber(data.min) or 1))/10,
 			expand = "NO",
 			scrollbar = "HORIZONTAL",
 			scroll_cb = function(self)
-				apply_timer:SetTimeout(1, function() ctable.cb(ref, self.posx) end)
+				apply_flag = true
 			end,
 		}
+		
+		local apply_timer = Timer()
+		local apply_func = function()
+			if (not slider) or (not iup.IsValid(slider)) then
+				apply_timer:Kill()
+				return
+			end
+			
+			if apply_flag then
+				ctable.cb(ref, slider.posx)
+			end
+			
+			apply_timer:SetTimeout(1)
+		end
+		apply_func()
 		
 		return iup.hbox {
 			mk_prepend(data),
@@ -1551,7 +1537,7 @@ local diag_constructor = function()
 						unins_msg,
 						iup.hbox {
 							iup.stationbutton {
-								title = bstr(62, "Load LME recovery system"),
+								title = bstr(62, "Open recovery menu"),
 								action = function()
 									gkinterface.GKProcessCommand("recovery")
 								end,

@@ -136,7 +136,7 @@ local config_definitions = {
 	current_if = { --tells Neoloader what interface to launch and authenticate. the interface is always launched first. If empty or interface isn't present or errors, launches default interface directly.
 		need_auth = "YES",
 		valid = nil,
-		default = "Vendetta Online Standard Interface",
+		default = "vosi-bridge",
 		legacy = {},
 	},
 	current_mgr = { --tells Neoloader what LME control interface to authenticate. failback to neomgr. failback again, to just using recovery interface
