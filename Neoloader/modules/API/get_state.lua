@@ -50,31 +50,31 @@ lib.get_state = function(name, version)
 	end
 
 	local state = {
-		load								= ref.load or "NO",
-		complete						= ref.complete == true,
+		load					= ref.load or "NO",
+		complete				= ref.complete == true,
 		dependencies_met		= deps_met or false,
-		load_position			 = ref.load_position or -1,
-		errors							= ref.errors or {},
+		load_position			= ref.load_position or -1,
+		errors					= ref.errors or {},
 
-		latest							= lib.get_latest(name) or "-1",
-		versions						= versions_list,
+		latest					= lib.get_latest(name) or "-1",
+		versions				= versions_list,
 
-		plugin_id					 = name,
+		plugin_id				= name,
 		plugin_version			= version,
-		plugin_type				 = ref.plugin_type,
-		plugin_name				 = ref.plugin_name,
-		plugin_author			 = ref.plugin_author,
-		plugin_link				 = ref.plugin_link,
-		plugin_folder			 = ref.plugin_folder,
-		plugin_ini_file		 = ref.plugin_regpath,
+		plugin_type				= ref.plugin_type,
+		plugin_name				= ref.plugin_name,
+		plugin_author			= ref.plugin_author,
+		plugin_link				= ref.plugin_link,
+		plugin_folder			= ref.plugin_folder,
+		plugin_ini_file			= ref.plugin_regpath,
 
 		-- v6: dependent_freeze > 0 ? "YES" : "NO"
-		plugin_frozen			 = (ref.dependents_frozen and "YES" or "NO"),
+		plugin_frozen			= (ref.dependents_frozen and "YES" or "NO"),
 
-		plugin_dependencies = ref.plugin_dependencies or {},
-		plugin_is_new			 = false, --ref.new_entry or false,
-		compat_flag				 = ref.compat or "NO",
-		plugin_stats				= ref.stats,	-- {timestat, memstat} if present
+		plugin_dependencies 	= ref.plugin_dependencies or {},
+		plugin_is_new			= false, --ref.new_entry or false,
+		compat_flag				= ref.compat or "NO",
+		plugin_stats			= ref.stats,	-- {timestat, memstat} if present
 	}
 
 	return state

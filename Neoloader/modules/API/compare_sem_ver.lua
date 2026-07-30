@@ -5,6 +5,11 @@ version=1.0.0
 owner=Neoloader|7.0.0
 type=lua
 created=2025-11-08
+
+because I keep forgetting:
+-1 -- obj1 older / less than obj2
+ 0 -- equal
+ 1 -- obj1 newer / greater than obj2
 ]]--
 
 

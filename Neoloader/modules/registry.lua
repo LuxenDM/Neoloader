@@ -462,18 +462,20 @@ _update_indexes = function(record, mode)
 	list_versions[id].latest_inactive = newest
 
 	-- refresh latest_active only on activation success (and if newest)
-	if mode == "activate" and ((record.launched == true) or (record.complete == true)) then
-		-- pick the newest version among those not explicitly "NO"
-		-- quick scan from newest backwards
+	if mode == "activate" then
 		local latest_ok = nil
+
 		for i = #vo, 1, -1 do
 			local v = vo[i]
 			local state = list_versions[id][v]
-			if state ~= "NO" then
+			local candidate = plugin_lookups[id .. "." .. v]
+
+			if state ~= "NO" and candidate and ( candidate.launched == true or candidate.complete == true ) then
 				latest_ok = v
 				break
 			end
 		end
+
 		list_versions[id].latest_active = latest_ok
 	end
 end
@@ -504,16 +506,6 @@ api.mark_failure = function(id, ver)
 	rec.complete = false
 	_update_indexes(rec, "activate")
 	return true, rec
-end
-
-api.mark_launching = function(id, ver)
-	
-	local key = id.."."..ver
-	local idx = plugin_lookups[key]
-	if not idx then return false, "not found" end
-	
-	local rec = registry[idx]
-	rec.launched = true
 end
 
 api.mark_launching = function(id, ver)
@@ -625,14 +617,21 @@ api.cleanse_registration = function()
 
     -- 1) Discover all current regN entries and filter valid ones
     local n = 1
+	local empty_counter = 0
     while true do
         local key = "reg" .. n
         local path = gkini.ReadString("Neo-registry", key, "")
+		
         if path == "" then
-            -- stop at first empty; this is how v7 ensure_registry_entry works
-            break
-        end
-        max_seen = n
+			empty_counter = empty_counter + 1
+			if empty_counter > 9 then
+				-- stop after 10 empty entries, strongly indicates no more entries
+				break
+			end
+        else
+			empty_counter = 0
+			max_seen = n
+		end
 
         if gksys.IsExist(path) then
             -- Try building INI to make sure it’s still sane

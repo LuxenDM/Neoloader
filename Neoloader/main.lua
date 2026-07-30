@@ -72,14 +72,14 @@ if not lme_flag then
 		
 		return
 	elseif launch_mode_cfg == "removed" then
-		print(lget("REM_PRINT", "Neoloader was recently uninstalled, so it will not run. To set it up again, use the /neo command. Otherwise, you can remove this plugin when convenient.")) --make this more approachable?
+		print(lget("REM_PRINT", "Neoloader has been disabled. To enable and configure it again, run the /neo command. Otherwise, you may safely delete the Neoloader plugin folder whenever convenient."))
 		
 		RegisterUserCommand("neo", function()
 			console_print("Neoloader re-enabling after being 'removed'")
 			gkini.WriteString("Neoloader", "launch_mode", "cooperative")
 			dofile(local_path .. "init.lua")
-		
-			dofile(local_path .. "setup.lua")
+			
+			gkinterface.GKProcessCommand("neosetup")
 		end)
 		
 		return
@@ -88,7 +88,7 @@ if not lme_flag then
 		
 		dofile("init.lua")
 		
-		dofile("setup.lua")
+		gkinterface.GKProcessCommand("neosetup")
 		
 	elseif launch_mode_cfg == "independent" then
 		if gkini.ReadString("Vendetta", "if", "") == "" then

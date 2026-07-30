@@ -16,6 +16,20 @@ local total_patch_count = 2
 
 --update check
 if update_check_num < total_patch_count then
+	
+	--force-enable latest versions of Lexicon, neomgr, and vosi-bridge
+	--this occurs EVERY update. prevents issues caused when these core utilities update and new plugin loading is set to "NO".
+	do
+		local bridge_ver = gkini.ReadString2("modreg", "version", "1.0.0", neo.path .. "modules/Vendetta Online Standard Interface/vosi.lua")
+		gkini.WriteString("Neo-pluginstate", "vosi-bridge." .. bridge_ver, "YES")
+		
+		local neomgr_ver = gkini.ReadString2("modreg", "version", "2.4.0", neo.path .. "modules/neomgr/neomgr.lua")
+		gkini.WriteString("Neo-pluginstate", "neomgr." .. neomgr_ver, "YES")
+		
+		local lex_ver = gkini.ReadString2("modreg", "version", "1.0.0", neo.path .. "modules/lexicon/lexicon.lua")
+		gkini.WriteString("Neo-pluginstate", "lexicon." .. lex_ver, "YES")
+	end
+	
 	if update_check_num == 0 then --Update from Neoloader 6.1.x -> 6.2.0+
 		lib.log_error("Neoloader was updated from v6.1.x or earlier - applying configuration fixes for v6.2.0", 3)
 		

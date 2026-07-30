@@ -1,7 +1,6 @@
 --[[
 [metadata]
 description=First-run setup solution for Neoloader
-version=2.0.0
 owner=Neoloader|7.0.0
 type=lua
 created=2026-4-1
@@ -21,15 +20,55 @@ if not ok and type(err) == "string" then
 	end
 end
 
-console_print("%%1 local path is " .. local_path)
-
 local gkrs = gkini.ReadString
 local gkws = gkini.WriteString
 
 
+local get_setup_locale = function()
+	local ex_local = gkini.ReadString("Neoloader", "ex_local", "")
+	if ex_local ~= "" then
+		return ex_local
+	end
+	
+	local vo_local = gkini.ReadString("Vendetta", "locale", "")
+	if vo_local ~= "" then
+		return vo_local
+	end
+	
+	return "en"
+end
+
+local serial_path = local_path .. "lang/lang.ini"
+local read_lang_entry = function(code)
+	return {
+		code = code,
+		full = gkini.ReadString2(code, "full", code, serial_path),
+		path = gkini.ReadString2(code, "path", code, serial_path),
+		game_supported = gkini.ReadString2(code, "game_supported", "yes", serial_path),
+		note_key = gkini.ReadString2(code, "note_key", "", serial_path),
+	}
+end
+
+local load_supported_languages = function()
+	local list = {}
+	local idx = 1
+	
+	while true do
+		local code = gkini.ReadString2("lang", tostring(idx), "", serial_path)
+		if code == "" then
+			break
+		end
+		
+		table.insert(list, read_lang_entry(code))
+		idx = idx + 1
+	end
+	
+	return list
+end
+
 
 local lget = function(header, key, def)
-	local cur_lang_code = gkini.ReadString("Vendetta", "locale", "en")
+	local cur_lang_code = get_setup_locale()
 	
 	local lang_path = local_path .. "lang/" .. cur_lang_code .. "/setup.ini"
 	
@@ -425,107 +464,61 @@ setup_handler = function()
 		options have been applied, LME is configured
 	]]--
 	
-	local locale_select_action = function(self, code)
-		gkini.WriteString("Vendetta", "locale", code or "en")
+	local locale_select_action = function(self, code, game_supported)
+		if game_supported == "yes" then
+			gkini.WriteString("Vendetta", "locale", code or "en")
+		end
+		
+		gkini.WriteString("Neoloader", "ex_local", code or "en")
 		invalidate_setup = true
 		setup_next(self)
 	end
 	
+	local build_locale_row = function(entry)
+		local support_note_display = iup.label {
+			alignment = "ARIGHT",
+			title = lget("setup", entry.note_key, ""),
+			size = "%20x",
+			font = Font.Default,
+			wordwrap = "YES",
+		}
+		
+		return iup.frame {
+			iup.hbox {
+				alignment = "ACENTER",
+				iup.button {
+					title = "",
+					_locale = entry.code,
+					image = local_path .. "lang/" .. entry.path .. "/flag.png",
+					size = "256x171",
+					action = function(self)
+						locale_select_action(self, entry.code, entry.game_supported)
+					end,
+				},
+				iup.fill { },
+				iup.vbox {
+					alignment = "ARIGHT",
+					iup.stationbutton {
+						action = function(self)
+							locale_select_action(self, entry.code, entry.game_supported)
+						end,
+						title = entry.full,
+						size = "x50",
+						font = Font.Default + 20,
+					},
+					entry.game_supported == "no" and support_note_display or nil,
+				},
+			},
+		}
+	end
+	
+	local locale_rows = {}
+	for _, entry in ipairs(load_supported_languages()) do
+		table.insert(locale_rows, build_locale_row(entry))
+	end
+
 	local locale_select = create_list_control {
-		iup.vbox {
-			iup.frame {
-				iup.hbox {
-					alignment = "ACENTER",
-					iup.button {
-						title = "",
-						_locale = "en",
-						image = local_path .. "assets/flag_en.png",
-						size = "256x171",
-						action = function(self)
-							locale_select_action(self, "en")
-						end,
-					},
-					iup.fill { },
-					iup.stationbutton {
-						action = function(self)
-							locale_select_action(self, "en")
-						end,
-						title = "English",
-						size = "x50",
-						font = "40",
-					},
-				},
-			},
-			iup.frame {
-				iup.hbox {
-					alignment = "ACENTER",
-					iup.button {
-						title = "",
-						_locale = "es",
-						image = local_path .. "assets/flag_es.png",
-						size = "256x171",
-						action = function(self)
-							locale_select_action(self, "es")
-						end,
-					},
-					iup.fill { },
-					iup.stationbutton {
-						action = function(self)
-							locale_select_action(self, "es")
-						end,
-						title = "Espanol",
-						size = "x50",
-						font = "40",
-					},
-				},
-			},
-			iup.frame {
-				iup.hbox {
-					alignment = "ACENTER",
-					iup.button {
-						title = "",
-						_locale = "fr",
-						image = local_path .. "assets/flag_fr.png",
-						size = "256x171",
-						action = function(self)
-							locale_select_action(self, "fr")
-						end,
-					},
-					iup.fill { },
-					iup.stationbutton {
-						action = function(self)
-							locale_select_action(self, "fr")
-						end,
-						title = "Francais",
-						size = "x50",
-						font = "40",
-					},
-				},
-			},
-			iup.frame {
-				iup.hbox {
-					alignment = "ACENTER",
-					iup.button {
-						title = "",
-						_locale = "pt",
-						image = local_path .. "assets/flag_pt.png",
-						size = "256x171",
-						action = function(self)
-							locale_select_action(self, "pt")
-						end,
-					},
-					iup.fill { },
-					iup.stationbutton {
-						action = function(self)
-							locale_select_action(self, "pt")
-						end,
-						title = "Portugues",
-						size = "x50",
-						font = "40",
-					},
-				},
-			},
-		},
+		iup.vbox(locale_rows)
 	}
 	
 	
@@ -555,6 +548,37 @@ setup_handler = function()
 			},
 		},
 	})
+	
+	local cur_lang_entry = read_lang_entry(get_setup_locale())
+	if cur_lang_entry.game_supported == "no" then
+		make_base(iup.vbox {
+			alignment = "ACENTER",
+			iup.fill { },
+			iup.label {
+				title = lget("setup", "LANGUAGE_SUPPORT_NOTE", "The language you have selected is not supported by the game. Neoloader will show localized text, but the game will remain in your current locale."),
+				wordwrap = "YES",
+				size = "%50x",
+			},
+			iup.fill { },
+			iup.hbox {
+				iup.fill { },
+				iup.stationbutton {
+					size = button_scalar(),
+					title = lget("generic", "NAV_PREV", "Go back"),
+					action = function(self)
+						setup_cur_panel = setup_cur_panel - 1
+						local next_panel = setup_panels[setup_cur_panel]
+						setup_viewer.value = next_panel
+					end,
+				},
+				iup.stationbutton {
+					size = button_scalar(),
+					title = lget("generic", "NAV_NEXT", "Next"),
+					action = setup_next,
+				},
+			},
+		})
+	end
 	
 	make_base(iup.vbox {
 		alignment = "ACENTER",

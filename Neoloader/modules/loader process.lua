@@ -154,16 +154,14 @@ do
         trigger_plugins(ini_list)
         ProcessEvent("LME_PLUGINS_LOADED")
 	elseif neo.api.get_statelock_value() then
+		-- cooperative mode, but post-pathlock: safe to schedule + activate immediately
+		cp("Late trigger setup, statelock is engaged; plugins will be launched momentarily", 1)
 		trigger_plugins(ini_list)
 		ProcessEvent("LME_PLUGINS_LOADED")
     else
-		if neo.api.get_statelock_value() then
-			cp("Late trigger setup, statelock is engaged; plugins will be launched momentarily", 1)
-		else
-			-- cooperative mode: schedule now, but activation will be delayed
-			-- by loader_blocked() until the game's PLUGINS_LOADED.
-			cp("Cooperative mode, plugins will be delayed until after default loader completes!", 1)
-		end
+		-- cooperative mode: schedule now, but activation will be delayed
+		-- by loader_blocked() until the game's PLUGINS_LOADED.
+		cp("Cooperative mode, plugins will be delayed until after default loader completes!", 1)
         trigger_plugins(ini_list)
 
         RegisterEvent(function()

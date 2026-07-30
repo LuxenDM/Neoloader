@@ -709,6 +709,29 @@ register_resolution {
 	end,
 }
 
+register_resolution {
+	key         = "clean_registry",
+	title       = "Clean plugin registry",
+	description = "Removes missing or invalid plugin registration entries and compacts the remaining registry entries.",
+	kind        = "terminal",
+	priority    = 200,
+
+	visible_if = function(state)
+		return state.capabilities.has_lme
+			and state.capabilities.has_lib
+	end,
+
+	run = function(state)
+		local ok, result = neo.api.registry.cleanse_registration()
+
+		if not ok then
+			error("Unable to clean plugin registry: " .. tostring(result))
+		end
+
+		lib.reload()
+	end,
+}
+
 
 
 

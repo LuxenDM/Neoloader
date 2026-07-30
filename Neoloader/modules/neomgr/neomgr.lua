@@ -23,38 +23,63 @@ end
 
 
 --verify API compatibility
-local api_check = lib.get_gstate()
+local api_check = lib.get_gstate().version_lme
 for k, v in ipairs {
-	api_check.major == 3,
-	api_check.minor >= 12,
+	api_check[1] == 3,
+	api_check[2] >= 12,
 } do
 	assert(v, "This version of neomgr is not compatible with the version of Neoloader installed! Please use the version bundled with your latest installation of Neoloader!")
 end
 
 local neo = {} --public table
 
---babel support
+-- Lexicon support
 
-local babel, shelf_id, update_class
+local lexicon
+local shelf_id
+local update_class
+
 local bstr = function(id, def)
 	return def
 end
 
-neo.add_translation = function() end --stub until babel ready
+local lexicon_support = function()
+	lexicon = lib.get_class("lexicon", "0")
 
-local babel_support = function()
-	babel = lib.get_class("babel", "0")
-	
-	shelf_id = babel.register(re_path .. "lang/", {'en', 'es', 'fr', 'pt'})
-	
+	for _, lang_code in ipairs(lexicon.get_support_list()) do
+		local page_id, err = lexicon.register(
+			"neomgr",
+			re_ver,
+			re_path .. "lang/" .. lang_code .. ".ini"
+		)
+
+		if not shelf_id and page_id then
+			shelf_id = page_id
+		end
+
+		if not page_id then
+			cp(
+				"Unable to register Lexicon locale "
+				.. tostring(lang_code)
+				.. ": "
+				.. tostring(err),
+				3
+			)
+		end
+	end
+
 	bstr = function(id, def)
-		return babel.fetch(shelf_id, id, def)
+		if not shelf_id then
+			return def
+		end
+
+		return lexicon.fetch(
+			shelf_id,
+			id,
+			def
+		)
 	end
 
-	neo.add_translation = function(path_to_file, file_lang_code)
-		return babel.add_new_lang(shelf_id, path_to_file, file_lang_code)
-	end
-	
 	update_class()
 end
 
@@ -93,7 +118,7 @@ local update_class = function()
 	local class = {
 		CCD1 = true,
 		smart_config = {
-			title = bstr(1, "Neoloader Lightweight Management Utility"),
+			title = bstr(1, "Neoloader Lightweight Management Interface"),
 			cb = function(cfg, val)
 				if config[cfg] then
 					config[cfg] = val
@@ -119,7 +144,7 @@ local update_class = function()
 			"enable_dependents",
 			"show_debuginfo",
 		},
-		description = bstr(5, "neomgr is the bundled management interace for Neoloader. It provides a lightweight interface for configuring Neoloader and managing plugins."),
+		description = bstr(5, "neomgr is the bundled management interface for Neoloader. It provides a lightweight interface for configuring Neoloader and managing plugins."),
 		commands = {
 			"/neo: open neoloader's manager",
 			"/neosetup: setup neoloader if uninstalled",
@@ -620,7 +645,7 @@ local diag_constructor = function()
 				if auth_key then
 					apply_func(auth_key)
 				else
-					lib.request_auth(bstr(1, "Neoloader Lightweight Manager [neomgr]"), apply_func)
+					lib.request_auth(bstr(1, "Neoloader Lightweight Management Interface"), apply_func)
 				end
 			end,
 		}
@@ -814,7 +839,7 @@ local diag_constructor = function()
 					if lib.is_exist(v.name, v.version) then
 						if lib.get_state(v.name, v.version).load == "YES" then
 							if lib.get_state(v.name, v.version).complete then
-								log_display = log_display .. bstr(70, "This plugin is enabled and loaded")
+								log_display = log_display .. bstr(70, "This plugin has loaded successfully")
 							else
 								if lib.get_state(v.name, v.version).plugin_is_new then
 									log_display = log_display .. bstr(80, "This plugin is new and hasn't loaded yet") .. "!"
@@ -835,7 +860,7 @@ local diag_constructor = function()
 									ver_display = ver_display .. (ver_index > 1 and ", v" or " v")
 									ver_display = ver_display .. ver_item .. (lib.is_ready(v.name, ver_item) and " (enabled)" or " (disabled)")
 								end
-								log_display = log_display .. "\n		" .. bstr(85, "The versions available are") .. ver_display
+								log_display = log_display .. "\n		" .. bstr(85, "The versions available are") .. ": " .. ver_display
 							end
 						else
 							log_display = log_display .. bstr(76, "This plugin has not been detected by Neoloader")
@@ -1115,7 +1140,7 @@ local diag_constructor = function()
 			end,
 			value = config.sort_dir == "UP" and 1 or 2,
 			bstr(27, "Ascending"),
-			bstr(28, "Decending"),
+			bstr(28, "Descending"),
 		}
 		
 		local root_modlist_panel = iup.stationsubframe {
@@ -1256,11 +1281,11 @@ local diag_constructor = function()
 				default = "NO",
 			}
 			valid_config.override_disabled_plugin_state = {
-				display = bstr(-1, "Load Neoloader when default loader is disabled"),
+				display = bstr(92, "Load Neoloader when default loader is disabled"),
 				default = "NO",
 			}
 			valid_config.launch_mode = {
-				display = bstr(-1, "Select Neoloader operating mode in conjunction with Default plugin loader"),
+				display = bstr(93, "Select Neoloader operating mode in conjunction with Default plugin loader"),
 				default = "cooperative",
 				valid = {
 					"cooperative",
@@ -1268,7 +1293,7 @@ local diag_constructor = function()
 				},
 			}
 			valid_config.stat_graphing = {
-				display = bstr(-1, "Log periodic performance metrics"),
+				display = bstr(94, "Log periodic performance metrics"),
 				default = "NO",
 			}
 		end
@@ -1453,7 +1478,7 @@ local diag_constructor = function()
 								iup.GetParent(self).visible = "NO"
 								auth_key = auth
 							end
-							lib.request_auth(bstr(1, "Neoloader Lightweight Manager [neomgr]"), obtain_key)
+							lib.request_auth(bstr(1, "Neoloader Lightweight Management Interface"), obtain_key)
 						end,
 					},
 				},
@@ -1476,7 +1501,7 @@ local diag_constructor = function()
 							},
 							iup.hbox {
 								iup.label {
-									title = bstr(-1, "This is ignored if you are using cooperative mode"),
+									title = bstr(95, "This is ignored if you are using cooperative mode"),
 								},
 							},
 							iup.fill {
@@ -1495,6 +1520,17 @@ local diag_constructor = function()
 								},
 								iup.fill { },
 								notif_select,
+							},
+							iup.fill {
+								size = tostring(Font.Default),
+							},
+							iup.hbox {
+								iup.stationbutton {
+									title = bstr(96, "Open guided configuration..."),
+									action = function()
+										gkinterface.GKProcessCommand("neosetup")
+									end,
+								},
 							},
 							iup.fill { },
 						},
@@ -1675,7 +1711,7 @@ local diag_constructor = function()
 			end,
 		},
 		iup.stationbutton {
-			title = bstr(55, "View notifications"),
+			title = bstr(90, "View notifications"),
 			bgcolor = "150 150 150",
 			expand = "HORIZONTAL",
 			size = "x" .. button_scalar(),
@@ -1698,7 +1734,7 @@ local diag_constructor = function()
 			end,
 		},
 		iup.stationbutton {
-			title = bstr(47, "Configure Neoloader"),
+			title = bstr(89, "Configure Neoloader"),
 			bgcolor = "150 150 150",
 			expand = "HORIZONTAL",
 			size = "x" .. button_scalar(),
@@ -1727,7 +1763,6 @@ local diag_constructor = function()
 			local close_action = function()
 				notif_panel.unreg()
 				HideDialog(iup.GetDialog(self))
-				iup.Destroy(iup.GetDialog(self))
 			end
 			
 			if apply_flag and #apply_actions > 0 then
@@ -1804,7 +1839,6 @@ local diag_constructor = function()
 					size = "x" .. button_scalar(),
 					action = function(self)
 						HideDialog(iup.GetDialog(self))
-						iup.Destroy(iup.GetDialog(self))
 						lib.reload()
 					end,
 				},
@@ -1861,4 +1895,4 @@ neo.open = diag_constructor
 neo.mgr = true
 update_class()
 
-lib.require({{name="babel", version="0"}}, babel_support)
+lib.require({{name="lexicon", version="0"}}, babel_support)

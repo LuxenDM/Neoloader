@@ -43,17 +43,17 @@ local recovery_system = {}
 local auth_key = SHA1(tostring(gkmisc.GetGameTime() + math.random()))
 
 local version = {
-	strver = "7.0.0 -PBR2",
+	strver = "7.0.0 -PBR3",
 	[1] = 7,
 	[2] = 0,
 	[3] = 0,
-	[4] = "PBR2",
+	[4] = "PBR3",
 }
 local lme_ver = {
-	strver = "3.12.0",
+	strver = "3.12.1",
 	[1] = 3,
 	[2] = 12,
-	[3] = 0,
+	[3] = 1,
 	[4] = "",
 }
 
@@ -236,7 +236,6 @@ do
 		"init.lua.version",
 		"recovery.lua",
 		"main.lua",
-		"setup.lua",
 		
 		"modules/api.lua",
 		"modules/config.lua",
@@ -244,6 +243,7 @@ do
 		"modules/loader process.lua",
 		"modules/locale.lua",
 		"modules/registry.lua",
+		"modules/setup.lua",
 		"modules/stats.lua",
 		"modules/update patcher.lua",
 		"modules/zcom.lua",
@@ -454,6 +454,10 @@ load_module("loader process.lua")  --< triggers loading system; registered inter
 
 neo.stats.checkpoint("Checking status of bundled assets")
 
+if not lib.is_exist(local_path .. "modules/lexicon/lexicon.lua") then
+	lib.register(local_path .. "modules/lexicon/lexicon.lua")
+end
+
 if not lib.is_exist(local_path .. "modules/neomgr/neomgr.lua") then
 	lib.register(local_path .. "modules/neomgr/neomgr.lua")
 end
@@ -496,11 +500,11 @@ local recov_startup_mgr_check = function()
 						end,
 						
 						run = function()
-							lib.set_load(neo.auth_key, "neomgr", "0", "YES")
+							lib.set_load(neo.auth_key, local_path .. "modules/neomgr/neomgr.lua", nil, "YES")
 							lib.lme_configure("current_mgr", "neomgr", neo.auth_key)
-							lib.activate("neomgr", "0", neo.auth_key)
+							lib.activate_plugin(local_path .. "modules/neomgr/neomgr.lua", nil, neo.auth_key)
 							RegisterUserCommand("neo", function() lib.open_config() end)
-							lib.execute("neomgr", "0", "open")
+							lib.execute(local_path .. "modules/neomgr/neomgr.lua", nil, "open")
 						end,
 					},
 				}
@@ -522,6 +526,9 @@ local recov_startup_mgr_check = function()
 	else
 		lib.log_error("Management interface was not found! " .. lib.lme_get_config("current_mgr") .. " wasn't listed as 'ready'!")
 	end
+	
+	neo.api.lex_check()
+	load_module("setup.lua")
 end
 
 if (neo.api.get_exec_mode() == "independent") then

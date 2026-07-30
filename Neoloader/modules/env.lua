@@ -4,7 +4,7 @@ These functions and variables are often required for certain functions or plugin
 Most of these were ripped from Draugath's BarebonesIF interface replacer - thanks, Draugath!
 ]]--
 
-
+lib.log_error("Constructing minimum environmental variables")
 
 
 HUDSize = HUDSize or function(x, y)
@@ -21,20 +21,20 @@ end
 
 local diag_tree = {} --tracks dialogs opened with ShowDialog function
 
-HideDialog = HideDialog or function(dlg) 
+HideDialog = (isdeclared("HideDialog") and HideDialog) or function(dlg) 
 	if diag_tree[#diag_tree] == dlg then
 		diag_tree[#diag_tree] = nil
 	end
 	dlg:hide() 
 end
 
-HideAllDialogs = HideAllDialogs or function()
+HideAllDialogs = (isdeclared("HideAllDialogs") and HideAllDialogs) or function()
 	for i=#diag_tree, 1, -1 do
 		HideDialog(diag_tree[i])
 	end
 end
 
-ShowDialog = ShowDialog or function(dlg, x, y)
+ShowDialog = (isdeclared("ShowDialog") and ShowDialog) or function(dlg, x, y)
 	table.insert(diag_tree, dlg)
 	if x then
 		dlg:showxy(x, y) 
@@ -43,18 +43,11 @@ ShowDialog = ShowDialog or function(dlg, x, y)
 	end 
 end
 
-PopupDialog = PopupDialog or function(dlg, x, y) --depreciated! if you want popup behavior, use :popup() directly!
+PopupDialog = (isdeclared("PopupDialog") and PopupDialog) or function(dlg, x, y) --deprecated! if you want popup behavior, use :popup() directly!
 	ShowDialog(dlg, x, y)
 end
 
-
----wtf is this function even for?
-CreditAndCrystal = (isdeclared("CreditAndCrystal") and CreditAndCrystal) or function(in1, in2, in3, in4, in5)
-	print(type(in1) .. ">" .. tostring(in1))
-	print(type(in2) .. ">" .. tostring(in2))
-	print(type(in3) .. ">" .. tostring(in3))
-	print(type(in4) .. ">" .. tostring(in4))
-	print(type(in5) .. ">" .. tostring(in5))
+CreditAndCrystal = (isdeclared("CreditAndCrystal") and CreditAndCrystal) or function()
 	return 1
 end
 
@@ -108,7 +101,7 @@ FactionColor_RGB = FactionColor_RGB or { --Matched to paint color instead of sta
 	[9] = "20 21 20", --corvus
 	[10] = "105 198 162", --tunguska
 	[11] = "143 8 106", --aeolus
-	[12] = "170 336 19", --ineubis
+	[12] = "170 255 19", --ineubis (original G value is 336)
 	[13] = "5 118 92", --xang xi
 	[100] = "85 85 85", --hive generic
 	[101] = "100 100 100", --hive skirm small

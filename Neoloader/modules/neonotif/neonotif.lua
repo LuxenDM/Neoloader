@@ -29,35 +29,65 @@ end
 cp("neonotif " .. re_ver .. " is operating out of " .. re_path)
 
 --verify API compatibility
-local api_check = lib.get_gstate()
+local api_check = lib.get_gstate().version_lme
 for k, v in ipairs {
-	api_check.major == 3,
-	api_check.minor >= 12,
+	api_check[1] == 3,
+	api_check[2] >= 12,
 } do
-	assert(v, "This version of neomgr is not compatible with the version of Neoloader installed! Please use the version bundled with your latest installation of Neoloader!")
+	assert(v, "This version of neonotif is not compatible with the version of Neoloader installed! Please use the version bundled with your latest installation of Neoloader!")
 end
 
 local neo = {}
-local babel, shelf_id, update_class
+
+
+
+-- Lexicon support
+
+local lexicon
+local shelf_id
+local update_class
+
 local bstr = function(id, def)
 	return def
 end
 
-neo.add_translation = function() end --stub until babel is available
+local lexicon_support = function()
+	lexicon = lib.get_class("lexicon", "0")
 
-local babel_support = function()
-	babel = lib.get_class("babel", "0")
-	
-	shelf_id = babel.register(re_path .. "lang/", {'en', 'es', 'fr', 'pt'})
-	
+	for _, lang_code in ipairs(lexicon.get_support_list()) do
+		local page_id, err = lexicon.register(
+			"neonotif",
+			re_ver,
+			re_path .. "lang/" .. lang_code .. ".ini"
+		)
+
+		if not shelf_id and page_id then
+			shelf_id = page_id
+		end
+
+		if not page_id then
+			cp(
+				"Unable to register Lexicon locale "
+				.. tostring(lang_code)
+				.. ": "
+				.. tostring(err),
+				3
+			)
+		end
+	end
+
 	bstr = function(id, def)
-		return babel.fetch(shelf_id, id, def)
+		if not shelf_id then
+			return def
+		end
+
+		return lexicon.fetch(
+			shelf_id,
+			id,
+			def
+		)
 	end
 
-	neo.add_translation = function(path_to_file, file_lang_code)
-		return babel.add_new_lang(shelf_id, path_to_file, file_lang_code)
-	end
-	
 	update_class()
 end
 
@@ -79,12 +109,12 @@ update_class = function()
 			end,
 			echo_notif = {
 				type = "toggle",
-				display = bstr(2, "Print LME notifications in chat"),
+				display = bstr(2, "Display notifications in chat"),
 				[1] = config.echo_notif,
 			},
 			img_scale = {
 				type = "slider",
-				display = bstr(13, "Notification image size"),
+				display = bstr(13, "Notification image size") .. ":",
 				min = 8,
 				max = 256,
 				default = tonumber(config.img_scale),
@@ -94,7 +124,7 @@ update_class = function()
 		},
 		description = bstr(3, "neo_notif is the bundled notification handler for Neoloader. It provides a simple system for event handling meant for informing the user about system events."),
 		commands = {
-			bstr(4, "There are no commands registered for neo_notif"),
+			bstr(4, "There are no commands registered for neo_notif. Other plugins and tools use it directly."),
 		},
 		manifest = {
 			re_path .. "neo_notif.lua",
@@ -105,7 +135,6 @@ update_class = function()
 			re_path .. "assets/notif_regdirty.png",
 			re_path .. "assets/notif_success.png",
 			re_path .. "assets/notif_unhandled.png",
-			re_path .. "assets/Neoloader v7 icon (PBR).png",
 			
 			re_path .. "lang/en.ini",
 			re_path .. "lang/es.ini",
@@ -159,7 +188,7 @@ local new_generator = function(notif_to_handle, echo_func, data_func)
 	
 	if type(echo_func) ~= "function" then
 		echo_func = function(data)
-			return "[" .. (data.title or notif_to_handle).. "] " .. (data.subtitle or bstr(5, "No handler for notification"))
+			return "[" .. (data.title or notif_to_handle).. "] " .. (data.subtitle or bstr(5, "Unable to display unregistered notification type"))
 		end
 	end
 	
@@ -355,7 +384,7 @@ new_generator("PLUGIN_FAILURE",
 						font = Font.H6,
 					},
 					iup.label {
-						title = tostring(data.error_string or bstr(12, "<failed to fetch error string>")),
+						title = tostring(data.error_string or ( "<" .. bstr(12, "failed to fetch error string") .. ">"),
 						font = Font.H6,
 					},
 				},
@@ -367,7 +396,7 @@ new_generator("PLUGIN_FAILURE",
 new_generator("NEO_REGISTRY_DIRTY", --[1]: expected [2]: total found
 	function(data) --notification chat print
 		return "Neoloader has detected dirty entries in the registry. This should not cause issues, but can be fixed from the recovery menu."
-			.. "\n\t" .. "The registry expected to find" .. " " .. tostring(data[1]) .. " " .. "entry, but instead got" .. " " .. tostring(data[2])
+			.. "\n\t" .. "The registry expected to find" .. " " .. tostring(data.expected) .. " " .. "entries, but instead got" .. " " .. tostring(data.total)
 	end,
 	function(data) --notification iup generator
 		return iup.pdarootframe {
@@ -381,15 +410,15 @@ new_generator("NEO_REGISTRY_DIRTY", --[1]: expected [2]: total found
 				},
 				iup.vbox {
 					iup.label {
-						title = bstr(11, "Neoloader has detected dirty entries in the registry") .. "!",
+						title = bstr(14, "Neoloader has detected dirty entries in the registry") .. "!",
 						font = Font.H4,
 					},
 					iup.label {
-						title = "This should not cause issues, but can be fixed from the recovery menu.",
+						title = bstr(15, "This should not cause issues, but can be fixed from the recovery menu."),
 						font = Font.H6,
 					},
 					iup.label {
-						title = "The registry expected to find" .. " " .. tostring(data[1]) .. " " .. "entry, but instead got" .. " " .. tostring(data[2]),
+						title = bstr(16, "The registry expected to find") .. " " .. tostring(data.expected) .. " " .. bstr(17, "entries, but instead got") .. " " .. tostring(data.total),
 						font = Font.H6,
 					},
 				},

@@ -23,6 +23,9 @@ neo.lib.get_gstate = function()
 	data.major = neo.lme_ver[1]		--will be deprecated in favor of table
 	data.minor = neo.lme_ver[2]		--will be deprecated in favor of table
 	data.patch = neo.lme_ver[3]		--will be deprecated in favor of table
+	
+	data.version_provider = neo.version
+	data.version_lme = neo.lme_ver
 
 	-- locks (through your API getters)
 	data.pathlock = neo.api.get_pathlock_value()

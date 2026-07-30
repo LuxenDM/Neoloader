@@ -1,0 +1,3 @@
+eo is the lang-code for Esperanto, a 'constructed language'. This is intended as a low-barrier-of-entry second or third language people can learn.
+
+Why is it supported here? Mostly as a showcase of language support structure and the ability to handle translation pipelines in Lexicon. I also REALLY like the idea of making communication easier for _everyone_. Anything that fosters cooperation and international understanding should be championed, so that we as humans may all step forward together.

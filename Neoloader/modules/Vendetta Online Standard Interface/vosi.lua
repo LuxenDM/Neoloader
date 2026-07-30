@@ -10,13 +10,12 @@ path=vosi.lua
 
 [metadata]
 description=This stub tells the Vendetta Online Standard Interface to load. Neoloader will launch that anyways if no interface is available, but this should help make interface selection and management more user-evident. It also provides methods to access the LME in the default interface directly.
-version=1.1.0
 owner=Neoloader|7.0.0
 type=lua
 created=2025-10-08
 ]]--
 
-local mod_path = lib.get_path() or lib.get_path("vosi-bridge", "0")
+local mod_path = lib.get_path() or lib.get_path("vosi-bridge", "1.0.0")
 local self_id, self_ver = lib.pass_ini_identifier(mod_path .. "vosi.lua", "")
 if self_id == mod_path then
 	error("Catastrophic failure")
@@ -60,16 +59,24 @@ local bstr = function(id, val)
 	return val
 end
 
-local update_class, babel, ref_id
+local update_class, lex, ref_id
 local babel_func = function()
-	babel = lib.get_class("babel", "0")
-	ref_id = babel.register(mod_path, "lang/", {'en', 'es', 'fr', 'pt'})
-	private.bstr = function(id, val)
-		return babel.fetch(ref_id, id, val)
+	local lex_ver = lib.get_latest("lexicon", "1.0.0", "1.4.9")
+	lex = lib.get_class("lexicon", lex_ver)
+	ref_id = lex.register("vosi-bridge", self_ver, mod_path .. "lang/en.ini")
+	
+	local supported_lang = {"da", "de", "eo", "es", "fr", "id", "it", "nl", "pl", "pt", "tr"}
+	
+	for _, lc in ipairs(supported_lang) do
+		lex.register("vosi-bridge", self_ver, local_path .. "lang/" .. lc .. ".ini")
 	end
 	
-	public.add_translation = function(path, lang_code)
-		babel.add_new_lang(ref_id, path, lang_code)
+	private.bstr = function(id, val)
+		return lex.fetch(ref_id, id, val)
+	end
+	
+	public.add_translation = function(path)
+		lex.register("vosi-bridge", self_ver, path)
 	end
 	
 	update_class()
@@ -135,14 +142,18 @@ local button_creator = function()
 		end
 		y_pos = y_pos - (sizes[2] * 1.5)
 		
+		--SetLocale2("ja")
 		local neobutton = iup.button {
 			title = bstr(4, "Open Mod Manager"),
+			--title = "Open Mod Manager" .. string.char(195, 169) .. ", é 編集",
+			font = odbutton.font,
 			size = odbutton.size,
 			cx = x_pos,
 			cy = y_pos,
 			image = odbutton.image,
 			action = open_config_or_recovery,
 		}
+		--SetLocale2("en")
 		
 		
 		iup.Append(OptionsDialog[1][1], neobutton)
