@@ -384,7 +384,7 @@ new_generator("PLUGIN_FAILURE",
 						font = Font.H6,
 					},
 					iup.label {
-						title = tostring(data.error_string or ( "<" .. bstr(12, "failed to fetch error string") .. ">"),
+						title = tostring(data.error_string or ( "<" .. bstr(12, "failed to fetch error string") .. ">")),
 						font = Font.H6,
 					},
 				},
@@ -449,4 +449,4 @@ neo.notif_handler = true
 
 update_class()
 
-lib.require({{name="babel", version="0"}}, babel_support)
+lib.require({{name="babel", version="0"}}, lexicon_support)

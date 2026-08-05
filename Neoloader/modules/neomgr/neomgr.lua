@@ -90,7 +90,7 @@ local auth_key
 local config = {
 	auto_open = gkrs("neomgr", "auto_open", "NO"),
 	--[[
-		depreciated en/disabling "on-top" visual notifications
+		deprecated the option to enable or disable "on-top" visual notifications
 		
 		making a notification system that didn't interfere with the user's current activity cannot work , as any notification would have to be rendered "on top" and block clicks until removed. If there is a way to get non-blocking topmost dialogs, this can be reimplemented. For now, notifications can only be viewed in a specific area, and/or implemented into other plugins directly.
 	]]--
@@ -1820,36 +1820,46 @@ local diag_constructor = function()
 		topmost = "YES",
 		fullscreen = "YES",
 		bgcolor = "0 0 0",
+		expand = "NO",
+		shrink = "YES",
 		defaultesc = close_button,
-		iup.vbox {
-			iup.hbox {
-				iup.fill { },
-				iup.label {
-					title = bstr(1, "Neoloader Lightweight Management Interface"),
+		iup.frame {
+			image = "",
+			bgcolor = "0 0 0 0 *",
+			segmented = "0 0 1 1",
+			expand = "NO",
+			size = HUDSize(1, 1),
+			
+			iup.vbox {
+				iup.hbox {
+					iup.fill { },
+					iup.label {
+						title = bstr(1, "Neoloader Lightweight Management Interface"),
+					},
+					iup.fill { },
 				},
-				iup.fill { },
+				iup.hbox {
+					iup.label {
+						title = "LME " .. bstr(59, "Provider") .. ": " .. lib[1] .. " " .. bstr(14, "version") .. " " .. lib.get_gstate().version.strver,
+					},
+					iup.fill {},
+					iup.stationbutton {
+						title = bstr(60, "Reload"),
+						size = "x" .. button_scalar(),
+						action = function(self)
+							HideDialog(iup.GetDialog(self))
+							lib.reload()
+						end,
+					},
+					iup.fill {
+						size = "%1",
+					},
+					close_button,
+				},
+				tabs_view,
+				panel_view,
 			},
-			iup.hbox {
-				iup.label {
-					title = "LME " .. bstr(59, "Provider") .. ": " .. lib[1] .. " " .. bstr(14, "version") .. " " .. lib.get_gstate().version.strver,
-				},
-				iup.fill {},
-				iup.stationbutton {
-					title = bstr(60, "Reload"),
-					size = "x" .. button_scalar(),
-					action = function(self)
-						HideDialog(iup.GetDialog(self))
-						lib.reload()
-					end,
-				},
-				iup.fill {
-					size = "%1",
-				},
-				close_button,
-			},
-			tabs_view,
-			panel_view,
-		}
+		},
 	}
 	
 	cp("Mapping Dialog")
@@ -1857,6 +1867,7 @@ local diag_constructor = function()
 	cp("updating")
 	modlist_panel.ctl_update(config.sort_type)
 	config_panel.ctl_update()
+	root_diag.size = HUDSize(1, 1)
 	cp("Showing")
 	ShowDialog(root_diag)
 end
@@ -1895,4 +1906,4 @@ neo.open = diag_constructor
 neo.mgr = true
 update_class()
 
-lib.require({{name="lexicon", version="0"}}, babel_support)
+lib.require({{name="lexicon", version="0"}}, lexicon_support)

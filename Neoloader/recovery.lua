@@ -503,17 +503,23 @@ register_resolution {
 		lib.lme_configure("current_if", "vo-if", au)
 		lib.lme_configure("current_mgr", "neomgr", au)
 		do
-			if not lib.is_exist("neomgr") then
-				lib.register(local_path .. "modules/neomgr/neomgr.lua")
+			local neomgr_ini = local_path .. "modules/neomgr/neomgr.lua"
+			
+			if not lib.is_exist(neomgr_ini) then
+				lib.register(neomgr_ini)
 			end
-			lib.set_load(au, "neomgr", "0", "YES")
+			
+			lib.set_load(au, neomgr_ini, nil, "YES")
 		end
 		lib.lme_configure("current_notif", "neonotif", au)
 		do
-			if not lib.is_exist("neonotif") then
-				lib.register(local_path .. "modules/neonotif/neonotif.lua")
+			local neonotif_ini = local_path .. "modules/neonotif/neonotif.lua"
+			
+			if not lib.is_exist(neonotif_ini) then
+				lib.register(neonotif_ini)
 			end
-			lib.set_load(au, "neonotif", "0", "YES")
+			
+			lib.set_load(au, neonotif_ini, nil, "YES")
 		end
 		lib.lme_configure("launch_mode", "independent", au)
 		

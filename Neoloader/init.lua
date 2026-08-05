@@ -529,6 +529,12 @@ local recov_startup_mgr_check = function()
 	
 	neo.api.lex_check()
 	load_module("setup.lua")
+	
+	
+	if gkini.ReadString("Neoloader", "first_run_setup", "NO") == "YES" then
+		gkini.WriteString("Neoloader", "first_run_setup", "")
+		gkinterface.GKProcessCommand("neosetup")
+	end
 end
 
 if (neo.api.get_exec_mode() == "independent") then

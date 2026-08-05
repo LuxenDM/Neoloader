@@ -9,7 +9,7 @@ how it works:
 	public.transliterate_for_display(str, lang_code)
 
 1) What font atlas is currently available?
-	(GetCurrentLanguage() -> current glyph family)
+	(GetLocale() -> current glyph family)
 2) What glyph family does this translation require?
 	(glyph_family_lookup[lang_code])
 3) If unavailable, how do we degrade it safely?
@@ -239,11 +239,19 @@ local transliterators = {
 }
 
 trlit.register_glyph_family = function(lang_code, family)
-	if glyph_family_lookup[lang_code] then
-		return
+	lang_code = trlit.normalize_lang_code(lang_code)
+	family = tostring(family or "")
+
+	if lang_code == "" or family == "" then
+		return false, "invalid glyph family registration"
 	end
-	
+
+	if glyph_family_lookup[lang_code] then
+		return true
+	end
+
 	glyph_family_lookup[lang_code] = family
+	return true
 end
 
 trlit.register_transliterator_service = function(family, trtable)
@@ -296,7 +304,7 @@ trlit.transliterate_for_display = function(str, lang_code)
 	cp("\12700FF00Request to transliterate")
 	cp("\tworking on " .. str)
 
-	local game_code = trlit.normalize_lang_code(GetCurrentLanguage())
+	local game_code = trlit.normalize_lang_code(GetLocale())
 	local text_code = trlit.normalize_lang_code(lang_code)
 	
 	cp("\tgame is running in " .. game_code .. "; text_code is " .. text_code)

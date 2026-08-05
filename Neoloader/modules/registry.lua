@@ -1,6 +1,6 @@
 --[[
 [metadata]
-description=the Registery is the list of plugins Neoloader is aware of.
+description=the Registry is the list of plugins Neoloader is aware of.
 version=1.0.15
 owner=Neoloader|7.0.0
 type=lua
@@ -197,16 +197,37 @@ api.get_latest_ver = function(id, ver_min, ver_max)
 		return false, "exact_version_required"
 	end
 	
+	if not ver_min then
+		-- Broad query: newest known version, active preferred.
+		local latest = ver_list.latest_active
+
+		if (not latest) or latest == "0" then
+			latest = ver_list.latest_inactive
+		end
+
+		if not latest or latest == "0" then
+			return false, "no_versions_known"
+		end
+
+		return true, latest
+	end
+
+	-- Range resolution may inspect inactive versions too.
 	local ver_limit = ver_list.latest_active
-	if (not ver_limit) or (ver_limit == "0") then
+
+	if (not ver_limit) or ver_limit == "0" then
 		ver_limit = ver_list.latest_inactive
 	end
 	
-	if not ver_min then
-		return true, ver_limit
+	if tostring(ver_min) == "0" then
+		local resolved, err = api.substitute_zero(id, ver_min)
+
+		if not resolved then
+			return false, err
+		end
+
+		ver_min = resolved
 	end
-	
-	ver_min = api.substitute_zero(id, ver_min)
 	
 	if api.compare_ver(ver_min, ver_limit) > 0 then
 		return false, "min_too_high"
@@ -438,11 +459,9 @@ end
 -- mode = "register" | "activate"
 _update_indexes = function(record, mode)
 	local id, ver = record.plugin_id, record.plugin_version
-	list_versions[id] = list_versions[id] or { latest_active = "0", latest_inactive = "0" }
-
-
+	
 	-- ensure per-ID tables
-	list_versions[id]   = list_versions[id]   or { latest_active = nil, latest_inactive = nil }
+	list_versions[id] = list_versions[id] or { latest_active = nil, latest_inactive = nil }
 	version_order[id]   = version_order[id]   or {}
 	plugin_lookups[id.."."..ver] = record.index
 
@@ -461,16 +480,22 @@ _update_indexes = function(record, mode)
 	local newest = vo[#vo]
 	list_versions[id].latest_inactive = newest
 
-	-- refresh latest_active only on activation success (and if newest)
+	-- Recompute the newest enabled version that is launching or complete.
 	if mode == "activate" then
 		local latest_ok = nil
 
 		for i = #vo, 1, -1 do
 			local v = vo[i]
 			local state = list_versions[id][v]
-			local candidate = plugin_lookups[id .. "." .. v]
+			local candidate_index = plugin_lookups[id .. "." .. v]
+			local candidate = candidate_index and registry[candidate_index]
 
-			if state ~= "NO" and candidate and ( candidate.launched == true or candidate.complete == true ) then
+			if state ~= "NO"
+			and candidate
+			and (
+				candidate.launched == true
+				or candidate.complete == true
+			) then
 				latest_ok = v
 				break
 			end
@@ -631,21 +656,21 @@ api.cleanse_registration = function()
         else
 			empty_counter = 0
 			max_seen = n
+			
+			if gksys.IsExist(path) then
+				-- Try building INI to make sure it’s still sane
+				local ini, err = api.build_ini(path)
+				if ini then
+					table.insert(survivors, { path = path, ini = ini })
+				else
+					-- optionally log that regN is stale / broken
+					neo.lib.log_error("Stale registry entry at " .. key .. ": " .. tostring(err), 2)
+				end
+			else
+				neo.lib.log_error("Stale registry entry at " .. key .. ": missing file " .. tostring(path), 2)
+			end
 		end
-
-        if gksys.IsExist(path) then
-            -- Try building INI to make sure it’s still sane
-            local ini, err = api.build_ini(path)
-            if ini then
-                table.insert(survivors, { path = path, ini = ini })
-            else
-                -- optionally log that regN is stale / broken
-                neo.lib.log_error("Stale registry entry at " .. key .. ": " .. tostring(err), 2)
-            end
-        else
-            neo.lib.log_error("Stale registry entry at " .. key .. ": missing file " .. tostring(path), 2)
-        end
-
+		
         n = n + 1
     end
 
@@ -691,7 +716,7 @@ api.get_version_list = function(id)
 	return out
 end
 
---ffs replace this
+-- TODO: Replace with a more robust implementation.
 api.get_versions_map = function()
 	return version_order
 end

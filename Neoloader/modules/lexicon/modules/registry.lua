@@ -101,6 +101,7 @@ private.add_support = function(lang_code, ini_path)
 		lang = "",
 		flag = "",
 		fallback = "",
+		glyph_family = "latin_basic",
 	}
 	
 	for k, v in pairs(default) do
@@ -110,6 +111,8 @@ private.add_support = function(lang_code, ini_path)
 	if default.code == "" or default.lang == "" then
 		return false, "invalid entry"
 	end
+	
+	public.transliterator.register_glyph_family(default.code, default.glyph_family)
 	
 	default.lang = public.transliterator.transliterate_for_display(default.lang, lang_code)
 	

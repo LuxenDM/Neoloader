@@ -86,9 +86,9 @@ if not lme_flag then
 	elseif launch_mode_cfg == "cooperative-first-run" then
 		console_print("First-time run of Neoloader")
 		
-		dofile("init.lua")
+		gkini.WriteString("Neoloader", "first_run_setup", "YES")
 		
-		gkinterface.GKProcessCommand("neosetup")
+		dofile("init.lua")
 		
 	elseif launch_mode_cfg == "independent" then
 		if gkini.ReadString("Vendetta", "if", "") == "" then

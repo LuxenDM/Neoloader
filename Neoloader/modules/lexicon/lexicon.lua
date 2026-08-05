@@ -5,7 +5,6 @@ id=lexicon
 version=1.0.0
 name=Lexicon Translation Library
 author=Luxen
-website=<tbd>
 path=lexicon.lua
 
 [metadata]
@@ -33,7 +32,7 @@ config = {
 	precache = "NO", --if entries are loaded during book creation. Slows initial game load, better performance.
 	manage_game_locale = "NO", --when yes, baseline and game locale are adjusted at the same time
 	do_translit = "YES", --handle transliteration of characters not loaded by the game
-	baseline_locale = "en", --what locale to use. Only accepts game-safe entries.
+	baseline_locale = "en", --what locale to use if preferred isn't available.
 	extended_locale = "en", --what preferred locale to use. All entries accepted. Falls back to baseline.
 }
 
