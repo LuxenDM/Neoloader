@@ -1,15 +1,4 @@
-WOAH! This is an in-development branch of Neoloader, version 7.0.0! Did you mean to end up here? The currently supported public version of Neoloader is v6.2.0. Make sure to navigate back to the main branch.
-
-
-v7.0.0 is a major refactor of the Neoloader codebase, targetting LME API 3.12.0
-
-
-
-The original readme.txt continues below this line.
-
-
-
-Welcome to the Vendetta Online Neoloader Pre-execution Library Management Engine (NPLME)! 
+Welcome to Neoloader, a Library Management Engine for Vendetta Online! 
 
 The purpose of Neoloader is to assist in loading plugins in Vendetta Online, using a dependency-ordered system. Besides the obvious benefit of allowing a user to enable or disable plugins in-game, this allows common-access libraries to be better utilized, and to improve and standardize communication between plugins, all in what aims to be a dummy-proof system requiring as little user-side configuration as possible. This expansion to the loading system in Vendetta Online is implemented using base-game functionality, and does not require modification of the game's files and doesn't exploit bugs in the sandbox environment.
 
@@ -17,42 +6,36 @@ Documentation for plugin developers can be found at https://quasar-rce.com/index
 
 
 
-Usage:
-======================================================================================
-Neoloader itself is just a loading and management system for extending Vendetta Online's functionality, and so comes bundled with "neomgr"; this is a minimal interface anyone can use to manage what plugins do or don't get loaded when the game launches. Other, better managers may be available, but when first installed, Neoloader is set to use neomgr as its current managing interface.
-
-To open your current managing interface, type
-
-	/neo
-
-If no managing interface is enabled, Neoloader will attempt to use neomgr; if this fails, you can also try /neomgr to force-enable it, and then use /neo normally.
-
-
-
 Installation:
 ======================================================================================
-Installation of this plugin follows standard plugin procedure; no special instructions are neccesary.
-Copy the "Neoloader" folder to the standard plugin directory if installing manually, or use your preferred plugin management tool.
+Copy the "Neoloader" folder to the standard plugin directory just like any other plugin, then launch the game. 
 
-The first time you run the game with Neoloader, the plugin will make the neccesary changes to config.ini, and then the game will reload. After that, Neoloader should detect any compatible plugins and begin managing them.
+The first time you run the game with Neoloader, you will be guided through a brief set of choices of how you want Neoloader to behave. Once complete, Neoloader is fully set up and configured.
+
+
+
+Usage:
+======================================================================================
+To open Neoloader's primary interface, either use the '/neo' command, or use the "Open Mod Manager" button. This interface allows you to view and manage your current plugins, as well as configure Neoloader itself. 
+
 
 
 
 Uninstallation:
 ======================================================================================
-If you can launch the game client without bugs, use the game command /neo to open the library management interface (provided by neomgr unless otherwise replaced). Go to settings; at the bottom, click on the button labeled "Uninstall Neoloader". Click the ok button to close the game, and then remove the plugin by deleting the Neoloader folder in your plugin directory or by using your preferred plugin manager.
+If you can launch the game client without issues, use the game command /neo to open the library management interface. Go to settings; at the bottom, click on the button labeled "Uninstall Neoloader". Click the ok button to close the game, and then remove the plugin by deleting the Neoloader folder in your plugin directory or by using your preferred plugin manager.
 
-Another option is to use the recovery menu to uninstall Neoloader. This will work better if Neoloader is misbehaving and you are struggling to uninstall it after a game update, but the game is still launching successfully.
+Another option is to use the recovery menu to uninstall Neoloader. There is no functional difference between the two methods, but the recovery interface will be available even if Neoloader itself fails to finish loading.
 
 Once uninstalled, the initializer will remind you that you can reinstall Neoloader through /neo, but otherwise executes no functionality.
 
 
 
-Uninstallation due to bugs:
+Uninstallation due to issues:
 ======================================================================================
 If you cannot launch the game due to bugs, delete the Neoloader folder from your plugin directory or use your preferred plugin manager. Next, open config.ini, and find the entry "if=plugins/Neoloader/init.lua". Delete this line, and save the file. If you want to clean all Neoloader data for a clean reinstallation, you should also delete the entire sections labeled [Neoloader], [Neo-registry], and [Neo-pluginstate].
 
-If the game STILL refuses to launch, another plugin may be the culprit, or config.ini may have corrupted data. Make a copy of config.ini before deleting it, and remove ALL of your plugins. If the game STILL cannot launch even like this, more in-depth investigation is warranted, and reinstalling the game may be neccesary.
+If the game STILL refuses to launch, another plugin may be the culprit, or config.ini may have corrupted data. Make a copy of config.ini before deleting it, and remove ALL of your plugins. If the game STILL cannot launch even like this, more in-depth investigation is warranted, and reinstalling the game may be necessary.
 
 
 
@@ -60,8 +43,7 @@ Compatibility:
 ======================================================================================
 Neoloader is not compatible with any custom interface; However, plugins can register themselves as a custom interface through Neoloader instead.
 
-Neoloader should be compatible with every platform the game *actively* supports and can be pluginded. This includes Windows, Mac, Linux, Android, ChromeOS, iOS. Neoloader has also been lightly tested on the Quest 2 specifically; other VR platforms may have different results.
-Not supported: ???, VendettaMark benchmarking utility
+Neoloader should be compatible with every platform the game *actively* supports and can be modded. This includes Windows, Mac, Linux, Android, ChromeOS, iOS. Neoloader has also been lightly tested on the Quest 2 specifically; other VR platforms may have different results.
 
 
 
@@ -69,14 +51,14 @@ FAQ:
 ======================================================================================
 Do I need Neoloader?
 
-	It depends. Some plugins will require the environment that Neoloader sets up. If you want to use one of these plugins, Neoloader will be required. Otherwise, Neoloader isn't a requirement for modding Vendetta Online, but its features should still prove useful, especially to pilots who cannot access their plugin directory easily.
+	It depends. Some plugins will require the environment that Neoloader sets up. If you want to use one of these plugins, Neoloader will be required. Otherwise, Neoloader isn't a requirement for modding Vendetta Online, but its features should still prove useful, especially to pilots who cannot access their plugin directory easily. As more plugins are created that utilize the LME environment, Neoloader will become more and more necessary if you wish to run them.
 	
 What is the performance hit to game launch for using Neoloader?
 	
 	Neoloader will variably increase the amount of time the game takes to first load, dependent on how many plugins can be loaded with neoloader and on how complex they are. You can actually see specifically how long Neoloader took to load inside neomgr; go to the logging section, and look for any line that starts with [timestat]. Neoloader measures (in milliseconds) how long every portion of its system takes to load.
 	
-	For me, Neoloader took ~550ms to "set up", and ~480ms to load with no other Neoloader-compatible plugins installed.
-	Almost all of this time is actually taken by the standard game interface launching, however; when using a patched version of barebones_if and MultiUI, it only took ~70ms for the game to launch.
+	[When last measured], Neoloader took ~550ms to "set up", and ~480ms to load with no other Neoloader-compatible plugins installed.
+	Almost all of this time is actually taken by the standard game interface launching, however; when using a custom lightweight interface, it only took ~70ms for the game to launch.
 	
 	Additionally, in a system where there are >100 plugins, the game's loading time only increased up by about three seconds. Again, almost all of that time is from those external plugins; Neoloader itself requires a very small amount of time to set up its environment.
 	
@@ -130,9 +112,11 @@ How do I contact Luxen?
 Is it safe to send people my config.ini or errors.log?
 	
 	Its important to note that your config.ini and errors.log will contain possibly sensitive information.
-		Your config.ini stores your usernames that you log in with! It is advised to use a tool like NeoPatcher to remove this information, or to manually delete it yourself. Look for [security], and delete every username that appears below it.
+		Your config.ini stores your usernames that you log in with! It is advised to manually delete it yourself. Look for [security], and delete every username that appears below it.
 		
 		Your errors.log will include some details about your computer and plugins, but the most sensitive data it'll contain will be your game chat from the session you played in. If you are trying to report a bug, try to replicate it on a new character (if logging in is needed in the first place), or you might leak private chat accidentally.
+
+	None of the information contained will be able to compromise your account, but please take measures to safeguard yourself and your game data where necessary.
 
 
 
