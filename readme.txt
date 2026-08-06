@@ -1,3 +1,5 @@
+This is an archived state of Neoloader v6.3.0. No further work or releases will continue on the v6.x branch. Please refer to the default branch for the current version being actively worked on.
+
 Welcome to the Vendetta Online Neoloader Pre-execution Library Management Engine (NPLME)! 
 
 The purpose of Neoloader is to assist in loading plugins in Vendetta Online, using a dependency-ordered system. Besides the obvious benefit of allowing a user to enable or disable plugins in-game, this allows common-access libraries to be better utilized, and to improve and standardize communication between plugins, all in what aims to be a dummy-proof system requiring as little user-side configuration as possible. This expansion to the loading system in Vendetta Online is implemented using base-game functionality, and does not require modification of the game's files and doesn't exploit bugs in the sandbox environment.
