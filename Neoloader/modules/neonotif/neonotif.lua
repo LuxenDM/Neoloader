@@ -10,7 +10,6 @@ path=neonotif.lua
 
 [metadata]
 description=neonotif is the standard LME notification front-end bundled with Neoloader
-version=1.2.1
 owner=Neoloader|7.0.0
 type=lua
 created=2025-03-09
@@ -449,4 +448,4 @@ neo.notif_handler = true
 
 update_class()
 
-lib.require({{name="babel", version="0"}}, lexicon_support)
+lib.require({{name="lexicon", version="0"}}, lexicon_support)
