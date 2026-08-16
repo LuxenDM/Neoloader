@@ -39,8 +39,24 @@ neo.api.lget = function(chapter, header, key, err_val)
 end
 
 neo.api.lex_check = function()
-	lex_ver = lib.get_latest("lexicon", "1.0.0", "1.4.9")
-	lex_class = lib.get_class("lexicon", lex_ver)
+	lex_ready = false
+	lex_class = nil
+	lex_ver = nil
+	
+	local ver = lib.get_latest("lexicon", "1.0.0", "1.4.9")
+	if not ver then
+		return false
+	end
+	
+	local class = lib.get_class("lexicon", ver)
+	if type(class) ~= "table"
+		or type(class.get_primary_locale) ~= "function"
+	then
+		return false
+	end
+	
+	lex_ver = ver
+	lex_class = class
 	lex_ready = true
+	return true
 end
-
