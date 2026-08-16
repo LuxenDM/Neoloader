@@ -52,10 +52,11 @@ lib.block_trap = function(id, ver, func)
 		-- mark incomplete + stash detail (minimal, local write)
 		-- (safe to touch the record in-place; we already have idx)
 		local record = rec
-		record.complete = false
-		record.err_details = err
-	
-	neo.api.registry.update_record_fields(id, ver, { complete = false, err_details = err })
+		reg.mark_failure(id, ver)
+
+		reg.update_record_fields(id, ver, {
+			err_details = err,
+		})
 	end
 	-- on success: return nothing
 end

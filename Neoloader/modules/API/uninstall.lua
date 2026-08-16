@@ -35,18 +35,32 @@ lib.uninstall = function(au)
 	end
 	
 	local counter = 0
-	while true do
+	local empty_count = 0
+
+	while empty_count < 10 do
 		counter = counter + 1
-		
-		local reg_entry = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+
+		local reg_entry = gkini.ReadString(
+			"Neo-registry",
+			"reg" .. tostring(counter),
+			""
+		)
+
 		if reg_entry == "" then
-			break
+			empty_count = empty_count + 1
+		else
+			empty_count = 0
+			gkini.WriteString(
+				"Neo-registry",
+				"reg" .. tostring(counter),
+				""
+			)
 		end
-		
-		gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
 	end
 	
-	gkini.WriteString("Vendetta", "if", "")
+	if gkini.ReadString("Vendetta", "if", "") == (neo.path .. "init.lua") then
+		gkini.WriteString("Vendetta", "if", "")
+	end
 	
 	gkinterface.GKSaveCfg()
 	

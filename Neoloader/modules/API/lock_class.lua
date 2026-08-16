@@ -1,6 +1,6 @@
 --[[
 [metadata]
-description=Lock a plugin's class, preventing external modification (returns key)
+description=Lock a plugin's class, preventing external modification
 version=1.0.1
 owner=Neoloader|7.0.0
 type=lua
@@ -20,7 +20,7 @@ lib.lock_class = function(id, version, key)
 
 	version = tostring(version or "0")
 	if version == "0" then
-		version = lib.get_latest(id)
+		version = reg.substitute_zero(id, "0")
 	end
 
 	if not lib.is_exist(id, version) then

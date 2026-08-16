@@ -34,15 +34,14 @@ lib.err_handle = function(test, log_msg)
 	lib.notify("CAPTURED_ERROR", err)
 
 	-- Always record the error in recovery
-	recovery.error = err
-	recovery.push_error()
+	recovery.push_error(err)
 
 	-- User-facing behavior
 	local mode = get_config("do_err_popup") or "NO"  -- "NO" | "YES" | "INTERRUPT"
 	if mode == "INTERRUPT" then
-		recovery.popup()      -- interrupt load safely, no CTD
+		recovery.open("popup")
 	elseif mode == "YES" then
-		recovery.open()       -- show the recovery UI, non-blocking
+		recovery.open()
 	end
 
 	return true

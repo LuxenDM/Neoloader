@@ -11,6 +11,6 @@ created=2025-11-08
 local neo = ...
 local lib = neo.lib
 
-lib.compare_sem_ver = function(semantic_version_string)
+lib.get_whole_ver = function(semantic_version_string)
 	return neo.api.registry.break_version(semantic_version_string)
 end

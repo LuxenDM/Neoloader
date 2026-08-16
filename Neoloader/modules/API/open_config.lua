@@ -19,9 +19,10 @@ lib.open_config = function()
 	
 	cp("mgr_id is " .. mgr_id)
 	
-	if not mgr_id or mgr_id == "" then
-		-- no LME manager configured - THIS MEANS THE LME CANNOT BE MANAGED!
-		-- fallback to opening the recovery system which can provide minimal management
+	if not mgr_id
+		or mgr_id == ""
+		or not lib.is_exist(mgr_id, "0")
+	then
 		rs.push_error(
 			"RECOV_STARTUP_MGR_CHECK_FAILURE_OPEN_CONFIG_CALLED|lib.open_config was called but no management front-end was available. The recovery system was opened instead.",
 			{

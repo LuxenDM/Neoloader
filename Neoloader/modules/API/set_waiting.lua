@@ -20,10 +20,17 @@ lib.set_waiting = function(id, ver, state, key)
 		["ON"] = 1, ["OFF"] = 0,
 		[1] = 1, [0] = 0,
 	}
-	state = valid_state[state] or 0
+	state = valid_state[state]
+	
+	if state == nil then
+		return false, "invalid waiting state"
+	end
+	
 	id = tostring(id or "null")
 	ver = tostring(ver or "0")
-	if ver == "0" then ver = lib.get_latest(id) end
+	if ver == "0" then 
+		ver = reg.substitute_zero(id, "0")
+	end
 
 	if not key then
 		return false, "waiting state key must be provided"

@@ -58,9 +58,11 @@ neo.lib.get_gstate = function()
 
 	-- build plugin list + role lists
 	data.pluginlist = {} --list of ALL plugins
-	data.mgr_list   = {} --list of LME managers, latest active versions only
-	data.if_list    = {"vo-if"} --list of interfaces, latest active versions only
-	data.notif_list = {} --list of notifiers, latest active versions only
+	data.mgr_list   = {} --list of LME managers
+	data.if_list    = {"vo-if"} --list of interfaces
+	data.notif_list = {} --list of notifiers; deprecating notification system entirely
+	--Manager/interface/notifier lists may contain multiple registered versions. When Neoloader selects an active handler for one of these roles, the latest eligible version is always treated as authoritative.
+	
 	local ids_seen = 0
 	local list_versions = reg.get_versions_map()
 	for id, vers in pairs(list_versions) do

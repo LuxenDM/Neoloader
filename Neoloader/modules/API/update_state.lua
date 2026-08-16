@@ -15,7 +15,7 @@ lib.update_state = function(id, ver, state_data)
 	id, ver = lib.pass_ini_identifier(id, ver)
 	ver = tostring(ver or "0")
 	if ver == "0" then
-		ver = lib.get_latest(id)
+		ver = reg.substitute_zero(id, "0")
 	end
 
 	if not lib.is_exist(id, ver) then

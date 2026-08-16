@@ -50,7 +50,7 @@ lib.get_class = function(id, ver)
 	local class_tbl = reg.get_container(id, ver) or {}
 
 	-- if locked, return a shallow copy; else return the live reference
-	if rec.lock then
+	if rec.container_locked then
 		return shallow_copy(class_tbl)
 	else
 		return class_tbl

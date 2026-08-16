@@ -20,7 +20,7 @@ lib.set_class = function(name, version, ftable)
 
 	version = tostring(version or "0")
 	if version == "0" then
-		version = lib.get_latest(name)
+		version = reg.substitute_zero(name, "0")
 		lib.log_error("Plugin " .. name .. " registered its class using wildcard version '0'. This is deprecated for self-registration and may resolve unpredictably across installed versions. It is also a very bad practice. Use the plugin’s literal version instead.", 3)
 	end
 

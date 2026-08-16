@@ -11,6 +11,6 @@ created=2025-11-08
 
 local neo = ...
 
-neo.lib.get_API = function()
+neo.lib.get_patch = function()
 	return neo.lme_ver[3]
 end

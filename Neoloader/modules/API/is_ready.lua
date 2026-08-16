@@ -26,10 +26,10 @@ lib.is_ready = function(id, version)
 	version = tostring(version or "0")
 	if version == "0" then
 		local status, lv = reg.get_latest_ver(id)
-	if not status then
-		return false, lv
-	end
-	version = lv
+		if not status then
+			return false, lv
+		end
+		version = lv
 	end
 
 	-- Specific version must exist
