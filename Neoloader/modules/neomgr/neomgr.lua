@@ -294,12 +294,18 @@ local create_CCD1_view = function(id, version)
 	
 	cp("creating CCD1 view for " .. tostring(id) .. " v" .. tostring(version))
 	
-	local ctable = {} --content table
-	ctable = lib.get_class(id, version)
+	local ctable = lib.get_class(id, version) --mod content table
+
+	if type(ctable) ~= "table" then
+		cp("unable to retrieve plugin class")
+		return
+	end
+
 	if not ctable.CCD1 then
 		cp("ccd1 disabled")
 		return
 	end
+	
 	ctable = ctable.smart_config
 	
 	if not ctable then
@@ -386,6 +392,7 @@ local create_CCD1_view = function(id, version)
 			
 			if apply_flag then
 				ctable.cb(ref, slider.posx)
+				apply_flag = false
 			end
 			
 			apply_timer:SetTimeout(1)
@@ -633,8 +640,20 @@ local diag_constructor = function()
 						if (config.enable_dependents == "YES") and (v[3] == "YES") then
 							cp("dep resolving is enabled!")
 							local deps = lib.get_state(v[1], v[2]).plugin_dependencies
-							for k2, v2 in ipairs(deps) do
-								lib.set_load(auth_key, v2.name, v2.version, "YES")
+							for _, dep in ipairs(deps) do
+								local dep_ver = dep.version
+
+								if dep.ver_max and dep.ver_max ~= "~" then
+									dep_ver = lib.get_latest(
+										dep.name,
+										dep.version,
+										dep.ver_max
+									)
+								end
+
+								if dep_ver ~= "?" then
+									lib.set_load(auth, dep.name, dep_ver, "YES")
+								end
 							end
 							cp("dependencies resolved")
 						end
@@ -656,19 +675,23 @@ local diag_constructor = function()
 			action = function(self)
 				
 				if apply_actions[cur_sel_str()] then
-					--Cancel load state toggle
 					local index = apply_actions[cur_sel_str()]
-						--index to be cleared
+
 					table.remove(apply_actions, index)
-						--remove application details
 					apply_actions[cur_sel_str()] = nil
-						--remove pointer index in table
-					local data = pluginlist[pluginlist[cur_sel_str()]]
-					
-					if data.current_state == -1 then
-						self.title = data.load == "YES" and bstr(11, "Will load") or bstr(12, "Will Not load")
+
+					for i, action in ipairs(apply_actions) do
+						apply_actions[action[1] .. action[2]] = i
 					end
-					
+
+					local data = pluginlist[pluginlist[cur_sel_str()]]
+
+					if data.current_state == -1 then
+						self.title = data.load == "YES"
+							and bstr(11, "Will load")
+							or bstr(12, "Will Not load")
+					end
+
 					iup.Refresh(self)
 				else
 					--queue load state toggle
@@ -767,7 +790,7 @@ local diag_constructor = function()
 			
 			if apply_actions[cur_sel_str()] then
 				--there is a pending action for this plugin, so inverse
-				load_toggle.value = data.load == "YES" and "OFF" or "NO"
+				load_toggle.value = data.load == "YES" and "OFF" or "ON"
 			end
 			
 			if (load_status[-1] == bstr(11, "Will load")) and (data.current_state == -1) then
@@ -922,9 +945,9 @@ local diag_constructor = function()
 			['-1'] = "255 0 255",
 			[0] = bstr(19, "NOT ENABLED"),
 			['0'] = "255 200 100",
-			[1] = bstr(21, "ERROR DURING LOADING"), --load failure
+			[1] = bstr(21, "ERROR DURING LOADING"), --missing dep
 			['1'] = "255 0 0",
-			[2] = bstr(20, "ERROR DURING LOADING"), --missing dep
+			[2] = bstr(20, "ERROR DURING LOADING"), --load failure
 			['2'] = "255 0 0",
 			[3] = bstr(22, "LOADED"),
 			['3'] = "100 255 100",
@@ -1216,6 +1239,7 @@ local diag_constructor = function()
 				page_select.xmax = entry_amount > 1 and entry_amount or 2
 				page_select.posx = 1
 				num_logentries.title = tostring(entry_amount)
+				page_select:scroll_cb() --to reset actual view
 			end,
 		}
 		
@@ -1252,6 +1276,14 @@ local diag_constructor = function()
 	local create_settings = function()
 		
 		local valid_config = {
+			launch_mode = {
+				display = bstr(93, "Select Neoloader operating mode in conjunction with Default plugin loader"),
+				default = "independent",
+				valid = {
+					"cooperative",
+					"independent",
+				},
+			},
 			allow_bad_api_version = {
 				--if type is not defined, default toggle
 				display = bstr(32, "Load plugins expecting a different LME API version than API version") .. " " .. tostring(lib.get_API()),
@@ -1273,6 +1305,7 @@ local diag_constructor = function()
 			"override_disabled_plugin_state",
 			"do_err_popup",
 			"hide_log_message_level",
+			"stat_graphing",
 		}
 		
 		if config.show_debuginfo == "YES" then
@@ -1283,14 +1316,6 @@ local diag_constructor = function()
 			valid_config.override_disabled_plugin_state = {
 				display = bstr(92, "Load Neoloader when default loader is disabled"),
 				default = "NO",
-			}
-			valid_config.launch_mode = {
-				display = bstr(93, "Select Neoloader operating mode in conjunction with Default plugin loader"),
-				default = "cooperative",
-				valid = {
-					"cooperative",
-					"independent",
-				},
 			}
 			valid_config.stat_graphing = {
 				display = bstr(94, "Log periodic performance metrics"),
@@ -1527,7 +1552,8 @@ local diag_constructor = function()
 							iup.hbox {
 								iup.stationbutton {
 									title = bstr(96, "Open guided configuration..."),
-									action = function()
+									action = function(self)
+										HideDialog(iup.GetDialog(self))
 										gkinterface.GKProcessCommand("neosetup")
 									end,
 								},
@@ -1756,18 +1782,20 @@ local diag_constructor = function()
 		tabs_view:append(v)
 	end
 	
-	local close_button = iup.stationbutton {
+	local close_button 
+	close_button = iup.stationbutton {
 		title = bstr(7, "Close"),
 		size = "x" .. button_scalar(),
-		action = function(self)
+		action = function()
 			local close_action = function()
 				notif_panel.unreg()
-				HideDialog(iup.GetDialog(self))
+				HideDialog(iup.GetDialog(close_button))
 			end
 			
 			if apply_flag and #apply_actions > 0 then
 				--there are pending applications
-				local apply_alert = iup.dialog {
+				local apply_alert 
+				apply_alert = iup.dialog {
 					fullscreen = "YES",
 					topmost = "YES",
 					bgcolor = "0 0 0 150 *",
@@ -1788,15 +1816,15 @@ local diag_constructor = function()
 									iup.hbox {
 										iup.stationbutton {
 											title = bstr(66, "YES"),
-											action = function(alert_self)
-												HideDialog(iup.GetDialog(alert_self))
+											action = function()
+												HideDialog(apply_alert)
 												close_action()
 											end,
 										},
 										iup.stationbutton {
 											title = bstr(67, "NO"),
-											action = function(alert_self)
-												HideDialog(iup.GetDialog(alert_self))
+											action = function()
+												HideDialog(apply_alert)
 											end,
 										},
 									},
