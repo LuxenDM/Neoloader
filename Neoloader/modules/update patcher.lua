@@ -35,20 +35,39 @@ if update_check_num < total_patch_count then
 		
 		local registry_fixes = {
 			["plugins/Neoloader/neomgr.ini"] = neo.path .. "modules/neomgr/neomgr.lua",
-			["plugins/Neoloader/neo_notif.ini"] = neo.path .. "modules/neomgr/neo_notif.lua",
+			["plugins/Neoloader/neo_notif.ini"] = neo.path .. "modules/neomgr/neonotif.lua",
 		}
 
 		local counter = 0
-		while true do
-			counter = counter + 1
-			local reg = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
-			if reg == "" then
-				break
-			end
+		local empty_count = 0
 
-			if registry_fixes[reg] then
-				gkini.WriteString("Neo-registry", "reg" .. tostring(counter), registry_fixes[reg])
-				lib.log_error("patched registration entry for " .. reg .. " >> " .. registry_fixes[reg], 1)
+		while empty_count < 10 do
+			counter = counter + 1
+
+			local reg = gkini.ReadString(
+				"Neo-registry",
+				"reg" .. tostring(counter),
+				""
+			)
+
+			if reg == "" then
+				empty_count = empty_count + 1
+			else
+				empty_count = 0
+
+				if registry_fixes[reg] then
+					gkini.WriteString(
+						"Neo-registry",
+						"reg" .. tostring(counter),
+						registry_fixes[reg]
+					)
+
+					lib.log_error(
+						"patched registration entry for "
+						.. reg .. " >> " .. registry_fixes[reg],
+						1
+					)
+				end
 			end
 		end
 
