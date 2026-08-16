@@ -500,11 +500,24 @@ local recov_startup_mgr_check = function()
 						end,
 						
 						run = function()
-							lib.set_load(neo.auth_key, local_path .. "modules/neomgr/neomgr.lua", nil, "YES")
+							local neomgr_ini = local_path .. "modules/neomgr/neomgr.lua"
+							
+							lib.set_load(neo.auth_key, neomgr_ini, nil, "YES")
+							
+							local id, ver = lib.pass_ini_identifier(neomgr_ini)
+							neo.api.registry.update_record_fields(id, ver, {
+								load = "YES",
+							})
+							
 							lib.lme_configure("current_mgr", "neomgr", neo.auth_key)
-							lib.activate_plugin(local_path .. "modules/neomgr/neomgr.lua", nil, neo.auth_key)
-							RegisterUserCommand("neo", function() lib.open_config() end)
-							lib.execute(local_path .. "modules/neomgr/neomgr.lua", nil, "open")
+							lib.activate_plugin(neomgr_ini, nil, neo.auth_key)
+							
+							RegisterUserCommand("neo", function()
+								lib.open_config()
+							end)
+							lib.execute("neomgr", "0", "auth_key_receiver", neo.auth_key)
+							
+							lib.execute(neomgr_ini, nil, "open")
 						end,
 					},
 				}
