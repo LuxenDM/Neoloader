@@ -403,18 +403,28 @@ register_resolution {
 	run = function(state)
 		--copied directly from v6.3.0 recovery, can be made more efficient probably?
 		local counter = 0
-		while true do
+		local empty_count = 0
+
+		while empty_count < 10 do
 			counter = counter + 1
-			local ini_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
-			if ini_file ~= "" then
+
+			local ini_file = gkini.ReadString(
+				"Neo-registry",
+				"reg" .. tostring(counter),
+				""
+			)
+
+			if ini_file == "" then
+				empty_count = empty_count + 1
+			else
+				empty_count = 0
+				
 				local id = gkini.ReadString2("modreg", "id", "null", ini_file)
 				local version = gkini.ReadString2("modreg", "version", "null", ini_file)
 				if id ~= "null" then
 					cp("disabling LME plugin " .. id .. " v" .. version)
 					gkini.WriteString("Neo-pluginstate", id .. "." .. version, "NO")
 				end
-			else
-				break
 			end
 		end
 	end,
@@ -432,20 +442,29 @@ register_resolution {
 	end,
 
 	run = function(state)
-		--copied directly from v6.3.0 recovery, can be made more efficient probably?
 		local counter = 0
-		while true do
+		local empty_count = 0
+
+		while empty_count < 10 do
 			counter = counter + 1
-			local ini_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
-			if ini_file ~= "" then
+
+			local ini_file = gkini.ReadString(
+				"Neo-registry",
+				"reg" .. tostring(counter),
+				""
+			)
+
+			if ini_file == "" then
+				empty_count = empty_count + 1
+			else
+				empty_count = 0
+				
 				local id = gkini.ReadString2("modreg", "id", "null", ini_file)
 				local version = gkini.ReadString2("modreg", "version", "null", ini_file)
 				if id ~= "null" then
 					cp("disabling LME plugin " .. id .. " v" .. version)
-					gkini.WriteString("Neo-pluginstate", id .. "." .. version, "NO")
+					lib.set_load(auth_key, id, version, "NO")
 				end
-			else
-				break
 			end
 		end
 	end,
@@ -590,23 +609,31 @@ register_resolution {
 			local plist = lib.get_gstate().pluginlist
 			for _, idvpairs in ipairs(plist) do
 					lib.log_error("de-registering LME plugin " .. idvpairs[1] .. " v" .. idvpairs[2])
-				lib.set_load(au, idvpairs[1], idvpairs[2], "REM")
+				lib.set_load(auth_key, idvpairs[1], idvpairs[2], "REM")
 			end
-			
+		
 			local counter = 0
-			while true do
+			local empty_count = 0
+
+			while empty_count < 10 do
 				counter = counter + 1
+
+				local ini_file = gkini.ReadString(
+					"Neo-registry",
+					"reg" .. tostring(counter),
+					""
+				)
+
+				if ini_file == "" then
+					empty_count = empty_count + 1
+				else
+					empty_count = 0
 				
-				local reg_entry = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
-				if reg_entry == "" then
-					break
+					gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
 				end
-				
-				gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
 			end
 		else
 			--no lib available, set config directly
-			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
 			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
 			gkini.WriteString("Neoloader", "allow_bad_api_version", "")
 			gkini.WriteString("Neoloader", "default_load_state", "")
@@ -618,24 +645,34 @@ register_resolution {
 			gkini.WriteString("Neoloader", "current_notif", "")
 			gkini.WriteString("Neoloader", "stat_graphing", "")
 			gkini.WriteString("Neoloader", "launch_mode", "removed")
-			
+		
 			local counter = 0
-			while true do
+			local empty_count = 0
+
+			while empty_count < 10 do
 				counter = counter + 1
-				local reg_entry = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
-				if reg_entry == "" then
-					break
+
+				local ini_file = gkini.ReadString(
+					"Neo-registry",
+					"reg" .. tostring(counter),
+					""
+				)
+
+				if ini_file == "" then
+					empty_count = empty_count + 1
+				else
+					empty_count = 0
+				
+					local id = gkini.ReadString2("modreg", "id", "null", ini_file)
+					local version = gkini.ReadString2("modreg", "version", "null", ini_file)
+					
+					if id ~= "null" then
+						console_print("de-registering LME plugin " .. id .. " v" .. version)
+						gkini.WriteString("Neo-pluginstate", id .. "." .. version, "REM")
+					end
+					
+					gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
 				end
-				
-				local id = gkini.ReadString2("modreg", "id", "null", ini_file)
-				local version = gkini.ReadString2("modreg", "version", "null", ini_file)
-				
-				if id ~= "null" then
-					lib.log_error("de-registering LME plugin " .. id .. " v" .. version)
-					gkini.WriteString("Neo-pluginstate", id .. "." .. version, "REM")
-				end
-				
-				gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
 			end
 		end
 		
@@ -673,9 +710,38 @@ register_resolution {
 			lib.lme_configure("hide_log_message_level", "", au)
 			lib.lme_configure("current_if", "", au)
 			lib.lme_configure("current_mgr", "", au)
+			lib.lme_configure("current_notif", "", au)
+			lib.lme_configure("launch_mode", "", au)
+			lib.lme_configure("stat_graphing", "", au)
+			
+			local plist = lib.get_gstate().pluginlist
+			for _, idvpairs in ipairs(plist) do
+					lib.log_error("de-registering LME plugin " .. idvpairs[1] .. " v" .. idvpairs[2])
+				lib.set_load(auth_key, idvpairs[1], idvpairs[2], "REM")
+			end
+		
+			local counter = 0
+			local empty_count = 0
+
+			while empty_count < 10 do
+				counter = counter + 1
+
+				local ini_file = gkini.ReadString(
+					"Neo-registry",
+					"reg" .. tostring(counter),
+					""
+				)
+
+				if ini_file == "" then
+					empty_count = empty_count + 1
+				else
+					empty_count = 0
+				
+					gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
+				end
+			end
 		else
 			--no lib available, set config directly
-			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
 			gkini.WriteString("Neoloader", "override_disabled_plugin_state", "")
 			gkini.WriteString("Neoloader", "allow_bad_api_version", "")
 			gkini.WriteString("Neoloader", "default_load_state", "")
@@ -684,9 +750,30 @@ register_resolution {
 			gkini.WriteString("Neoloader", "hide_log_message_level", "")
 			gkini.WriteString("Neoloader", "current_if", "")
 			gkini.WriteString("Neoloader", "current_mgr", "")
-			--ensure enabled state
 			gkini.WriteString("Neoloader", "current_notif", "")
 			gkini.WriteString("Neoloader", "launch_mode", "")
+			gkini.WriteString("Neoloader", "stat_graphing", "")
+		
+			local counter = 0
+			local empty_count = 0
+
+			while empty_count < 10 do
+				counter = counter + 1
+
+				local ini_file = gkini.ReadString(
+					"Neo-registry",
+					"reg" .. tostring(counter),
+					""
+				)
+
+				if ini_file == "" then
+					empty_count = empty_count + 1
+				else
+					empty_count = 0
+				
+					gkini.WriteString("Neo-registry", "reg" .. tostring(counter), "")
+				end
+			end
 		end
 		
 		for _, setting in ipairs {
@@ -696,17 +783,6 @@ register_resolution {
 			"playbackmode", "playbackdevice", "capturemode", "capturedevice",
 		} do
 			gkini.WriteString("Vendetta", setting, "")
-		end
-		
-		local rem_counter = 0
-		while true do
-			rem_counter = rem_counter + 1
-			local line_opt = gkini.ReadString("Neo-registry", "reg" .. tostring(rem_counter), "")
-			if line_opt == "" then
-				break
-			end
-			
-			gkini.WriteString("Neo-registry", "reg" .. tostring(rem_counter), "")
 		end
 		
 		gkini.WriteString("Neoloader", "STOP", "uninstalled|nuke_settings")
@@ -1092,6 +1168,9 @@ local build_home_tab = function(switch_page)
 			return lget("RECOVERY_SUGGEST_NEO_FAILURE|Neoloader failed early. Check logs for more details. Your LME provider may not have been installed correctly, or needs an update.")
 		elseif not c.has_lib then
 			return lget("RECOVERY_SUGGEST_LIB_FAILURE|Core API not available. Check logs for more details. Your LME provider may not have been installed correctly, or needs an update.")
+			-- If neo exists but lib does not, Neoloader has already taken ownership of configuration state but failed to generate the API required to modify it safely.
+			-- Do not expose pre- or post-lib configuration repairs in this state; recovery requires reinstall/update/uninstall instead.
+			-- This is a CATASTROPHIC failure on Neoloader's part! 
 		elseif not c.has_lme then
 			return lget("RECOVERY_SUGGEST_LME_FAILURE|The LME provider did not finish loading. Try safe LME settings.")
 		elseif not c.has_vo then
@@ -1615,39 +1694,49 @@ local build_pre_LME_options = function()
 	
 	local counter = 0
 	local highlite_bg = false
-	while true do
+	local empty_count = 0
+
+	while empty_count < 10 do
 		counter = counter + 1
-		highlite_bg = not highlite_bg
-		
-		local reg_file = gkini.ReadString("Neo-registry", "reg" .. tostring(counter), "")
+
+		local reg_file = gkini.ReadString(
+			"Neo-registry",
+			"reg" .. tostring(counter),
+			""
+		)
+
 		if reg_file == "" then
-			break
+			empty_count = empty_count + 1
+		else
+			empty_count = 0
+
+			-- build plugin card
+		
+			local id = gkini.ReadString2("modreg", "id", "null", reg_file)
+			local ver = gkini.ReadString2("modreg", "version", "null", reg_file)
+			local name = gkini.ReadString2("modreg", "name", "null", reg_file)
+			local idver_key = id .. "." .. ver
+			local current = gkini.ReadString("Neo-pluginstate", idver_key, "NO")
+			
+			local option_list = oplist {
+				header = "Neo-pluginstate",
+				key = idver_key,
+				hide_key = true,
+				default = 2,
+				value = current == "YES" and 1 or 2,
+				lget("BINARY_YES|YES"),
+				lget("BINARY_NO|NO"),
+			}
+			
+			local card = build_plugin_card {
+				title = name .. " v" .. ver,
+				status = lget("RECOVERY_PLUGIN_CARD_PRE|Registered plugin load state."),
+				option_control = option_list,
+				bgcolor = highlite_bg and "255 255 255 30 *" or "0 0 0 0 *",
+			}
+			
+			option_list_container:append(card)
 		end
-		
-		local id = gkini.ReadString2("modreg", "id", "null", reg_file)
-		local ver = gkini.ReadString2("modreg", "version", "null", reg_file)
-		local name = gkini.ReadString2("modreg", "name", "null", reg_file)
-		local idver_key = id .. "." .. ver
-		local current = gkini.ReadString("Neo-pluginstate", idver_key, "NO")
-		
-		local option_list = oplist {
-			header = "Neo-pluginstate",
-			key = idver_key,
-			hide_key = true,
-			default = 2,
-			value = current == "YES" and 1 or 2,
-			lget("BINARY_YES|YES"),
-			lget("BINARY_NO|NO"),
-		}
-		
-		local card = build_plugin_card {
-			title = name .. " v" .. ver,
-			status = lget("RECOVERY_PLUGIN_CARD_PRE|Registered plugin load state."),
-			option_control = option_list,
-			bgcolor = highlite_bg and "255 255 255 30 *" or "0 0 0 0 *",
-		}
-		
-		option_list_container:append(card)
 	end
 	
 	local scroll_content = iup.frame {
@@ -1664,6 +1753,11 @@ local build_pre_LME_options = function()
 			scroll_pane:map_cb()
 		end,
 		display_trigger = function()
+			if rs.state.capabilities.has_neo and not rs.state.capabilities.has_lib then
+				opt_list_text.title = lget("RECOVERY_SUGGEST_LIB_FAILURE|Core API not available. Check logs for more details. Your LME provider may not have been installed correctly, or needs an update.")
+				opt_list_text.font = Font.Default + 8
+			end
+			
 			local safe_width = tostring(scroll_pane.w - (Font.Default * 3)) .. "x"
 			
 			scroll_content.size = safe_width
@@ -1818,11 +1912,13 @@ local create_diag = function()
 	local post_LME_once_flag = false
 	
 	local switch_page = function(page_name)
+		
 		if page_name == "home" then
 			page_box.value = home_tab
 		elseif page_name == "resolutions" then
 			page_box.value = res_tab
 		elseif page_name == "plugins" then
+			
 			if (rs.state.capabilities.has_lib) and (not post_LME_once_flag) then
 				post_LME_once_flag = true
 				lme_tab:detach()
@@ -1885,8 +1981,8 @@ local create_diag = function()
 	local dev_tab_button = iup.button {
 		title = lget("RECOVERY_NAV_DEV|Developer tools"),
 				expand = "HORIZONTAL",
-		visible = rs.state.capabilities.has_neo and "YES" or "NO",
-		active = rs.state.capabilities.has_neo and "YES" or "NO",
+		visible = rs.state.capabilities.has_lib and "YES" or "NO",
+		active = rs.state.capabilities.has_lib and "YES" or "NO",
 		action = function()
 			switch_page("dev")
 		end,
