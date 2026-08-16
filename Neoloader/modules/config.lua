@@ -33,11 +33,12 @@ current_notif: current LME notification handler (ID, version always assumed late
 
 local neo = ...
 local config = neo.config
+
+neo.api.validity_override = false --if true, allow invalid options to be written; used by recovery system and uninstaller
+
 neo.api.config = {}
 
 local api = neo.api.config
-
-api.validity_override = false --if true, allow invalid options to be written; used by recovery system and uninstaller
 
 local config_definitions = {
 	override_disabled_plugin_state = { --if plugins are disabled, Neoloader self-quits. this overrides that behavior, allowing Neoloader and any LME mods to run
@@ -67,7 +68,7 @@ local config_definitions = {
 		},
 	},
 	default_load_state = { --mods typically run when installed on game load. this can change that behavior, in case mods are being made available over the network with a VFS, when the user wants to download but not run mods (to inspect, for instance)
-		need_auth = true, --require authorization key to change
+		need_auth = "YES", --require authorization key to change
 		valid = {
 			YES = true,
 			NO = true,
@@ -361,9 +362,14 @@ local config_reset_handler = function()
 			gkini.WriteString("Vendetta", "if", "")
 		end
 	elseif config.launch_mode == "independent" then
-		if gkini.ReadString("Vendetta", "if", "") == "" then
+		local current_if = gkini.ReadString("Vendetta", "if", "")
+		
+		--make sure other users (cough cough Draugath) aren't manually launching Neoloader themselves
+		if (config.current_if ~= "voidif") and (current_if ~= (neo.path .. "init.lua")) then
 			lib.log_error("launch_mode set to independent, adding Neoloader from immediate execution via if= option", 1)
 			gkini.WriteString("Vendetta", "if", neo.path .. "init.lua")
+		else
+			lib.log_error("launch_mode was set to independent, but VoidIF is the current interface - Neoloader will expect someone else's mod to load itself")
 		end
 	end
 
