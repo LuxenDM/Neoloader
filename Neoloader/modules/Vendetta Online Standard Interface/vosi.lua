@@ -60,7 +60,7 @@ local bstr = function(id, val)
 end
 
 local update_class, lex, ref_id
-local babel_func = function()
+local lexicon_integration = function()
 	local lex_ver = lib.get_latest("lexicon", "1.0.0", "1.4.9")
 	lex = lib.get_class("lexicon", lex_ver)
 	ref_id = lex.register("vosi-bridge", self_ver, mod_path .. "lang/en.ini")
@@ -211,3 +211,5 @@ vosi_timer:SetTimeout(100, button_creator)
 
 
 RegisterEvent(button_creator, "PLUGINS_LOADED")
+
+lib.require({{id="lexicon", version="1.0.0", ver_max="1.4.9"}}, lexicon_integration) 
