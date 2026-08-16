@@ -233,7 +233,14 @@ api.get_latest_ver = function(id, ver_min, ver_max)
 		return false, "min_too_high"
 	end
 	
-	ver_max = api.substitute_zero(id, ver_max or "0")
+	if ver_max == nil then
+		ver_max = ver_limit
+	else
+		ver_max = api.substitute_zero(id, ver_max)
+		if not ver_max then
+			return false, "no_valid_ver_max"
+		end
+	end
 	
 	if api.compare_ver(ver_max, ver_limit) > 0 then
 		--clamp ver_max to limit
@@ -374,16 +381,12 @@ api.add_new_plugin = function(intable)
 		container_key = "",
 	}
 	
-	table.insert(class_container, {})
-
-	-- minimal validation (match your v7 comments/expectations)
-	
 	for k, v in pairs(intable) do
 		default[k] = v
 	end
 	local data = default
-	
-	--console_print(">>> " .. spickle(data))
+
+	-- minimal validation
 	
 	if data.plugin_id == "null" or not data.plugin_version then
 		return false, "missing or invalid id or version"
@@ -401,6 +404,7 @@ api.add_new_plugin = function(intable)
 	end
 
 	-- append to registry and stamp index
+	table.insert(class_container, {})
 	table.insert(registry, data)
 	data.index = #registry
 	plugin_lookups[k] = data.index
@@ -595,27 +599,58 @@ api.ensure_registry_entry = function(data)
         return false, "no plugin_regpath defined"
     end
 
-    -- 1) Check if already present
+    -- Check for an existing registration while tolerating registry gaps.
+	-- If an existing entry is found beyond a gap, move it forward into the first empty slot so normal startup scanning can reach it.
 	
 	--future todo: make this async after time-period elapses
     local n = 1
-    while true do
-        local key = "reg" .. tostring(n)
-        local existing = gkini.ReadString("Neo-registry", key, "")
+	local empty_count = 0
+	local first_empty = nil
 
-        if existing == "" then
-            -- empty slot found → safe to write here
-            gkini.WriteString("Neo-registry", key, path)
-            gkinterface.GKSaveCfg()
-            return true, n
-        elseif existing == path then
-            -- already registered at regN → nothing to do
-            return true, n
-        end
+	while empty_count < 10 do
+		local key = "reg" .. tostring(n)
+		local existing = gkini.ReadString("Neo-registry", key, "")
 
-        n = n + 1
-        -- NOTE: no upper bound; system scales naturally
-    end
+		if existing == "" then
+			first_empty = first_empty or n
+			empty_count = empty_count + 1
+
+		elseif existing == path then
+			if first_empty then
+				gkini.WriteString(
+					"Neo-registry",
+					"reg" .. tostring(first_empty),
+					path
+				)
+
+				gkini.WriteString(
+					"Neo-registry",
+					key,
+					""
+				)
+
+				gkinterface.GKSaveCfg()
+				return true, first_empty
+			end
+
+			return true, n
+		else
+			empty_count = 0
+		end
+
+		n = n + 1
+	end
+
+	local target = first_empty or n
+
+	gkini.WriteString(
+		"Neo-registry",
+		"reg" .. tostring(target),
+		path
+	)
+
+	gkinterface.GKSaveCfg()
+	return true, target
 end
 
 
