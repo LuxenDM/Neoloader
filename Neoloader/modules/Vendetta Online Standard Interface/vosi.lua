@@ -131,7 +131,7 @@ local button_creator = function()
 		end
 	end
 	
-	if angular_check == "1" and Platform == "Windows" then
+	if angular_check == "1" then
 		local odbutton = OptionsDialog[1][1][15]
 		
 		local x_pos = tonumber(odbutton.cx)
