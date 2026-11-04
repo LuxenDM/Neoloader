@@ -43,11 +43,11 @@ local recovery_system = {}
 local auth_key = SHA1(tostring(gkmisc.GetGameTime() + math.random()))
 
 local version = {
-	strver = "7.0.0 -PBR3",
+	strver = "7.0.0",
 	[1] = 7,
 	[2] = 0,
 	[3] = 0,
-	[4] = "PBR3",
+	[4] = "",
 }
 local lme_ver = {
 	strver = "3.12.1",
