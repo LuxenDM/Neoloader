@@ -46,7 +46,7 @@ local version = {
 	strver = "7.0.0",
 	[1] = 7,
 	[2] = 0,
-	[3] = 0,
+	[3] = 1,
 	[4] = "",
 }
 local lme_ver = {

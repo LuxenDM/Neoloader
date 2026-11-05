@@ -113,8 +113,6 @@ local button_creator = function()
 		return
 	end
 	
-	recheck_flag = true
-	
 	if ((cur_if ~= self_id) and (cur_mode == "independent")) and (not (cur_if == "vo-if")) then
 		cp("Vendetta Online's Standard Interface does not appear to be the current interface; integrations will not be made.")
 		return
@@ -132,7 +130,11 @@ local button_creator = function()
 	end
 	
 	if angular_check == "1" then
-		local odbutton = OptionsDialog[1][1][15]
+		local odbutton = OptionsDialog and OptionsDialog[1] and OptionsDialog[1][1] and OptionsDialog[1][1][15]
+		if not odbutton then
+			cp("Unable to integrate button into options dialog, dialog design not as expected")
+			return
+		end
 		
 		local x_pos = tonumber(odbutton.cx)
 		local y_pos = tonumber(odbutton.cy)
@@ -142,7 +144,6 @@ local button_creator = function()
 		end
 		y_pos = y_pos - (sizes[2] * 1.5)
 		
-		--SetLocale2("ja")
 		local neobutton = iup.button {
 			title = bstr(4, "Open Mod Manager"),
 			--title = "Open Mod Manager" .. string.char(195, 169) .. ", é 編集",
@@ -153,8 +154,6 @@ local button_creator = function()
 			image = odbutton.image,
 			action = open_config_or_recovery,
 		}
-		--SetLocale2("en")
-		
 		
 		iup.Append(OptionsDialog[1][1], neobutton)
 	else
@@ -164,7 +163,13 @@ local button_creator = function()
 			action = open_config_or_recovery,
 		}
 		
-		local opframe_ref = OptionsDialog[1][1][1]
+		local opframe_ref = OptionsDialog and OptionsDialog[1] and OptionsDialog[1][1] and OptionsDialog[1][1][1]
+		
+		if not opframe_ref then
+			cp("Unable to integrate button into options dialog, dialog design not as expected")
+			return
+		end
+		
 		local fill_ref
 		
 		local get_num_children = function(ihandle)
@@ -203,6 +208,8 @@ local button_creator = function()
 	end
 	
 	cp("LME integrations for the standard interface have been added")
+	
+	recheck_flag = true
 end
 
 vosi_timer:SetTimeout(100, button_creator)
